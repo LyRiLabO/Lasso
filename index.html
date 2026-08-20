@@ -598,6 +598,12 @@
     overflow:hidden;
     text-overflow:ellipsis;
   }
+  .col-head .col-name.col-name-editable{
+    cursor:pointer;
+  }
+  .col-head .col-name.col-name-editable:active{
+    opacity:.6;
+  }
   .col-head.col-gold .col-dot{background:var(--gold);}
   .col-head.col-sage .col-dot{background:var(--sage);}
   .col-head.col-dusk .col-dot{background:var(--dusk);}
@@ -1562,6 +1568,15 @@
     notifyTutorial('batchdelete'); // 教學步驟9：批次選取並刪除
   });
 
+  function renameColumn(col){
+    const newName = (window.prompt('修改編輯者姓名：', col.name) || '').trim();
+    if(!newName || newName === col.name) return;
+    col.name = newName;
+    saveToStorage();
+    renderColumnHeader();
+    renderEvents(); // 行程卡片上顯示的參與者名字（"· 小明、小華"）也要跟著更新
+  }
+
   function renderColumnHeader(){
     columnHeaderRow.innerHTML = '';
     columns.forEach((col, idx) => {
@@ -1584,6 +1599,15 @@
         } else {
           cell.classList.add('select-locked');
         }
+      } else {
+        // 非選取狀態下，點擊欄位上方的姓名可以直接重新命名這位編輯者
+        // （包含一開始就有的「我」，以及後來透過「新增共編者」加入的人）。
+        const nameEl = cell.querySelector('.col-name');
+        nameEl.classList.add('col-name-editable');
+        nameEl.addEventListener('click', function(e){
+          e.stopPropagation();
+          renameColumn(col);
+        });
       }
 
       columnHeaderRow.appendChild(cell);
