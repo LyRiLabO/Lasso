@@ -1808,8 +1808,12 @@
       } else {
         label.classList.add('ecard-cluster');
         label.textContent = '+' + cluster.length + ' 個行程';
-        label.addEventListener('click', function(ev){
+        // 卡片本身是靠 pointerdown 判斷「點一下開編輯頁」的，click 事件
+        // 發生得太晚（pointerdown 早就先冒泡上去把編輯頁打開了），所以
+        // 這裡要在 pointerdown 階段就攔截並直接開清單，不能只擋 click。
+        label.addEventListener('pointerdown', function(ev){
           ev.stopPropagation();
+          ev.preventDefault();
           openClusterMenu(label, cluster.map(c => ({
             title: (c.isRecurring ? '↻ ' : '') + c.rawTitle,
             timeStr: c.timeStr,
