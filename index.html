@@ -512,6 +512,14 @@
   }
   .cluster-menu button:active{background:rgba(246,241,228,0.14);}
   .cluster-menu button + button{border-top:1px solid rgba(246,241,228,0.14);}
+  .cluster-menu button.selected{
+    background:rgba(192,138,46,0.24);
+  }
+  .cluster-menu button.selected span:first-child{color:var(--gold);}
+  .cluster-menu button.locked{
+    opacity:.4;
+    cursor:not-allowed;
+  }
 
   /* 時長 < 45 分鐘：高度放不下兩行，標題與時間改成同一行並排 */
   .event-card.compact{
@@ -1437,11 +1445,36 @@
       btn.innerHTML = '<span></span><span></span>';
       btn.querySelector('span:first-child').textContent = item.title;
       btn.querySelector('span:last-child').textContent = item.timeStr;
-      btn.addEventListener('click', function(ev){
-        ev.stopPropagation();
-        closeClusterMenu();
-        openEdit(item.masterId, item.instanceDate);
-      });
+
+      if(selectMode){
+        // 選取狀態下，清單項目改成勾選／取消勾選要刪除的行程，不會點進
+        // 編輯頁；沒有權限的（別人建立的共同行程）直接鎖住、無法點擊。
+        const key = item.masterId+'@'+item.instanceDate;
+        if(!canSelectInstance(item)){
+          btn.classList.add('locked');
+          btn.disabled = true;
+        } else {
+          if(selectedEventKeys.has(key)) btn.classList.add('selected');
+          btn.addEventListener('click', function(ev){
+            ev.stopPropagation();
+            if(selectedEventKeys.has(key)) selectedEventKeys.delete(key);
+            else selectedEventKeys.add(key);
+            btn.classList.toggle('selected', selectedEventKeys.has(key));
+            // 只同步時間軸上那個小色塊本身的灰底狀態，不整個重繪畫面，
+            // 這樣清單才不會因為 renderEvents() 把自己也重置掉。
+            document.querySelectorAll(
+              '.event-card[data-master-id="'+CSS.escape(item.masterId)+'"][data-date="'+CSS.escape(item.instanceDate)+'"]'
+            ).forEach(c => c.classList.toggle('select-picked', selectedEventKeys.has(key)));
+          });
+        }
+      } else {
+        btn.addEventListener('click', function(ev){
+          ev.stopPropagation();
+          closeClusterMenu();
+          openEdit(item.masterId, item.instanceDate);
+        });
+      }
+
       menu.appendChild(btn);
     });
     document.body.appendChild(menu);
@@ -1691,9 +1724,6 @@
       const durationMin = endMin - startMin;
       const runs = eventColRuns(inst);
       const firstIdx = runs[0][0]; // 顏色統一用第一位參與者，同一行程的每個分段顏色一致
-      const names = (inst.participants||[])
-        .map(pid => { const c = columns.find(x=>x.id===pid); return c ? c.name : null; })
-        .filter(Boolean).join('、');
       const recurMark = inst.isRecurring ? '<span class="ecard-recur-inline">↻</span>' : '';
       const title = escapeHtml(inst.title || '(未命名行程)');
       const timeStr = inst.start+' - '+inst.end;
@@ -1730,10 +1760,12 @@
               '<span class="ecard-time">'+timeStr+'</span>'+
             '</div>';
         } else {
+          // 行程格子本身不顯示參與者名單：橫跨的欄位範圍已經很清楚表達
+          // 「誰參與了」，格子裡再重複列一次名字反而佔位置又多餘。
           card.innerHTML =
             (inst.isRecurring ? '<span class="ecard-recur-tag">↻</span>' : '') +
             '<div class="ecard-title">'+title+'</div>'+
-            '<div class="ecard-time">'+timeStr+(names ? ' · '+escapeHtml(names) : '')+'</div>';
+            '<div class="ecard-time">'+timeStr+'</div>';
         }
 
         eventsLayer.appendChild(card); // 先掛進 DOM 才能量出實際渲染尺寸
@@ -1753,6 +1785,7 @@
             recurMark, title, timeStr,
             rawTitle: inst.title || '(未命名行程)',
             isRecurring: !!inst.isRecurring,
+            creatorId: inst.creatorId, participants: inst.participants,
             masterId: inst.masterId, instanceDate: inst.instanceDate
           });
         }
@@ -1762,7 +1795,7 @@
         handle.className = 'resize-handle';
         handle.setAttribute('aria-hidden', 'true');
         card.appendChild(handle);
-        attachResizeHandle(card, inst, handle, runMin, runMax, {title:title, recurMark:recurMark, names:names});
+        attachResizeHandle(card, inst, handle, runMin, runMax, {title:title, recurMark:recurMark});
       });
     });
 
@@ -1818,7 +1851,9 @@
             title: (c.isRecurring ? '↻ ' : '') + c.rawTitle,
             timeStr: c.timeStr,
             masterId: c.masterId,
-            instanceDate: c.instanceDate
+            instanceDate: c.instanceDate,
+            creatorId: c.creatorId,
+            participants: c.participants
           })));
         });
       }
@@ -1833,8 +1868,8 @@
 
   // 拖曳圓點調整時長時，即時把卡片上顯示的時間文字換成拖曳當下（吸附到
   // 5 分鐘後）的預覽值，讓使用者可以直接看數字決定在哪裡放手，
-  // 不用再靠肉眼對齊格線。三種卡片版型（tiny／compact／一般）的時間
-  // 文字各自長在不同節點裡，這裡依卡片目前的 class 分別找到對應節點更新。
+  // 不用再靠肉眼對齊格線。卡片本身不顯示參與者名字（欄位跨度已經很
+  // 明確表達參與者了），這裡只更新時間文字。
   function updateCardTimeDisplay(card, meta, timeStr){
     const soloEl = card.querySelector('.ecard-solo');
     if(soloEl){
@@ -1843,11 +1878,7 @@
     }
     const timeEl = card.querySelector('.ecard-time');
     if(!timeEl) return;
-    if(card.classList.contains('compact')){
-      timeEl.textContent = timeStr;
-    } else {
-      timeEl.textContent = timeStr + (meta.names ? ' · '+meta.names : '');
-    }
+    timeEl.textContent = timeStr;
   }
 
   function renderTimeline(){
@@ -1902,9 +1933,6 @@
       const durationMin = endMin-startMin;
       const runs = eventColRuns(inst);
       const firstIdx = runs[0][0];
-      const names = (inst.participants||[])
-        .map(pid => { const c = columns.find(x=>x.id===pid); return c ? c.name : null; })
-        .filter(Boolean).join('、');
       const title = escapeHtml(inst.title||'(未命名行程)');
       const timeStr = inst.start+' - '+inst.end;
 
@@ -1919,7 +1947,7 @@
           card.classList.add('compact');
           card.innerHTML = '<div class="ecard-row"><span class="ecard-title">'+title+'</span><span class="ecard-time">'+timeStr+'</span></div>';
         } else {
-          card.innerHTML = '<div class="ecard-title">'+title+'</div><div class="ecard-time">'+timeStr+(names ? ' · '+escapeHtml(names) : '')+'</div>';
+          card.innerHTML = '<div class="ecard-title">'+title+'</div><div class="ecard-time">'+timeStr+'</div>';
         }
         layer.appendChild(card);
       });
@@ -2137,15 +2165,12 @@
       grabOffsetY: grabY - rect.top,
       span: runMax - runMin,
       durationMin: timeToMinutes(inst.end) - timeToMinutes(inst.start),
-      // 記錄下標題／重複標記／參與者名單，拖曳過程中即時換算時間文字時
-      // 要用同一套格式重建卡片內容（跟 attachResizeHandle 共用同一個
+      // 記錄下標題／重複標記，拖曳過程中即時換算時間文字時要用同一套
+      // 格式重建卡片內容（跟 attachResizeHandle 共用同一個
       // updateCardTimeDisplay 輔助函式）。
       meta: {
         title: escapeHtml(inst.title || '(未命名行程)'),
-        recurMark: inst.isRecurring ? '<span class="ecard-recur-inline">↻</span>' : '',
-        names: (inst.participants||[])
-          .map(pid => { const c = columns.find(x=>x.id===pid); return c ? c.name : null; })
-          .filter(Boolean).join('、')
+        recurMark: inst.isRecurring ? '<span class="ecard-recur-inline">↻</span>' : ''
       },
       lastEdgeDir: null
     };
