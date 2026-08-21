@@ -355,8 +355,7 @@
     border-left-color:#8A8FA0 !important;
   }
   .event-card.select-picked .ecard-title,
-  .event-card.select-picked .ecard-time,
-  .event-card.select-picked .ecard-solo{
+  .event-card.select-picked .ecard-time{
     color:#4B5066;
   }
   .event-card.select-locked{
@@ -455,6 +454,65 @@
   .card-menu.arrow-down::after{ bottom:-6px; }
   .card-menu.arrow-up::after{ top:-6px; transform:translateX(-50%) rotate(180deg); }
 
+  /* 好幾個很短、緊挨在一起的行程：各自的浮動標籤會疊在一起沒辦法辨識，
+     這種情況乾脆合併成一個「+N 個行程」提示，點下去才展開清單。
+     清單本身的視覺跟長按選單（.card-menu）同一套語彙，只是改成直向排列。 */
+  .event-card .ecard-solo.ecard-cluster{
+    pointer-events:auto;
+    cursor:pointer;
+    background:var(--red);
+  }
+  .cluster-menu{
+    position:fixed;
+    display:flex;
+    flex-direction:column;
+    background:var(--ink);
+    border-radius:11px;
+    box-shadow:0 10px 24px rgba(32,38,58,0.4);
+    overflow:hidden;
+    z-index:1000;
+    min-width:180px;
+    max-width:min(280px, 84vw);
+  }
+  .cluster-menu-title{
+    color:var(--ink-faint);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    padding:10px 14px 4px;
+  }
+  .cluster-menu button{
+    border:none;
+    background:none;
+    color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13.5px;
+    font-weight:700;
+    padding:10px 14px;
+    text-align:left;
+    cursor:pointer;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    white-space:nowrap;
+    overflow:hidden;
+  }
+  .cluster-menu button span:first-child{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    flex:1 1 auto;
+    min-width:0;
+  }
+  .cluster-menu button span:last-child{
+    flex:0 0 auto;
+    font-weight:600;
+    font-size:11.5px;
+    color:var(--ink-faint);
+  }
+  .cluster-menu button:active{background:rgba(246,241,228,0.14);}
+  .cluster-menu button + button{border-top:1px solid rgba(246,241,228,0.14);}
+
   /* 時長 < 45 分鐘：高度放不下兩行，標題與時間改成同一行並排 */
   .event-card.compact{
     display:flex;
@@ -483,22 +541,33 @@
     margin:0;
   }
 
-  /* 時長 < 15 分鐘：連一行都放不下，改成單一文字節點，用 JS 動態縮小字體塞進區塊 */
-  .event-card.tiny{
-    padding:1px 8px;
-    display:flex;
-    align-items:center;
+  /* 格子不管用哪種排版都裝不下行程名稱＋時間時（不管是被高度夾住，
+     還是寬度太窄被截斷），改用這個統一的「浮動標籤」：字體大小固定
+     不再動態縮小，文字整段貼在格子正上方（貼在時間軸最上緣、上面
+     沒有空間時改貼下方），永遠完整顯示。格子本身留一條乾淨的色塊
+     當作這段時間的視覺提示即可。 */
+  .event-card.label-floated{
+    overflow:visible;
+    padding:0;
   }
-  .event-card.tiny .ecard-solo{
-    width:100%;
+  .event-card .ecard-solo{
+    position:absolute;
+    left:0;
     white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
     font-family:'Noto Sans TC', sans-serif;
     font-weight:700;
-    color:var(--ink);
-    line-height:1.15;
+    font-size:11px;
+    line-height:1.3;
+    color:var(--paper);
+    background:var(--ink);
+    padding:3px 8px;
+    border-radius:8px;
+    box-shadow:0 3px 8px rgba(32,38,58,0.32);
+    z-index:6;
+    pointer-events:none; /* 純顯示用，點擊要穿透到底下的色塊，不擋原本的卡片互動 */
   }
+  .event-card.float-above .ecard-solo{ bottom:calc(100% + 4px); }
+  .event-card.float-below .ecard-solo{ top:calc(100% + 4px); }
 
   .fab{
     position:absolute;
@@ -516,28 +585,6 @@
     z-index:5;
   }
   .fab:active{opacity:.6;}
-
-  /* 「重看教學」：先給測試/開發階段用，方便隨時重新觸發教學而不用清
-     localStorage。左下角跟鉛筆按鍵（右下角）對角放，小小一顆不擋東西。
-     之後如果不想保留在正式畫面上，直接刪掉這顆按鍵跟對應的 JS 綁定即可。 */
-  .tutorial-replay-btn{
-    position:absolute;
-    left:14px; bottom:24px;
-    width:34px; height:34px;
-    border-radius:50%;
-    background:var(--ink);
-    color:var(--paper);
-    border:none;
-    font-family:'Noto Sans TC', sans-serif;
-    font-size:15px;
-    font-weight:700;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer;
-    box-shadow:0 3px 8px rgba(32,38,58,0.28);
-    opacity:.55;
-    z-index:5;
-  }
-  .tutorial-replay-btn:active{opacity:.85;}
 
   .selection-box{
     position:absolute;
@@ -905,83 +952,6 @@
 
   ::-webkit-scrollbar{width:0;height:0;}
 
-  /* ---------------- 操作教學疊層 ---------------- */
-  /* 最外層容器本身雖然透明看不見，但預設 pointer-events 是 auto，
-     如果不特別關掉，它自己就會把整個螢幕的點擊吃光——包括高亮框裡
-     那個「特意留空給使用者操作」的洞，導致整區看起來亮著卻點不動。
-     這裡把容器本身設成 pointer-events:none（點擊直接穿透到底下真正
-     的畫面元件），只有真的需要擋住點擊的兩塊子元素（遮罩、說明泡泡）
-     各自重新打開 pointer-events:auto。 */
-  .tutorial-overlay{position:fixed; inset:0; z-index:9990; pointer-events:none;}
-  .tutorial-overlay[hidden]{display:none;}
-  .tutorial-mask{
-    position:fixed;
-    background:rgba(20,22,34,0.62);
-    pointer-events:auto;
-    z-index:9991;
-  }
-  .tutorial-ring{
-    position:fixed;
-    border:2px solid var(--paper);
-    border-radius:14px;
-    box-shadow:0 0 0 3px rgba(178,58,47,0.55), 0 6px 20px rgba(0,0,0,0.35);
-    pointer-events:none;
-    z-index:9992;
-  }
-  .tutorial-bubble{
-    position:fixed;
-    pointer-events:auto;
-    z-index:9993;
-    background:var(--ink);
-    color:var(--paper);
-    border-radius:16px;
-    padding:14px 16px 12px;
-    width:min(300px, 86vw);
-    box-shadow:0 10px 30px rgba(0,0,0,0.35);
-    font-family:'Noto Sans TC', sans-serif;
-  }
-  .tutorial-bubble-step{
-    font-size:11px;
-    font-weight:700;
-    letter-spacing:.08em;
-    color:var(--gold);
-    margin-bottom:5px;
-  }
-  .tutorial-bubble-text{
-    font-size:14px;
-    line-height:1.65;
-    white-space:pre-line;
-    margin-bottom:12px;
-  }
-  .tutorial-bubble-actions{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-  }
-  .tutorial-skip-btn{
-    background:none;
-    border:none;
-    color:var(--ink-faint);
-    font-size:12.5px;
-    font-family:'Noto Sans TC', sans-serif;
-    cursor:pointer;
-    padding:6px 4px;
-  }
-  .tutorial-skip-btn:active{opacity:.6;}
-  .tutorial-next-btn{
-    background:var(--paper);
-    color:var(--ink);
-    border:none;
-    border-radius:10px;
-    padding:8px 18px;
-    font-size:13px;
-    font-weight:700;
-    font-family:'Noto Sans TC', sans-serif;
-    cursor:pointer;
-  }
-  .tutorial-next-btn:active{opacity:.75;}
-
   @media (prefers-reduced-motion: reduce){
     .page{transition:none;}
     .event-card{transition:none;}
@@ -1055,8 +1025,6 @@
         </g>
       </svg>
     </button>
-
-    <button class="tutorial-replay-btn" id="btnReplayTutorial" aria-label="重看教學">?</button>
   </section>
 
   <!-- ============ 頁面二：行程編輯頁 ============ -->
@@ -1127,25 +1095,6 @@
 
 </div>
 
-<!-- 操作教學疊層：四片遮罩負責「除了目標元素以外全部變暗且擋掉點擊」，
-     中間留空給真正的元素接收使用者的真實手勢；教學期間所有資料都是
-     暫時換上去的假資料，結束後會整組換回使用者原本看到的內容。 -->
-<div id="tutorialOverlay" class="tutorial-overlay" hidden>
-  <div class="tutorial-mask" id="tutMaskTop"></div>
-  <div class="tutorial-mask" id="tutMaskBottom"></div>
-  <div class="tutorial-mask" id="tutMaskLeft"></div>
-  <div class="tutorial-mask" id="tutMaskRight"></div>
-  <div class="tutorial-ring" id="tutorialRing"></div>
-  <div class="tutorial-bubble" id="tutorialBubble">
-    <div class="tutorial-bubble-step" id="tutorialStepLabel"></div>
-    <div class="tutorial-bubble-text" id="tutorialBubbleText"></div>
-    <div class="tutorial-bubble-actions">
-      <button type="button" id="tutorialSkipBtn" class="tutorial-skip-btn">跳過教學</button>
-      <button type="button" id="tutorialNextBtn" class="tutorial-next-btn">下一步</button>
-    </div>
-  </div>
-</div>
-
 <script>
 (function(){
   "use strict";
@@ -1191,14 +1140,9 @@
      之後，就是一般瀏覽器環境，會正常運作。 */
   const STORAGE_KEY = 'shared-planner-v1';
   let storageAvailable = true;
-  // 提前宣告：saveToStorage() 在頁面第一次渲染時就會讀到這個變數，
-  // 必須先於任何 render 呼叫之前存在（教學引擎其餘的狀態與邏輯在檔案
-  // 最後面，但這個旗標本身要在這裡先宣告）。
-  let tutorialActive = false;
 
   function saveToStorage(){
     if(!storageAvailable) return;
-    if(tutorialActive) return; // 教學沙盒期間的假資料一律不落地，避免污染使用者原本的資料
     try{
       localStorage.setItem(STORAGE_KEY, JSON.stringify({columns, events}));
     }catch(err){
@@ -1468,6 +1412,57 @@
     closeCardMenu();
   }, true);
 
+  /* ---------------- 緊鄰短行程合併後的「+N 個行程」清單彈窗 ----------------
+     浮動標籤解決了「文字被截斷/縮到看不清」，但好幾個很短的行程緊挨在
+     一起時，各自的浮動標籤還是會疊在一起沒辦法辨識。與其硬擠，乾脆把
+     這一群合併成一個「+N 個行程」提示，點下去才展開完整清單，點清單
+     裡的項目就直接跳去那個行程的編輯頁（跟平常點行程卡片一樣）。 */
+  let clusterMenuEl = null;
+
+  function closeClusterMenu(){
+    if(clusterMenuEl){ clusterMenuEl.remove(); clusterMenuEl = null; }
+  }
+
+  function openClusterMenu(anchorEl, items){
+    closeClusterMenu();
+    closeCardMenu();
+    const rect = anchorEl.getBoundingClientRect();
+
+    const menu = document.createElement('div');
+    menu.className = 'cluster-menu';
+    menu.innerHTML = '<div class="cluster-menu-title">'+items.length+' 個行程</div>';
+    items.forEach(item => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.innerHTML = '<span></span><span></span>';
+      btn.querySelector('span:first-child').textContent = item.title;
+      btn.querySelector('span:last-child').textContent = item.timeStr;
+      btn.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        closeClusterMenu();
+        openEdit(item.masterId, item.instanceDate);
+      });
+      menu.appendChild(btn);
+    });
+    document.body.appendChild(menu);
+
+    const menuRect = menu.getBoundingClientRect();
+    let left = rect.left + rect.width/2 - menuRect.width/2;
+    left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8));
+    let top = rect.top - menuRect.height - 10;
+    if(top < 8) top = rect.bottom + 10; // 標籤太靠畫面上緣就改顯示在下方
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+
+    clusterMenuEl = menu;
+  }
+
+  document.addEventListener('pointerdown', function(e){
+    if(!clusterMenuEl) return;
+    if(clusterMenuEl.contains(e.target)) return;
+    closeClusterMenu();
+  }, true);
+
   /* ---------------- 時間軸主頁 ---------------- */
   const timelineGrid = document.getElementById('timelineGrid');
   const eventsLayer = document.getElementById('eventsLayer');
@@ -1523,12 +1518,10 @@
   }
 
   selectToggleBtn.addEventListener('click', function(){
-    if(tutorialActive && !tutorialStepAllows('batchdelete')) return; // 教學進行中，這一步不是要教批次選取刪除，不給回饋
     setSelectMode(!selectMode);
   });
 
   deleteSelectedBtn.addEventListener('click', function(){
-    if(tutorialActive && !tutorialStepAllows('batchdelete')) return; // 保險：理論上只有步驟9才看得到這顆鍵
     if(selectedEventKeys.size === 0 && selectedColumnIds.size === 0) return;
 
     // 1) 刪除被選取的行程：只刪除「目前這一天」看到的這一場，
@@ -1565,7 +1558,6 @@
     }
 
     setSelectMode(false); // 刪除完成後自動關閉選取狀態
-    notifyTutorial('batchdelete'); // 教學步驟9：批次選取並刪除
   });
 
   function renameColumn(col){
@@ -1672,6 +1664,7 @@
   function renderEvents(){
     saveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來
     closeCardMenu(); // 畫面要重繪了，任何還開著的快捷選單先收起來，避免指到舊卡片
+    closeClusterMenu();
     eventsLayer.innerHTML = '';
     renderColumnDividers();
     const insts = getInstancesForDate(currentDate).filter(inst =>
@@ -1686,6 +1679,9 @@
     }
 
     const n = Math.max(1, columns.length);
+    // 裝不下、需要浮動標籤的候選項先集中收集起來，等這一天的卡片都建完，
+    // 才能正確判斷哪些會疊在一起、需要合併成「+N 個行程」（見 renderFloatLabels）。
+    const floatCandidates = [];
 
     insts.forEach(inst => {
       const startMin = timeToMinutes(inst.start);
@@ -1725,12 +1721,7 @@
           }
         }
 
-        if(durationMin < 15){
-          // 連一行都放不下：整段文字用同一個節點，稍後統一縮字塞進去
-          card.classList.add('tiny');
-          card.innerHTML =
-            '<span class="ecard-solo">'+recurMark+title+' · '+timeStr+'</span>';
-        } else if(durationMin < 45){
+        if(durationMin < 45){
           // 放得下一行，但兩行會被壓縮：標題與時間並排在同一行
           card.classList.add('compact');
           card.innerHTML =
@@ -1745,30 +1736,90 @@
             '<div class="ecard-time">'+timeStr+(names ? ' · '+escapeHtml(names) : '')+'</div>';
         }
 
+        eventsLayer.appendChild(card); // 先掛進 DOM 才能量出實際渲染尺寸
+
+        // 量測剛剛這個排版是否真的裝得下：不管是被高度夾住，還是文字
+        // 太長被 ellipsis 截斷，只要顯示不完整，就先清空、記錄成候選項，
+        // 稍後統一交給 renderFloatLabels 決定要單獨顯示還是合併。
+        const measureTitle = card.querySelector('.ecard-title');
+        const overflowsV = card.scrollHeight - card.clientHeight > 1;
+        const overflowsH = measureTitle && (measureTitle.scrollWidth - measureTitle.clientWidth > 1);
+        if(overflowsV || overflowsH){
+          card.classList.remove('compact');
+          card.classList.add('label-floated');
+          card.innerHTML = '';
+          floatCandidates.push({
+            card, top, height, runMin, runMax,
+            recurMark, title, timeStr,
+            rawTitle: inst.title || '(未命名行程)',
+            isRecurring: !!inst.isRecurring,
+            masterId: inst.masterId, instanceDate: inst.instanceDate
+          });
+        }
+
         attachCardInteractions(card, inst, runMin, runMax);
         const handle = document.createElement('span');
         handle.className = 'resize-handle';
         handle.setAttribute('aria-hidden', 'true');
         card.appendChild(handle);
         attachResizeHandle(card, inst, handle, runMin, runMax, {title:title, recurMark:recurMark, names:names});
-        eventsLayer.appendChild(card);
-        if(durationMin < 15) fitTinyCardText(card);
       });
     });
+
+    renderFloatLabels(floatCandidates);
   }
 
-  // 區塊小到連一行都放不下時，逐步縮小字體直到內容剛好能塞進區塊高度為止
-  // （下限 6px，避免縮到看不清楚）。
-  function fitTinyCardText(card){
-    const solo = card.querySelector('.ecard-solo');
-    if(!solo) return;
-    let fontSize = 11;
-    solo.style.fontSize = fontSize+'px';
-    let guard = 0;
-    while(card.scrollHeight > card.clientHeight && fontSize > 6 && guard < 20){
-      fontSize -= 0.5;
-      solo.style.fontSize = fontSize+'px';
-      guard++;
+  // 幫「裝不下、需要浮動標籤」的候選項分群：欄位範圍完全相同（代表彼此
+  // 時間沒有重疊、不是被拆成並排的分段）而且垂直距離近到標籤會疊在一起
+  // 的，合併成一個「+N 個行程」提示，點下去才展開清單；沒有跟其他項目
+  // 擠在一起的，照原本方式各自顯示完整的浮動標籤。
+  function renderFloatLabels(candidates){
+    const CLUSTER_GAP = 28; // 約略一個標籤本身的高度，兩個色塊間的空隙小於這個值就視為標籤會疊在一起
+
+    const groups = new Map(); // key: 'runMin-runMax'
+    candidates.forEach(c => {
+      const key = c.runMin+'-'+c.runMax;
+      if(!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(c);
+    });
+
+    groups.forEach(list => {
+      list.sort((a,b) => a.top - b.top);
+      let cluster = [list[0]];
+      for(let i=1; i<list.length; i++){
+        const prev = cluster[cluster.length-1];
+        const cur = list[i];
+        if(cur.top - (prev.top+prev.height) < CLUSTER_GAP){
+          cluster.push(cur);
+        } else {
+          flushCluster(cluster);
+          cluster = [cur];
+        }
+      }
+      flushCluster(cluster);
+    });
+
+    function flushCluster(cluster){
+      const anchor = cluster[0]; // 群組一律貼在最上面那一個項目的位置
+      const label = document.createElement('span');
+      label.className = 'ecard-solo';
+      if(cluster.length === 1){
+        label.innerHTML = anchor.recurMark + anchor.title + ' · ' + anchor.timeStr;
+      } else {
+        label.classList.add('ecard-cluster');
+        label.textContent = '+' + cluster.length + ' 個行程';
+        label.addEventListener('click', function(ev){
+          ev.stopPropagation();
+          openClusterMenu(label, cluster.map(c => ({
+            title: (c.isRecurring ? '↻ ' : '') + c.rawTitle,
+            timeStr: c.timeStr,
+            masterId: c.masterId,
+            instanceDate: c.instanceDate
+          })));
+        });
+      }
+      anchor.card.classList.add(anchor.top < 28 ? 'float-below' : 'float-above');
+      anchor.card.appendChild(label);
     }
   }
 
@@ -1860,17 +1911,13 @@
         card.style.height = height+'px';
         card.style.left = 'calc(' + (runMin/n*100) + '% + 3px)';
         card.style.width = 'calc(' + ((runMax-runMin+1)/n*100) + '% - 6px)';
-        if(durationMin < 15){
-          card.classList.add('tiny');
-          card.innerHTML = '<span class="ecard-solo">'+title+' · '+timeStr+'</span>';
-        } else if(durationMin < 45){
+        if(durationMin < 45){
           card.classList.add('compact');
           card.innerHTML = '<div class="ecard-row"><span class="ecard-title">'+title+'</span><span class="ecard-time">'+timeStr+'</span></div>';
         } else {
           card.innerHTML = '<div class="ecard-title">'+title+'</div><div class="ecard-time">'+timeStr+(names ? ' · '+escapeHtml(names) : '')+'</div>';
         }
         layer.appendChild(card);
-        if(durationMin < 15) fitTinyCardText(card);
       });
     });
     panel.appendChild(layer);
@@ -1919,7 +1966,6 @@
         if(previewPanel){ previewPanel.remove(); previewPanel = null; }
         timelineGrid.style.transform = '';
         renderTimeline();
-        notifyTutorial('swipe'); // 教學步驟5：滑動切換日期
       }, 300);
     } else {
       timelineGrid.style.transform = 'translateX(0px)';
@@ -2193,7 +2239,6 @@
     floatingDrag = null;
     applyQuickPlacement(fd.masterId, fd.homeDate, currentDate, newStart, newEnd, newParticipants);
     renderEvents();
-    notifyTutorial('move'); // 教學步驟4：長按拖曳搬移行程
   }
 
   /* ---------------- 長按拖拽（防誤觸） ---------------- */
@@ -2222,12 +2267,6 @@
         return;
       }
 
-      if(tutorialActive && !tutorialCardGestureAllowed(inst.masterId)){
-        // 教學進行中，這張卡片跟目前這一步無關（不是指定的示範卡片，
-        // 或這步教的不是長按選單／搬移），完全不啟動互動，不給任何回饋。
-        return;
-      }
-
       stopMomentumScroll(); // 再次觸碰畫面就先停掉還在滑的慣性捲動
       startX = e.clientX;
       startY = e.clientY;
@@ -2241,13 +2280,7 @@
         if(cancelledByScroll) return;
         phase = 'menu';
         if(navigator.vibrate) navigator.vibrate(15);
-        // 教學步驟4（搬移）也會先經過這個 400ms 的長按判斷才能轉成拖曳，
-        // 但那一步教的不是選單，所以選單本身不彈出來，只留內部的
-        // phase 狀態讓後續移動能轉成拖曳。
-        if(!tutorialActive || (TUTORIAL_STEPS[tutorialStepIndex] && TUTORIAL_STEPS[tutorialStepIndex].awaits === 'menu')){
-          openCardMenu(card, inst.masterId, inst.instanceDate);
-        }
-        notifyTutorial('menu'); // 教學步驟3：長按跳出「複製／刪除」選單
+        openCardMenu(card, inst.masterId, inst.instanceDate);
       }, 400);
 
       const onMove = function(ev2){
@@ -2279,11 +2312,6 @@
           // 拖曳搬移這個行程，不是要用選單——收起選單，轉成浮動拖曳。
           const dx = ev2.clientX - startX;
           if(Math.abs(dx) > 10 || Math.abs(ev2.clientY - startY) > 10){
-            if(tutorialActive && !(TUTORIAL_STEPS[tutorialStepIndex] && TUTORIAL_STEPS[tutorialStepIndex].awaits === 'move')){
-              // 教學進行中，這一步教的不是搬移，忽略這個移動手勢
-              // （選單原本就沒開啟，什麼事都不會發生）。
-              return;
-            }
             closeCardMenu();
             phase = 'dragging';
             startFloatingDrag(inst, runMin, runMax, card, startX, startY, ev2.clientX, ev2.clientY);
@@ -2309,11 +2337,9 @@
           // 或點畫面其他地方讓它自動收起。
         } else if(cancelledByScroll){
           startMomentumScroll(scrollVelocity);
-        } else if(!tutorialActive){
+        } else {
           openEdit(inst.masterId, inst.instanceDate);
         }
-        // 教學進行中的單純點一下（沒有觸發長按、也沒有被判定成捲動）：
-        // 「點卡片開編輯頁」不是任何一個教學步驟要教的操作，忽略，不給回饋。
       };
 
       document.addEventListener('pointermove', onMove);
@@ -2334,12 +2360,6 @@
 
     handle.addEventListener('pointerdown', function(e){
       e.stopPropagation(); // 不要觸發卡片本體「移動時間」的那組互動
-
-      if(tutorialActive){
-        const step = TUTORIAL_STEPS[tutorialStepIndex];
-        const ok = step && step.awaits === 'resize' && step.masterId === inst.masterId;
-        if(!ok) return; // 教學進行中，這一步不是要教調整這張卡片的時長，不給回饋
-      }
 
       startX = e.clientX;
       startY = e.clientY;
@@ -2461,7 +2481,6 @@
 
           applyQuickPlacement(inst.masterId, inst.instanceDate, inst.instanceDate, newStart, newEnd, Array.from(pset));
           renderEvents();
-          notifyTutorial('resize'); // 教學步驟2：拖曳圓點調整時長
         }
       };
 
@@ -2627,10 +2646,6 @@
             cancelled = true;
             clearTimeout(longPressTimer);
             let mode = (Math.abs(dx) > Math.abs(dy)) ? 'swipeday' : 'scroll';
-            // 垂直捲動維持一律可用（純導覽用途，不算教學要教的操作）；
-            // 但橫向滑動切日這個手勢，教學期間只有步驟5才放行，其餘
-            // 步驟直接當作什麼都沒發生（不捲動也不切日），不給回饋。
-            if(mode === 'swipeday' && !tutorialGridGestureAllowed('swipe')) mode = null;
             gestureMode = mode;
           }
         }
@@ -2683,7 +2698,6 @@
           const endMin = Math.round(bottom/50*60);
           const participantIds = columns.slice(colMin, colMax+1).map(c=>c.id);
           createNewEvent(startMin, endMin, participantIds);
-          notifyTutorial('create'); // 教學步驟1：空白處拖曳新增行程
         }
       } else if(gestureMode === 'swipeday'){
         // 放開手指：滑動幅度夠大就用動畫接續完成切日，不夠就彈回原位
@@ -2714,7 +2728,6 @@
 
       longPressTimer = setTimeout(function(){
         if(cancelled) return;
-        if(!tutorialGridGestureAllowed('create')) return; // 教學期間，這一步不是要教空白處新增行程，不給回饋
         selecting = true;
         if(navigator.vibrate) navigator.vibrate(15);
         let top = Math.max(0, snapToFiveMin(anchorPx));
@@ -2752,32 +2765,26 @@
 
   document.getElementById('fabAdd').addEventListener('click', function(){
     if(selectMode) return;
-    if(tutorialActive && !tutorialStepAllows('fab')) return; // 教學進行中，這一步不是要教鉛筆新增，不給回饋
     const now = new Date();
     const startHour = currentDate === todayStr() ? now.getHours() : 9;
     const newId = createNewEvent(startHour*60, startHour*60 + 60, [columns[0].id]);
     openEdit(newId, currentDate);
-    notifyTutorial('fab'); // 教學步驟6：點鉛筆按鍵新增行程
   });
 
   document.getElementById('btnAddColumn').addEventListener('click', function(){
     if(selectMode) return;
-    if(tutorialActive && !tutorialStepAllows('addcol')) return; // 教學進行中，這一步不是要教新增共編者，不給回饋
     const name = (window.prompt('新增共編使用者的名字：', '') || '').trim();
     if(!name) return;
     const id = 'p' + Date.now();
     columns.push({id, name});
     renderColumnHeader();
     renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
-    notifyTutorial('addcol'); // 教學步驟8：新增共編者欄位
   });
 
   datePicker.addEventListener('change', function(){
     if(!datePicker.value) return;
-    if(tutorialActive && !tutorialStepAllows('swipe')) return; // 保險：教學期間這一步不是要教切換日期，忽略
     currentDate = datePicker.value;
     renderTimeline();
-    notifyTutorial('swipe'); // 教學步驟5：點擊日期文字切換日期（跟滑動手勢算同一步）
   });
 
   /* ---------------- 編輯頁：欄位連動 ---------------- */
@@ -2796,17 +2803,6 @@
   let selectedParticipants = new Set();
   let selectedWeekdays = new Set();
 
-  fieldSyncEdit.addEventListener('change', function(){
-    if(tutorialActive && !tutorialStepAllows('sync')){
-      // 教學進行中，這一步不是要教同步編輯：把勾選狀態復原，避免留下
-      // 使用者「好像點了但畫面沒變化」以外的其他副作用（狀態改變本身
-      // 也算一種回饋，這裡索性連狀態都不讓它變）。
-      fieldSyncEdit.checked = false;
-      return;
-    }
-    if(fieldSyncEdit.checked) notifyTutorial('sync'); // 教學步驟7下半：開啟同步編輯
-  });
-
   function renderParticipantChips(selectedIds){
     selectedParticipants = new Set(selectedIds);
     participantsBox.innerHTML = '';
@@ -2817,7 +2813,6 @@
       chip.innerHTML = '<span class="chip-dot"></span><span></span>';
       chip.querySelector('span:last-child').textContent = col.name;
       chip.addEventListener('click', function(){
-        if(tutorialActive) return; // 教學進行中（步驟7），調整參與者不是要教的操作，不給回饋
         if(selectedParticipants.has(col.id)){
           // 至少保留一位參與者，避免行程變成沒人參加
           if(selectedParticipants.size > 1) selectedParticipants.delete(col.id);
@@ -2838,11 +2833,9 @@
       chip.className = 'weekday-chip' + (selectedWeekdays.has(idx) ? ' selected' : '');
       chip.textContent = label.slice(1); // 週日→日、週一→一...
       chip.addEventListener('click', function(){
-        if(tutorialActive && !tutorialStepAllows('recur')) return; // 教學進行中，這一步不是要教設定重複星期，不給回饋
         if(selectedWeekdays.has(idx)) selectedWeekdays.delete(idx);
         else selectedWeekdays.add(idx);
         chip.classList.toggle('selected', selectedWeekdays.has(idx));
-        notifyTutorial('recur'); // 教學步驟7上半：設定重複星期
       });
       weekdayBox.appendChild(chip);
     });
@@ -2951,12 +2944,10 @@
   });
 
   document.getElementById('btnCancel').addEventListener('click', function(){
-    if(tutorialActive) return; // 教學進行中（步驟7），取消/完成都不是要教的操作，不給回饋
     goBackToTimeline(); // 不儲存任何變更
   });
 
   document.getElementById('btnDone').addEventListener('click', function(){
-    if(tutorialActive) return; // 教學進行中（步驟7），取消/完成都不是要教的操作，不給回饋
     if(!editingMasterId) return;
     const master = events.find(e => e.id === editingMasterId);
     if(!master) return;
@@ -3015,7 +3006,6 @@
   });
 
   document.getElementById('btnDelete').addEventListener('click', function(){
-    if(tutorialActive) return; // 教學進行中（步驟7），刪除行程不是要教的操作，不給回饋
     if(!editingMasterId) return;
     const master = events.find(e => e.id === editingMasterId);
     if(!master) return;
@@ -3065,380 +3055,6 @@
 
   // 每分鐘更新一次「現在時間」紅線
   setInterval(renderNowLine, 60*1000);
-
-  /* ---------------- 操作教學（第一次打開網頁時，帶著使用者實際操作一輪） ----------------
-     核心概念是「沙盒快照」：
-       1. 教學開始前，把使用者當下真正看到的資料（不管是空白時間軸、還是
-          房間裡已經有別人建立的欄位／行程）整組存起來。
-       2. 換上教學專用的假資料（兩個示範欄位＋幾筆示範行程），讓使用者
-          用真實的手勢操作——拖曳新增、調時長、長按選單、搬移、切換日期、
-          設定重複、新增共編者、批次選取刪除，全部都是走真正的程式邏輯，
-          不是動畫模擬。
-       3. 教學期間 saveToStorage() 會被擋下（見該函式內的 tutorialActive
-          判斷），所以假資料不會被存進 localStorage，更不會有機會送到
-          之後要接的 Supabase 後端。
-       4. 教學結束（完成最後一步，或按「跳過教學」）時，把資料換回第 1 步
-          存的原始快照，重新整理畫面，使用者會看到自己原本該看到的內容，
-          完全不受教學過程影響。 */
-  const TUTORIAL_SEEN_KEY = 'shared-planner-tutorial-seen-v1';
-
-  let tutorialStepIndex = 0;
-  let tutorialSnapshot = null;
-
-  const tutorialOverlay = document.getElementById('tutorialOverlay');
-  const tutMaskTop = document.getElementById('tutMaskTop');
-  const tutMaskBottom = document.getElementById('tutMaskBottom');
-  const tutMaskLeft = document.getElementById('tutMaskLeft');
-  const tutMaskRight = document.getElementById('tutMaskRight');
-  const tutorialRing = document.getElementById('tutorialRing');
-  const tutorialBubble = document.getElementById('tutorialBubble');
-  const tutorialStepLabel = document.getElementById('tutorialStepLabel');
-  const tutorialBubbleText = document.getElementById('tutorialBubbleText');
-  const tutorialNextBtn = document.getElementById('tutorialNextBtn');
-  const tutorialSkipBtn = document.getElementById('tutorialSkipBtn');
-
-  // 把一個「取得座標的函式」包裝成跟 DOM 元素一樣有 getBoundingClientRect()
-  // 介面的假目標，用來高亮「空白時段」這種沒有對應單一 DOM 節點的區域。
-  function tutorialFakeTarget(getRectFn){
-    return {getBoundingClientRect: getRectFn};
-  }
-
-  // 拖曳類手勢（調整時長／搬移）如果只高亮行程格子本身，使用者拖曳時
-  // 手指很容易滑出高亮範圍、碰到旁邊變暗的遮罩。這裡改成高亮「整個
-  // 欄位寬度 × 卡片上下留一大段緩衝」的區域，範圍再夾在目前實際看得到
-  // 的捲動視窗內，讓使用者有足夠空間可以真的拖著手指移動。
-  function tutorialCardRoomTarget(masterId, marginTop, marginBottom){
-    return tutorialFakeTarget(function(){
-      const card = eventsLayer.querySelector('.event-card[data-master-id="'+masterId+'"]');
-      if(!card) return {left:0, top:0, right:0, bottom:0};
-      const c = card.getBoundingClientRect();
-      const gridRect = timelineGrid.getBoundingClientRect();
-      const scrollRect = timelineScroll.getBoundingClientRect();
-      return {
-        left: gridRect.left,
-        right: gridRect.right,
-        top: Math.max(scrollRect.top, c.top - marginTop),
-        bottom: Math.min(scrollRect.bottom, c.bottom + marginBottom)
-      };
-    });
-  }
-
-  // 日期切換其實有兩種手勢：滑動整個時間軸畫面、或點擊上方日期文字，
-  // 所以高亮範圍要把兩塊都框進去（日期文字列 + 底下可滑動的時間軸），
-  // 而不是只框住日期文字那一小塊。
-  function tutorialDateAreaTarget(){
-    return tutorialFakeTarget(function(){
-      const a = dateDisplayBtn.getBoundingClientRect();
-      const b = daySlider.getBoundingClientRect();
-      return {
-        left: Math.min(a.left, b.left),
-        right: Math.max(a.right, b.right),
-        top: Math.min(a.top, b.top),
-        bottom: Math.max(a.bottom, b.bottom)
-      };
-    });
-  }
-
-  const TUTORIAL_STEPS = [
-    {
-      display: 1,
-      awaits: 'create',
-      text: '在空白處按住往下拖，就能拉出一段新行程！',
-      target: () => tutorialFakeTarget(function(){
-        const g = timelineGrid.getBoundingClientRect();
-        return {left:g.left+8, right:g.right-8, top:g.top+6*50, bottom:g.top+9*50};
-      }),
-      onEnter: function(){
-        showPage('timeline');
-        timelineScroll.scrollTop = 4*50;
-      }
-    },
-    {
-      display: 2,
-      awaits: 'resize',
-      masterId: 'tut-resize',
-      text: '拖曳卡片右下角的圓點，調整行程的時長。',
-      target: () => tutorialCardRoomTarget('tut-resize', 100, 80),
-      onEnter: function(){
-        showPage('timeline');
-        timelineScroll.scrollTop = 8*50;
-      }
-    },
-    {
-      display: 3,
-      awaits: 'menu',
-      masterId: 'tut-menu',
-      text: '長按卡片不放，會跳出『複製』『刪除』的快捷選單。',
-      target: () => eventsLayer.querySelector('.event-card[data-master-id="tut-menu"]'),
-      onEnter: function(){
-        showPage('timeline');
-        timelineScroll.scrollTop = 11*50;
-      }
-    },
-    {
-      display: 4,
-      awaits: 'move',
-      masterId: 'tut-move',
-      text: '長按再拖曳，可以把行程搬到別的時間。',
-      target: () => tutorialCardRoomTarget('tut-move', 80, 120),
-      onEnter: function(){
-        showPage('timeline');
-        timelineScroll.scrollTop = 14*50;
-      }
-    },
-    {
-      display: 5,
-      awaits: 'swipe',
-      text: '左右滑動畫面，或點擊日期文字，快速切換到別天。',
-      target: () => tutorialDateAreaTarget(),
-      onEnter: function(){
-        showPage('timeline');
-      }
-    },
-    {
-      display: 6,
-      awaits: 'fab',
-      text: '點擊這支鉛筆，可以直接設定時間來新增行程。',
-      target: () => document.getElementById('fabAdd'),
-      onEnter: function(){
-        showPage('timeline');
-        currentDate = tutorialDemoDate;
-        renderTimeline();
-      }
-    },
-    {
-      display: 7,
-      awaits: 'recur',
-      text: '每星期的固定行程不想手動新增？使用重複功能吧！',
-      target: () => weekdayBox,
-      onEnter: function(){
-        showPage('timeline');
-        openEdit('tut-recur-a', tutorialDemoDate);
-      }
-    },
-    {
-      display: 7,
-      awaits: 'sync',
-      text: '開啟同步編輯，將編輯內容套用到整個重複系列。',
-      target: () => syncField,
-      onEnter: function(){
-        showPage('timeline');
-        openEdit('tut-recur-b', tutorialDemoDate);
-      }
-    },
-    {
-      display: 8,
-      awaits: 'addcol',
-      text: '點這裡幫自己或家人朋友建立專屬欄位，一起安排行程～',
-      target: () => document.getElementById('btnAddColumn'),
-      onEnter: function(){
-        showPage('timeline');
-      }
-    },
-    {
-      display: 9,
-      awaits: 'batchdelete',
-      text: '想一次刪掉好幾筆行程或欄位？點擊這裡進入選取模式，選好後點垃圾桶一次刪除。',
-      target: () => document.getElementById('btnSelectToggle'),
-      onEnter: function(){
-        showPage('timeline');
-      }
-    }
-  ];
-
-  let tutorialDemoDate = todayStr();
-
-  function notifyTutorial(key){
-    if(!tutorialActive) return;
-    const step = TUTORIAL_STEPS[tutorialStepIndex];
-    if(!step || step.awaits !== key) return;
-    // 給畫面一點時間把重繪／回彈動畫跑完，再進到下一步，體感比較順
-    setTimeout(advanceTutorial, 450);
-  }
-
-  // 給一般「按一下就完成」的操作（鉛筆新增、新增共編者、設定重複、
-  // 同步編輯、選取模式切換／批次刪除）用：非教學狀態一律放行；
-  // 教學狀態則只有「目前步驟正在等待的那個操作」才放行，其餘一律
-  // 什麼都不做，不給任何回饋。
-  function tutorialStepAllows(kind){
-    if(!tutorialActive) return true;
-    const step = TUTORIAL_STEPS[tutorialStepIndex];
-    return !!(step && step.awaits === kind);
-  }
-
-  // 給行程卡片本體的長按選單／搬移用：教學狀態下，只有「目前步驟
-  // 指定的那張示範卡片」而且「這步教的正好是選單或搬移」才放行；
-  // 其他任何卡片、或這張卡片但這步教的是別的操作，一律不給回饋
-  // （連長按計時器都不啟動，避免使用者摸到卡片卻不知道為什麼沒反應
-  // 以外的其他副作用，例如不小心觸發捲動判斷之類——單純完全不處理）。
-  function tutorialCardGestureAllowed(masterId){
-    if(!tutorialActive) return true;
-    const step = TUTORIAL_STEPS[tutorialStepIndex];
-    return !!(step && (step.awaits === 'menu' || step.awaits === 'move') && step.masterId === masterId);
-  }
-
-  // 給時間軸空白處的手勢用（長按拖曳新增行程／左右滑動切換日期）：
-  // 教學狀態下，只有「目前步驟正在教的那一種」才放行。
-  function tutorialGridGestureAllowed(kind){
-    if(!tutorialActive) return true;
-    const step = TUTORIAL_STEPS[tutorialStepIndex];
-    return !!(step && step.awaits === kind);
-  }
-
-  function advanceTutorial(){
-    if(!tutorialActive) return;
-    tutorialStepIndex++;
-    if(tutorialStepIndex >= TUTORIAL_STEPS.length){
-      endTutorial();
-      return;
-    }
-    showTutorialStep();
-  }
-
-  function showTutorialStep(){
-    const step = TUTORIAL_STEPS[tutorialStepIndex];
-    if(step.onEnter) step.onEnter();
-    tutorialStepLabel.textContent = '步驟 '+step.display+' / 9';
-    tutorialBubbleText.textContent = step.text;
-    tutorialNextBtn.textContent = (tutorialStepIndex === TUTORIAL_STEPS.length-1) ? '完成教學' : '下一步';
-    // 原生日期選擇器（datePicker）不像其他手勢能單純用 pointerdown 判斷
-    // 攔截——一點下去瀏覽器就會直接彈出原生介面，JS 事件監聽已經來不及
-    // 阻止「跳出來」這個回饋本身，所以只有這裡用 disabled 屬性能真正
-    // 擋住：不是步驟5的時候直接讓它點不動。
-    datePicker.disabled = (step.awaits !== 'swipe');
-    // 等這一輪 DOM／頁面切換穩定後再量測位置，避免抓到切換前的舊版面
-    requestAnimationFrame(function(){
-      requestAnimationFrame(function(){
-        positionTutorialOverlay(step);
-      });
-    });
-  }
-
-  function positionTutorialOverlay(step){
-    const el = step.target();
-    if(!el){ return; } // 目標元素這一刻還沒渲染出來，等下一個 tick 再試
-    const r = el.getBoundingClientRect();
-    if(r.width === 0 && r.height === 0) return; // 元素還沒真的出現在畫面上
-    const pad = 8;
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const rect = {
-      left: Math.max(2, r.left - pad),
-      top: Math.max(2, r.top - pad),
-      right: Math.min(vw-2, r.right + pad),
-      bottom: Math.min(vh-2, r.bottom + pad)
-    };
-
-    tutMaskTop.style.cssText = 'left:0;top:0;width:'+vw+'px;height:'+Math.max(0,rect.top)+'px;';
-    tutMaskBottom.style.cssText = 'left:0;top:'+rect.bottom+'px;width:'+vw+'px;height:'+Math.max(0, vh-rect.bottom)+'px;';
-    tutMaskLeft.style.cssText = 'left:0;top:'+rect.top+'px;width:'+Math.max(0,rect.left)+'px;height:'+Math.max(0, rect.bottom-rect.top)+'px;';
-    tutMaskRight.style.cssText = 'left:'+rect.right+'px;top:'+rect.top+'px;width:'+Math.max(0, vw-rect.right)+'px;height:'+Math.max(0, rect.bottom-rect.top)+'px;';
-    tutorialRing.style.cssText = 'left:'+rect.left+'px;top:'+rect.top+'px;width:'+(rect.right-rect.left)+'px;height:'+(rect.bottom-rect.top)+'px;';
-
-    const bubbleW = tutorialBubble.offsetWidth || 280;
-    const bubbleH = tutorialBubble.offsetHeight || 130;
-    let bubbleTop;
-    if(vh - rect.bottom > bubbleH + 24){
-      bubbleTop = rect.bottom + 14;
-    } else if(rect.top > bubbleH + 24){
-      bubbleTop = rect.top - bubbleH - 14;
-    } else {
-      bubbleTop = Math.max(10, vh - bubbleH - 16); // 上下都放不下時，貼底顯示
-    }
-    let bubbleLeft = (rect.left + rect.right)/2 - bubbleW/2;
-    bubbleLeft = Math.max(12, Math.min(bubbleLeft, vw - bubbleW - 12));
-    tutorialBubble.style.left = bubbleLeft+'px';
-    tutorialBubble.style.top = bubbleTop+'px';
-  }
-
-  function tutorialTick(){
-    if(!tutorialActive) return;
-    const step = TUTORIAL_STEPS[tutorialStepIndex];
-    if(step) positionTutorialOverlay(step);
-    requestAnimationFrame(tutorialTick);
-  }
-
-  function startTutorial(){
-    // 1) 把使用者原本看到的真實資料整組存起來
-    tutorialSnapshot = {
-      columns: JSON.parse(JSON.stringify(columns)),
-      events: JSON.parse(JSON.stringify(events)),
-      currentDate: currentDate
-    };
-
-    // 2) 換上教學專用的假資料：兩個示範欄位 + 每個步驟各自獨立的示範行程
-    //    （每個步驟用自己專屬的行程，這樣不管使用者在某一步做了什麼
-    //    操作（複製、刪除、搬移…），都不會影響到後面步驟要用的示範行程）
-    tutorialDemoDate = todayStr();
-    columns = [
-      {id:'p1', name:'我'},
-      {id:'tut-friend', name:'小美'}
-    ];
-    events = [
-      {id:'tut-resize', title:'練習拖曳圓點', date:tutorialDemoDate, start:'09:00', end:'10:00', notes:'', participants:['p1'], creatorId:'p1'},
-      {id:'tut-menu', title:'練習長按選單', date:tutorialDemoDate, start:'12:00', end:'13:00', notes:'', participants:['tut-friend'], creatorId:'p1'},
-      {id:'tut-move', title:'練習搬移行程', date:tutorialDemoDate, start:'15:00', end:'16:00', notes:'', participants:['p1'], creatorId:'p1'},
-      {id:'tut-recur-a', title:'練習設定重複', date:tutorialDemoDate, start:'19:00', end:'19:30', notes:'', participants:['tut-friend'], creatorId:'p1', recurrence:null},
-      {id:'tut-recur-b', title:'每週練習同步編輯', date:tutorialDemoDate, start:'20:00', end:'20:30', notes:'', participants:['p1'], creatorId:'p1', recurrence:{weekdays:[weekdayOf(tutorialDemoDate)]}}
-    ];
-    currentDate = tutorialDemoDate;
-
-    tutorialActive = true;
-    tutorialStepIndex = 0;
-    tutorialOverlay.hidden = false;
-
-    renderTimeline();
-    showTutorialStep();
-    requestAnimationFrame(tutorialTick);
-  }
-
-  function endTutorial(){
-    tutorialActive = false;
-    tutorialOverlay.hidden = true;
-    datePicker.disabled = false; // 還原日期選擇器的可點擊狀態
-
-    // 教學結束時如果卡在編輯頁，先退回時間軸，避免等下換回真實資料後，
-    // 編輯頁還指著一個已經不存在的示範行程
-    if(pageEdit.classList.contains('active')) showPage('timeline');
-
-    // 3) 換回一開始存的真實資料快照，教學過程中的假資料/假操作全部丟棄
-    if(tutorialSnapshot){
-      columns = tutorialSnapshot.columns;
-      events = tutorialSnapshot.events;
-      currentDate = tutorialSnapshot.currentDate;
-      tutorialSnapshot = null;
-    }
-
-    try{ localStorage.setItem(TUTORIAL_SEEN_KEY, '1'); }catch(err){}
-
-    renderTimeline();
-  }
-
-  tutorialNextBtn.addEventListener('click', function(){
-    advanceTutorial();
-  });
-  tutorialSkipBtn.addEventListener('click', function(){
-    endTutorial();
-  });
-
-  // 「重看教學」按鍵：不管有沒有看過教學，點了就直接重新觸發一次，
-  // 方便測試；正式上線如果不想要這顆按鍵，把這段跟上面 HTML 那顆
-  // button 一起刪掉即可。
-  document.getElementById('btnReplayTutorial').addEventListener('click', function(){
-    if(tutorialActive) return; // 教學進行中再按一次就不重複觸發
-    startTutorial();
-  });
-
-  // 只有「第一次打開這個網頁」才自動跳出教學（判斷依據存在 localStorage，
-  // 只跟這台裝置的這個瀏覽器有關，不會用到後端資料）
-  let tutorialAlreadySeen = true;
-  try{
-    tutorialAlreadySeen = !!localStorage.getItem(TUTORIAL_SEEN_KEY);
-  }catch(err){
-    tutorialAlreadySeen = true; // localStorage 不可用時（例如沙盒預覽環境），乾脆不跳教學
-  }
-  if(!tutorialAlreadySeen){
-    setTimeout(startTutorial, 400); // 讓主畫面先正常渲染完一輪，教學疊層再蓋上去，避免畫面閃爍
-  }
 
 })();
 </script>
