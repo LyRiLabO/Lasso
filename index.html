@@ -24,6 +24,8 @@
     --sage:#7C8F6A;
     --dusk:#6E7FA3;
     --blush:#C77B6C;
+    --hour-px:50; /* 每小時的高度（px，不含單位），縮放時由 JS 更新這個變數，
+                     所有跟每小時高度成比例的地方（格線、卡片容器）都跟著變 */
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   /* 整個介面預設不能被框選文字，這是像手機 App 一樣操作的關鍵：
@@ -233,13 +235,13 @@
   }
   .day-slider{
     position:relative;
-    height:1200px; /* 24 * 50px，撐開外層可以捲動的高度 */
+    height:calc(var(--hour-px) * 24px);
     overflow-x:hidden;
   }
   .timeline-grid, .day-preview-panel{
     position:absolute;
     top:0; left:0; right:16px;
-    height:1200px;
+    height:calc(var(--hour-px) * 24px);
   }
   .timeline-grid{
     touch-action:none;
@@ -263,7 +265,7 @@
   .hour-row{
     position:absolute;
     left:0; right:0;
-    height:50px;
+    height:calc(var(--hour-px) * 1px);
     border-top:1px solid var(--line-soft);
   }
   .hour-row:first-child{border-top:none;}
@@ -278,7 +280,7 @@
   }
   .hour-row .half-tick{
     position:absolute;
-    left:52px; right:0; top:25px;
+    left:52px; right:0; top:calc(var(--hour-px) * 0.5px);
     border-top:1px dashed var(--line);
     opacity:.7;
   }
@@ -455,7 +457,7 @@
   .card-menu.arrow-up::after{ top:-6px; transform:translateX(-50%) rotate(180deg); }
 
   /* 好幾個很短、緊挨在一起的行程：各自的浮動標籤會疊在一起沒辦法辨識，
-     這種情況乾脆合併成一個「+N 個行程」提示，點下去才展開清單。
+     這種情況乾脆合併成一個「N 項行程」提示，點下去才展開清單。
      清單本身的視覺跟長按選單（.card-menu）同一套語彙，只是改成直向排列。 */
   .event-card .ecard-solo.ecard-cluster{
     pointer-events:auto;
@@ -1420,11 +1422,12 @@
     closeCardMenu();
   }, true);
 
-  /* ---------------- 緊鄰短行程合併後的「+N 個行程」清單彈窗 ----------------
+  /* ---------------- 緊鄰短行程合併後的「N 項行程」清單彈窗 ----------------
      浮動標籤解決了「文字被截斷/縮到看不清」，但好幾個很短的行程緊挨在
-     一起時，各自的浮動標籤還是會疊在一起沒辦法辨識。與其硬擠，乾脆把
-     這一群合併成一個「+N 個行程」提示，點下去才展開完整清單，點清單
-     裡的項目就直接跳去那個行程的編輯頁（跟平常點行程卡片一樣）。 */
+     一起時，各自的浮動標籤還是會疊在一起沒辦法辨識（不管是不是同一個
+     人的行程都可能發生）。與其硬擠，乾脆把這一群合併成一個「N 項行程」
+     提示，點下去才展開完整清單，點清單裡的項目就直接跳去那個行程的
+     編輯頁（跟平常點行程卡片一樣）。 */
   let clusterMenuEl = null;
 
   function closeClusterMenu(){
@@ -1438,7 +1441,7 @@
 
     const menu = document.createElement('div');
     menu.className = 'cluster-menu';
-    menu.innerHTML = '<div class="cluster-menu-title">'+items.length+' 個行程</div>';
+    menu.innerHTML = '<div class="cluster-menu-title">'+items.length+' 項行程</div>';
     items.forEach(item => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -1503,14 +1506,25 @@
   const columnHeaderRow = document.getElementById('columnHeaderRow');
   const weekdayLabel = document.getElementById('weekdayLabel');
   const dateLabel = document.getElementById('dateLabel');
+
+  // ---- 垂直縮放：每小時的高度（px） ----
+  // 預設 50px／小時，雙指 pinch／雙擊可以即時放大縮小；每次重新整理網頁
+  // 都會回到預設值，不會記住上次縮放到哪裡。放大到最大值時，就算是最短
+  // （5 分鐘）的行程也有足夠高度可以完整顯示一行文字，不需要再靠浮動標籤。
+  const HOUR_PX_DEFAULT = 50;
+  const HOUR_PX_MIN = 24;
+  const HOUR_PX_MAX = 300;
+  const HOUR_PX_ZOOM_STEP = 100; // 雙擊「放大一級」要跳到的高度
+  let hourPx = HOUR_PX_DEFAULT;
+  let pinchActive = false; // 雙指縮放進行中時，讓其他單指手勢（拖曳/調整時長/長按新增）全部按兵不動
   const datePicker = document.getElementById('datePicker');
   const dateDisplayBtn = document.getElementById('dateDisplayBtn');
   const dateContentCurrent = document.getElementById('dateContentCurrent');
 
   /* ---------------- 選取模式（批次刪除行程／使用者欄位） ----------------
      權限規則：
-     - 使用者欄位：只有自己的欄位（CURRENT_USER_ID）可以選取／刪除，
-       且僅剩一位使用者時不可刪除（canSelectColumn 直接擋掉，不給選）。
+     - 使用者欄位：僅剩一位使用者時不可刪除；除此之外任何欄位都可以選取
+       ／刪除，包含別人的（見下方 canSelectColumn 的說明）。
      - 行程：自己創建的行程（無論是否為共同行程）都可以選取／刪除；
        不是自己創建、但只單獨掛在自己欄位上的行程，也視為「自己欄位上的
        行程」可以選取／刪除；不是自己創建、且是跟別人共同參與的行程，
@@ -1519,8 +1533,10 @@
   let selectedEventKeys = new Set();   // 'masterId@instanceDate'
   let selectedColumnIds = new Set();
 
+  // 暫時開放：後端（Supabase）還沒接上真正的多人身份與 owner_id 機制之前，
+  // 這台裝置的操作者可以刪除任何人的欄位，不限自己的。等後端做好之後，
+  // 這裡要改回只放行 col.id === CURRENT_USER_ID（真正的 owner-only）。
   function canSelectColumn(col){
-    if(col.id !== CURRENT_USER_ID) return false;
     if(columns.length <= 1) return false; // 僅剩一位使用者，不可刪除
     return true;
   }
@@ -1666,11 +1682,41 @@
     for(let h=0; h<24; h++){
       const row = document.createElement('div');
       row.className = 'hour-row';
-      row.style.top = (h*50)+'px';
+      row.style.top = (h*hourPx)+'px';
       row.innerHTML = '<span class="hlabel">'+pad2(h)+':00</span><span class="half-tick"></span>'+
-        '<span class="quarter-tick" style="top:12.5px"></span><span class="quarter-tick" style="top:37.5px"></span>';
+        '<span class="quarter-tick" style="top:'+(hourPx*0.25)+'px"></span><span class="quarter-tick" style="top:'+(hourPx*0.75)+'px"></span>';
       timelineGrid.insertBefore(row, eventsLayer);
     }
+  }
+
+  // 縮放後重新整理畫面：格線、行程卡、現在時間線全部要依照新的 hourPx
+  // 重新計算位置。anchorClientY 是這次縮放要固定不動的螢幕座標（pinch
+  // 兩指的中點，或雙擊的那一點）；縮放前後都要讓同一個時間點對齊在這個
+  // 螢幕座標上，畫面才會有「以手指為中心放大/縮小」的自然手感，而不是
+  // 整個畫面跳來跳去。沒有指定 anchorClientY 時（例如未來若有其他呼叫
+  // 情境）就固定用可視範圍正中間當作縮放中心。
+  function setHourPx(newHourPx, anchorClientY){
+    newHourPx = Math.max(HOUR_PX_MIN, Math.min(HOUR_PX_MAX, newHourPx));
+    if(Math.abs(newHourPx - hourPx) < 0.5) return;
+
+    const scrollRect = timelineScroll.getBoundingClientRect();
+    const refClientY = anchorClientY != null ? anchorClientY : (scrollRect.top + timelineScroll.clientHeight/2);
+    // 用「舊」hourPx 換算出縮放中心目前對應到的絕對分鐘數
+    const anchorMin = (timelineScroll.scrollTop + (refClientY - scrollRect.top)) / hourPx * 60;
+
+    hourPx = newHourPx;
+    document.documentElement.style.setProperty('--hour-px', hourPx);
+    daySlider.style.height = (hourPx*24)+'px';
+    timelineGrid.style.height = (hourPx*24)+'px';
+    buildHourRows();
+    renderEvents();
+    renderNowLine();
+
+    // 縮放後，把同一個時間點（anchorMin）重新對齊回 refClientY 這個螢幕座標
+    const newTop = anchorMin/60*hourPx;
+    const targetScrollTop = newTop - (refClientY - scrollRect.top);
+    const maxScroll = Math.max(0, timelineScroll.scrollHeight - timelineScroll.clientHeight);
+    timelineScroll.scrollTop = Math.max(0, Math.min(maxScroll, targetScrollTop));
   }
 
   function renderDateHeader(){
@@ -1690,7 +1736,7 @@
     const min = now.getHours()*60 + now.getMinutes();
     const line = document.createElement('div');
     line.className = 'now-line';
-    line.style.top = (min/60*50)+'px';
+    line.style.top = (min/60*hourPx)+'px';
     timelineGrid.insertBefore(line, eventsLayer);
   }
 
@@ -1713,14 +1759,14 @@
 
     const n = Math.max(1, columns.length);
     // 裝不下、需要浮動標籤的候選項先集中收集起來，等這一天的卡片都建完，
-    // 才能正確判斷哪些會疊在一起、需要合併成「+N 個行程」（見 renderFloatLabels）。
+    // 才能正確判斷哪些會疊在一起、需要合併成「N 項行程」（見 renderFloatLabels）。
     const floatCandidates = [];
 
     insts.forEach(inst => {
       const startMin = timeToMinutes(inst.start);
       const endMin = timeToMinutes(inst.end);
-      const top = startMin/60*50;
-      const height = Math.max(8, (endMin-startMin)/60*50);
+      const top = startMin/60*hourPx;
+      const height = Math.max(8, (endMin-startMin)/60*hourPx);
       const durationMin = endMin - startMin;
       const runs = eventColRuns(inst);
       const firstIdx = runs[0][0]; // 顏色統一用第一位參與者，同一行程的每個分段顏色一致
@@ -1802,45 +1848,54 @@
     renderFloatLabels(floatCandidates);
   }
 
-  // 幫「裝不下、需要浮動標籤」的候選項分群：欄位範圍完全相同（代表彼此
-  // 時間沒有重疊、不是被拆成並排的分段）而且垂直距離近到標籤會疊在一起
-  // 的，合併成一個「+N 個行程」提示，點下去才展開清單；沒有跟其他項目
-  // 擠在一起的，照原本方式各自顯示完整的浮動標籤。
+  // 幫「裝不下、需要浮動標籤」的候選項分群：只要欄位範圍相鄰或重疊、
+  // 而且垂直距離近到標籤會疊在一起，不管是不是同一個人的行程都合併成
+  // 一個「N 項行程」提示，點下去才展開清單；沒有跟其他項目擠在一起的，
+  // 照原本方式各自顯示完整的浮動標籤。
+  //
+  // 用 union-find 做群組合併，而不是單純依 top 排序後往下掃：因為同一
+  // 時段常常會同時有好幾個人的欄位緊鄰在一起，彼此的欄位範圍不會完全
+  // 相同（分別是不同人的欄位），照時間排序掃過去會漏掉「欄位相鄰但
+  // 中間夾著別的時間點的項目」這種情況，用 union-find 兩兩比對才不會漏。
   function renderFloatLabels(candidates){
     const CLUSTER_GAP = 28; // 約略一個標籤本身的高度，兩個色塊間的空隙小於這個值就視為標籤會疊在一起
 
-    const groups = new Map(); // key: 'runMin-runMax'
-    candidates.forEach(c => {
-      const key = c.runMin+'-'+c.runMax;
-      if(!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(c);
+    const n = candidates.length;
+    const parent = candidates.map((_, i) => i);
+    function find(i){ while(parent[i]!==i){ parent[i]=parent[parent[i]]; i=parent[i]; } return i; }
+    function union(i,j){ const ri=find(i), rj=find(j); if(ri!==rj) parent[ri]=rj; }
+
+    for(let i=0; i<n; i++){
+      for(let j=i+1; j<n; j++){
+        const a = candidates[i], b = candidates[j];
+        const colsTouch = a.runMin <= b.runMax+1 && b.runMin <= a.runMax+1; // 欄位相鄰或重疊
+        if(!colsTouch) continue;
+        const vGap = (a.top <= b.top) ? b.top-(a.top+a.height) : a.top-(b.top+b.height);
+        if(vGap < CLUSTER_GAP) union(i,j);
+      }
+    }
+
+    const groups = new Map();
+    candidates.forEach((c, i) => {
+      const root = find(i);
+      if(!groups.has(root)) groups.set(root, []);
+      groups.get(root).push(c);
     });
 
-    groups.forEach(list => {
-      list.sort((a,b) => a.top - b.top);
-      let cluster = [list[0]];
-      for(let i=1; i<list.length; i++){
-        const prev = cluster[cluster.length-1];
-        const cur = list[i];
-        if(cur.top - (prev.top+prev.height) < CLUSTER_GAP){
-          cluster.push(cur);
-        } else {
-          flushCluster(cluster);
-          cluster = [cur];
-        }
-      }
+    groups.forEach(cluster => {
+      cluster.sort((a,b) => a.top - b.top || a.runMin - b.runMin);
       flushCluster(cluster);
     });
 
     function flushCluster(cluster){
-      const anchor = cluster[0]; // 群組一律貼在最上面那一個項目的位置
+      const anchor = cluster[0]; // 群組一律貼在最上面（同高度則最左）那一個項目的位置
       const label = document.createElement('span');
       label.className = 'ecard-solo';
       if(cluster.length === 1){
         label.innerHTML = anchor.recurMark + anchor.title + ' · ' + anchor.timeStr;
       } else {
         label.classList.add('ecard-cluster');
-        label.textContent = '+' + cluster.length + ' 個行程';
+        label.textContent = cluster.length + ' 項行程';
         // 卡片本身是靠 pointerdown 判斷「點一下開編輯頁」的，click 事件
         // 發生得太晚（pointerdown 早就先冒泡上去把編輯頁打開了），所以
         // 這裡要在 pointerdown 階段就攔截並直接開清單，不能只擋 click。
@@ -1907,7 +1962,7 @@
     for(let h=0; h<24; h++){
       const row = document.createElement('div');
       row.className = 'hour-row';
-      row.style.top = (h*50)+'px';
+      row.style.top = (h*hourPx)+'px';
       row.innerHTML = '<span class="hlabel">'+pad2(h)+':00</span><span class="half-tick"></span>';
       panel.appendChild(row);
     }
@@ -1928,8 +1983,8 @@
     getInstancesForDate(dateStr).forEach(inst => {
       const startMin = timeToMinutes(inst.start);
       const endMin = timeToMinutes(inst.end);
-      const top = startMin/60*50;
-      const height = Math.max(8, (endMin-startMin)/60*50);
+      const top = startMin/60*hourPx;
+      const height = Math.max(8, (endMin-startMin)/60*hourPx);
       const durationMin = endMin-startMin;
       const runs = eventColRuns(inst);
       const firstIdx = runs[0][0];
@@ -2187,7 +2242,7 @@
     // 使用者可以直接看數字決定要在哪裡鬆手，不用肉眼對齊格線。
     const ghostTop = clientY - floatingDrag.grabOffsetY;
     const gridRect = timelineGrid.getBoundingClientRect();
-    const rawMin = Math.round((ghostTop - gridRect.top)/50*60);
+    const rawMin = Math.round((ghostTop - gridRect.top)/hourPx*60);
     const snappedStart = Math.max(0, Math.min(23*60, Math.round(rawMin/5)*5));
     const previewStr = minutesToTime(snappedStart)+' - '+minutesToTime(snappedStart + floatingDrag.durationMin);
     updateCardTimeDisplay(floatingDrag.ghost, floatingDrag.meta, previewStr);
@@ -2239,7 +2294,7 @@
     const ghostTop = clientY - fd.grabOffsetY;
 
     const gridRect = timelineGrid.getBoundingClientRect();
-    const rawMin = Math.round((ghostTop - gridRect.top)/50*60);
+    const rawMin = Math.round((ghostTop - gridRect.top)/hourPx*60);
     const snappedStart = Math.max(0, Math.min(23*60, Math.round(rawMin/5)*5));
     const newStart = minutesToTime(snappedStart);
     const newEnd = minutesToTime(snappedStart + fd.durationMin);
@@ -2282,6 +2337,7 @@
     let scrollVelocity = 0;
 
     card.addEventListener('pointerdown', function(e){
+      if(pinchActive) return; // 雙指縮放進行中，單指手勢一律不啟動
       e.stopPropagation();
 
       if(selectMode){
@@ -2313,6 +2369,7 @@
       }, 400);
 
       const onMove = function(ev2){
+        if(pinchActive) return; // 雙指縮放進行中，這個手勢不再繼續處理
         const dy = ev2.clientY - startY;
 
         if(phase === 'idle'){
@@ -2388,6 +2445,7 @@
     let finalHeight = 0, finalWidthPx = 0;
 
     handle.addEventListener('pointerdown', function(e){
+      if(pinchActive) return; // 雙指縮放進行中，單指手勢一律不啟動
       e.stopPropagation(); // 不要觸發卡片本體「移動時間」的那組互動
 
       startX = e.clientX;
@@ -2422,7 +2480,7 @@
         // 上下拖曳：高度直接跟著手指的原始位移連續變化，拖曳過程中不吸附，
         // 起始時間固定，只延伸/縮短下緣，放開的那一刻才吸附到 15 分鐘格線。
         let newHeight = origHeight + (e2.clientY - startY);
-        newHeight = Math.max(8, Math.min(newHeight, 1200 - origTop));
+        newHeight = Math.max(8, Math.min(newHeight, hourPx*24 - origTop));
 
         // 左右拖曳：寬度同樣直接跟著手指的原始像素位移連續變化（不是整欄
         // 整欄跳），左緣（起始欄）固定不動，放開才換算成實際涵蓋幾欄。
@@ -2441,9 +2499,9 @@
           !(i.masterId === inst.masterId && i.instanceDate === inst.instanceDate)
         );
 
-        let heightLimit = 1200 - origTop;
+        let heightLimit = hourPx*24 - origTop;
         otherInsts.forEach(other => {
-          const oTop = timeToMinutes(other.start)/60*50;
+          const oTop = timeToMinutes(other.start)/60*hourPx;
           if(oTop < origTop) return; // 只考慮起始時間之後（下方）的
           eventColRuns(other).forEach(([oMin, oMax]) => {
             if(runMin <= oMax && oMin <= roughColMax) heightLimit = Math.min(heightLimit, oTop - origTop);
@@ -2451,8 +2509,8 @@
         });
         newHeight = Math.max(8, Math.min(newHeight, heightLimit));
 
-        const curStartMin = Math.round(origTop/50*60);
-        const curEndMin = Math.round((origTop+newHeight)/50*60);
+        const curStartMin = Math.round(origTop/hourPx*60);
+        const curEndMin = Math.round((origTop+newHeight)/hourPx*60);
         let widthLimit = evRect.right - cardLeft;
         otherInsts.forEach(other => {
           const oStart = timeToMinutes(other.start), oEnd = timeToMinutes(other.end);
@@ -2471,8 +2529,8 @@
         // 即時預覽：用跟放開時完全相同的 5 分鐘吸附規則換算目前的結束時間，
         // 直接寫回卡片上的時間文字，這樣使用者放手時看到的數字
         // 就是最終會套用的結果，不會有落差。
-        const startMinAbs = Math.round(origTop/50*60);
-        const previewDurationMin = Math.max(5, Math.round(newHeight/50*60/5)*5);
+        const startMinAbs = Math.round(origTop/hourPx*60);
+        const previewDurationMin = Math.max(5, Math.round(newHeight/hourPx*60/5)*5);
         const previewEndMin = startMinAbs + previewDurationMin;
         updateCardTimeDisplay(card, meta, minutesToTime(startMinAbs)+' - '+minutesToTime(previewEndMin));
       };
@@ -2488,9 +2546,9 @@
           handle.classList.remove('active');
 
           // 高度 → 吸附到 5 分鐘
-          let durationMin = Math.round(finalHeight/50*60/5)*5;
+          let durationMin = Math.round(finalHeight/hourPx*60/5)*5;
           durationMin = Math.max(5, durationMin);
-          const startMinAbs = Math.round(origTop/50*60);
+          const startMinAbs = Math.round(origTop/hourPx*60);
           const newStart = minutesToTime(startMinAbs);
           const newEnd = minutesToTime(startMinAbs + durationMin);
 
@@ -2558,8 +2616,8 @@
     momentumRAF = requestAnimationFrame(step);
   }
 
-  function snapToFiveMin(px){ return Math.round(px/(50/12))*(50/12); } // 50/12px ≈ 4.17px = 5分鐘（50px/小時 ÷ 12），格線視覺上仍只畫到15分刻度，只是拖曳吸附變細
-  const FIVE_MIN_PX = 50/12; // 5 分鐘對應的像素高度，供各處拖曳/縮放/建立行程的最小單位統一使用
+  function snapToFiveMin(px){ const step = hourPx/12; return Math.round(px/step)*step; } // hourPx/12px = 5分鐘（每小時高度 ÷ 12），格線視覺上仍只畫到15分刻度，只是拖曳吸附變細
+  function fiveMinPx(){ return hourPx/12; } // 5 分鐘對應的像素高度，供各處拖曳/縮放/建立行程的最小單位統一使用；隨 hourPx 縮放即時變動，所以寫成函式而不是常數
 
   // 讓拉框選取的範圍不能延伸進已經被其他行程占用的地方：anchorPx/anchorColIdx
   // 是拖曳的固定端（手指最初按下的位置），只有「正在延伸」的那一端會被
@@ -2569,8 +2627,8 @@
     const insts = getInstancesForDate(currentDate);
     const blockers = [];
     insts.forEach(inst => {
-      const iTop = timeToMinutes(inst.start)/60*50;
-      const iBottom = timeToMinutes(inst.end)/60*50;
+      const iTop = timeToMinutes(inst.start)/60*hourPx;
+      const iBottom = timeToMinutes(inst.end)/60*hourPx;
       eventColRuns(inst).forEach(([runMin, runMax]) => {
         if(colMin <= runMax && runMin <= colMax && top < iBottom && iTop < bottom){
           blockers.push({iTop, iBottom, runMin, runMax});
@@ -2630,17 +2688,17 @@
     box.style.height = Math.max(6, trueHeight)+'px'; // 視覺上留一點高度看得到,但不代表可以建立
     box.style.left = 'calc(' + (colMin/n*100) + '% + 2px)';
     box.style.width = 'calc(' + ((colMax-colMin+1)/n*100) + '% - 4px)';
-    box.classList.toggle('no-room', trueHeight < FIVE_MIN_PX);
+    box.classList.toggle('no-room', trueHeight < fiveMinPx());
     // 直接記錄實際欄位索引跟「真實」高度，放開時讀這裡即可，不要從
     // calc() 字串或被強制拉高的 style.height 反推。
     box.dataset.colMin = colMin;
     box.dataset.colMax = colMax;
     box.dataset.trueTop = topPx;
     box.dataset.trueBottom = bottomPx;
-    const startMin = Math.round(topPx/50*60);
-    const endMin = Math.round(bottomPx/50*60);
+    const startMin = Math.round(topPx/hourPx*60);
+    const endMin = Math.round(bottomPx/hourPx*60);
     const names = columns.slice(colMin, colMax+1).map(c=>c.name).join('、');
-    box.querySelector('.selection-label').textContent = trueHeight < FIVE_MIN_PX
+    box.querySelector('.selection-label').textContent = trueHeight < fiveMinPx()
       ? '沒有空間'
       : minutesToTime(startMin) + ' – ' + minutesToTime(endMin) + (names ? ' · '+names : '');
   }
@@ -2661,6 +2719,7 @@
     }
 
     function onMove(e){
+      if(pinchActive) return; // 雙指縮放進行中，這個手勢不再繼續處理
       const rect = eventsLayer.getBoundingClientRect();
       const curPx = e.clientY - rect.top;
 
@@ -2696,8 +2755,8 @@
       let top = Math.min(anchorPx, curPx);
       let bottom = Math.max(anchorPx, curPx);
       top = Math.max(0, snapToFiveMin(top));
-      bottom = Math.min(1200, snapToFiveMin(bottom));
-      if(bottom - top < FIVE_MIN_PX) bottom = top + FIVE_MIN_PX;
+      bottom = Math.min(hourPx*24, snapToFiveMin(bottom));
+      if(bottom - top < fiveMinPx()) bottom = top + fiveMinPx();
 
       const curColIdx = colIdxFromX(e.clientX);
       const colMin = Math.min(anchorColIdx, curColIdx);
@@ -2722,9 +2781,9 @@
         const colMin = Number(box.dataset.colMin);
         const colMax = Number(box.dataset.colMax);
         removeSelectionBox();
-        if(bottom - top >= FIVE_MIN_PX){ // 被夾到沒有空間時這裡會趨近 0，不建立行程
-          const startMin = Math.round(top/50*60);
-          const endMin = Math.round(bottom/50*60);
+        if(bottom - top >= fiveMinPx()){ // 被夾到沒有空間時這裡會趨近 0，不建立行程
+          const startMin = Math.round(top/hourPx*60);
+          const endMin = Math.round(bottom/hourPx*60);
           const participantIds = columns.slice(colMin, colMax+1).map(c=>c.id);
           createNewEvent(startMin, endMin, participantIds);
         }
@@ -2741,6 +2800,7 @@
 
     timelineGrid.addEventListener('pointerdown', function(e){
       if(selectMode) return; // 選取狀態下，空白處長按不建立新行程，避免手勢衝突
+      if(pinchActive) return; // 雙指縮放進行中，單指手勢一律不啟動
       // 只處理空白區域（行程卡自己的 pointerdown 會 stopPropagation）
       stopMomentumScroll(); // 再次觸碰畫面就先停掉還在滑的慣性捲動
       downY = e.clientY;
@@ -2760,7 +2820,7 @@
         selecting = true;
         if(navigator.vibrate) navigator.vibrate(15);
         let top = Math.max(0, snapToFiveMin(anchorPx));
-        let bottom = Math.min(1200, top + 50); // 預設長按不拖曳＝1小時
+        let bottom = Math.min(hourPx*24, top + hourPx); // 預設長按不拖曳＝1小時
         const clamped = clampSelectionAgainstCollisions(top, bottom, anchorColIdx, anchorColIdx, true, true);
         paintSelectionBox(clamped.top, clamped.bottom, clamped.colMin, clamped.colMax);
       }, 400);
@@ -3063,17 +3123,98 @@
   }
   buildHourRows();
   renderTimeline();
+
+  /* ---------------- 垂直縮放手勢：雙指 pinch ＋ 雙擊快速切換 ----------------
+     用 capture 階段監聽 pointerdown/pointermove/pointerup，這樣不管是點在
+     空白處還是行程卡片上（子元素自己的 pointerdown 通常會 stopPropagation），
+     都一定能偵測到「現在有幾根手指按著」，藉此判斷雙指 pinch 是否開始。
+     一旦偵測到第二根手指按下，就把 pinchActive 設成 true，讓其他單指手勢
+     （拖曳搬移、調整時長、長按新增行程）在各自的 pointerdown/onMove 裡
+     自動略過（見前面幾處 `if(pinchActive) return;`）。 */
+  (function(){
+    const activePointers = new Map(); // pointerId -> {x, y}，縮放期間持續更新，用來算兩指距離
+    const downPositions = new Map();  // pointerId -> {x, y}，記錄按下當下的位置，判斷放開時是不是「真的只是輕點」
+    let pinchStartDist = 0;
+    let pinchStartHourPx = HOUR_PX_DEFAULT;
+
+    function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+    function currentTwoPoints(){
+      const pts = Array.from(activePointers.values());
+      return pts.length >= 2 ? [pts[0], pts[1]] : null;
+    }
+
+    timelineScroll.addEventListener('pointerdown', function(e){
+      activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      downPositions.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      if(activePointers.size === 2){
+        const [p1, p2] = currentTwoPoints();
+        pinchActive = true;
+        pinchStartDist = dist(p1, p2) || 1;
+        pinchStartHourPx = hourPx;
+        closeCardMenu();
+        closeClusterMenu();
+        stopMomentumScroll();
+      }
+    }, true);
+
+    timelineScroll.addEventListener('pointermove', function(e){
+      if(!activePointers.has(e.pointerId)) return;
+      activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      if(!pinchActive || activePointers.size < 2) return;
+      const [p1, p2] = currentTwoPoints();
+      const curDist = dist(p1, p2) || 1;
+      const midY = (p1.y+p2.y)/2;
+      setHourPx(pinchStartHourPx * (curDist / pinchStartDist), midY);
+    }, true);
+
+    // 雙擊快速切換「預設／放大一級」，方便單指操作、不方便用雙指 pinch 的人。
+    // 只有「按下到放開之間幾乎沒有移動」才算數，避免拖曳搬移行程、調整
+    // 時長、放開慣性捲動之類的操作被誤判成點擊。
+    let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+
+    timelineScroll.addEventListener('pointerup', function(e){
+      const wasPinching = activePointers.size >= 2;
+      const downPos = downPositions.get(e.pointerId);
+      activePointers.delete(e.pointerId);
+      downPositions.delete(e.pointerId);
+      if(activePointers.size < 2) pinchActive = false;
+      if(wasPinching || !downPos) return; // 剛結束一次 pinch，這一放開不算輕點
+
+      const movedSinceDown = dist(downPos, {x:e.clientX, y:e.clientY});
+      if(movedSinceDown > 12) return; // 手指移動過，代表這是拖曳/長按類的放開，不是輕點
+
+      const now = performance.now();
+      const dt = now - lastTapTime;
+      const movedFromLastTap = Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY);
+      if(dt < 300 && movedFromLastTap < 25){
+        lastTapTime = 0; // 消耗掉這次雙擊，避免連續多擊又誤觸發
+        const target = (Math.abs(hourPx - HOUR_PX_DEFAULT) < 1) ? HOUR_PX_ZOOM_STEP : HOUR_PX_DEFAULT;
+        setHourPx(target, e.clientY);
+      } else {
+        lastTapTime = now;
+        lastTapX = e.clientX;
+        lastTapY = e.clientY;
+      }
+    }, true);
+
+    timelineScroll.addEventListener('pointercancel', function(e){
+      activePointers.delete(e.pointerId);
+      downPositions.delete(e.pointerId);
+      if(activePointers.size < 2) pinchActive = false;
+    }, true);
+  })();
+
   // 開場自動捲到「現在時間線」的位置，讓那條線落在可視範圍由上往下 1/3
   // 的地方；如果現在時間太晚，往下捲會超過畫面底部，夾限會自動讓它
   // 停在捲動範圍的最底端，不會硬要維持在 1/3 處造成過捲。
   function scrollToNowLine(){
     if(currentDate !== todayStr()){
-      timelineScroll.scrollTop = 7*50; // 不是今天就沒有「現在時間線」，退回原本的預設位置
+      timelineScroll.scrollTop = 7*hourPx; // 不是今天就沒有「現在時間線」，退回原本的預設位置
       return;
     }
     const now = new Date();
     const nowMin = now.getHours()*60 + now.getMinutes();
-    const nowTopPx = nowMin/60*50;
+    const nowTopPx = nowMin/60*hourPx;
     const visibleHeight = timelineScroll.clientHeight;
     let target = nowTopPx - visibleHeight/3;
     const maxScroll = Math.max(0, timelineScroll.scrollHeight - timelineScroll.clientHeight);
