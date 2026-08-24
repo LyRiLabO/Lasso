@@ -315,9 +315,8 @@
     left:0; right:0;
     min-height:8px;
     touch-action:none;
-    background:var(--card);
+    background:var(--ecard-color, var(--card));
     border-radius:8px;
-    border-left:4px solid var(--gold);
     box-shadow:0 2px 6px var(--shadow);
     padding:5px 10px;
     overflow:hidden;
@@ -329,7 +328,7 @@
     font-family:'Noto Sans TC', sans-serif;
     font-weight:700;
     font-size:12.5px;
-    color:var(--ink);
+    color:var(--ecard-text, var(--ink));
     line-height:1.25;
     white-space:nowrap;
     overflow:hidden;
@@ -338,17 +337,10 @@
   .event-card .ecard-time{
     font-family:'JetBrains Mono', monospace;
     font-size:9.5px;
-    color:var(--ink-soft);
+    color:var(--ecard-text-soft, var(--ink-soft));
     margin-top:1px;
   }
-  .event-card.c-gold{border-left-color:var(--gold);}
-  .event-card.c-sage{border-left-color:var(--sage);}
-  .event-card.c-dusk{border-left-color:var(--dusk);}
-  .event-card.c-blush{border-left-color:var(--blush);}
-  .event-card.c-gold .resize-handle::after{background:var(--gold);}
-  .event-card.c-sage .resize-handle::after{background:var(--sage);}
-  .event-card.c-dusk .resize-handle::after{background:var(--dusk);}
-  .event-card.c-blush .resize-handle::after{background:var(--blush);}
+  .event-card .resize-handle::after{background:var(--ecard-handle-color, var(--ecard-color, var(--gold)));}
   /* 選取狀態：拖曳圓點收起（避免跟選取手勢打架），
      已選取的行程整張卡片變灰，沒有權限選取的行程則半透明淡出、無法點擊。 */
   .event-card.select-mode .resize-handle{display:none;}
@@ -375,26 +367,38 @@
   }
   .resize-handle{
     position:absolute;
-    right:-13px; bottom:-13px;
     width:36px; height:36px;
     display:flex;
     align-items:center;
     justify-content:center;
-    cursor:se-resize;
     touch-action:none;
     z-index:13;
   }
+  .resize-handle.rh-tl{ left:-13px; top:-13px; cursor:nw-resize; }
+  .resize-handle.rh-tr{ right:-13px; top:-13px; cursor:ne-resize; }
+  .resize-handle.rh-bl{ left:-13px; bottom:-13px; cursor:sw-resize; }
+  .resize-handle.rh-br{ right:-13px; bottom:-13px; cursor:se-resize; }
   .resize-handle::after{
     content:"";
     display:block;
-    width:26px; height:26px;
+    width:22px; height:22px;
     border-radius:50%;
-    background:var(--ink);
+    background:var(--ecard-handle-color, var(--ink));
     border:2.5px solid var(--paper);
-    transition:transform .12s ease;
+    opacity:0;
+    transform:scale(.4);
+    transition:opacity .12s ease, transform .12s ease;
+  }
+  /* 平常隱形，手指按下格子角落的那一刻（不用等長按判定完成）先給觸控回饋，
+     真正進入縮放狀態（長按 400ms 判定通過）後再放大一級，跟原本單一把手
+     的手感一致。 */
+  .resize-handle.touched::after{
+    opacity:1;
+    transform:scale(1);
   }
   .resize-handle.active::after{
-    transform:scale(1.7);
+    opacity:1;
+    transform:scale(1.55);
   }
 
   /* 長按拖曳行程時的浮動卡片：脫離欄位的百分比定位系統，直接用
@@ -462,6 +466,7 @@
   .event-card .ecard-solo.ecard-cluster{
     pointer-events:auto;
     cursor:pointer;
+    color:var(--paper);
     background:var(--red);
   }
   .cluster-menu{
@@ -499,14 +504,19 @@
     white-space:nowrap;
     overflow:hidden;
   }
-  .cluster-menu button span:first-child{
+  .cluster-menu button span.cluster-dot{
+    width:9px; height:9px;
+    border-radius:50%;
+    flex:0 0 auto;
+  }
+  .cluster-menu button span.cluster-title{
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
     flex:1 1 auto;
     min-width:0;
   }
-  .cluster-menu button span:last-child{
+  .cluster-menu button span.cluster-time{
     flex:0 0 auto;
     font-weight:600;
     font-size:11.5px;
@@ -517,7 +527,7 @@
   .cluster-menu button.selected{
     background:rgba(192,138,46,0.24);
   }
-  .cluster-menu button.selected span:first-child{color:var(--gold);}
+  .cluster-menu button.selected span.cluster-title{color:var(--gold);}
   .cluster-menu button.locked{
     opacity:.4;
     cursor:not-allowed;
@@ -564,12 +574,14 @@
     position:absolute;
     left:0;
     white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
     font-family:'Noto Sans TC', sans-serif;
     font-weight:700;
     font-size:11px;
     line-height:1.3;
-    color:var(--paper);
-    background:var(--ink);
+    color:var(--ecard-text, var(--paper));
+    background:var(--ecard-color, var(--ink));
     padding:3px 8px;
     border-radius:8px;
     box-shadow:0 3px 8px rgba(32,38,58,0.32);
@@ -880,6 +892,27 @@
   }
   .participant-chip.selected .chip-dot{background:var(--paper);}
 
+  .color-box{
+    display:flex; flex-wrap:wrap; gap:10px;
+  }
+  .color-swatch{
+    width:32px; height:32px;
+    border-radius:50%;
+    border:2px solid transparent;
+    cursor:pointer;
+    position:relative;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06);
+  }
+  .color-swatch.selected{
+    border-color:var(--ink);
+  }
+  .color-swatch.selected::after{
+    content:"";
+    position:absolute; inset:6px;
+    border-radius:50%;
+    border:2px solid var(--paper);
+  }
+
   .weekday-box{
     display:flex; gap:8px;
   }
@@ -948,14 +981,14 @@
     float:right;
     font-size:22px;
     line-height:0.7;
-    color:var(--ink-soft);
+    color:var(--ecard-text-soft, var(--ink-soft));
     margin-left:4px;
   }
   .ecard-recur-inline{
     font-size:1.7em;
     line-height:0;
     vertical-align:-3px;
-    color:var(--ink-soft);
+    color:var(--ecard-text-soft, var(--ink-soft));
     margin-right:2px;
     display:inline-block;
   }
@@ -1068,12 +1101,13 @@
               <label for="fieldEnd">結束時間</label>
               <input id="fieldEnd" type="time" step="300">
             </div>
-            <div class="tcell">
-              <label for="fieldDuration">所需分鐘</label>
-              <input id="fieldDuration" type="number" min="5" step="5" inputmode="numeric">
-            </div>
           </div>
         </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">顏色</span>
+        <div class="color-box" id="colorBox"></div>
       </div>
 
       <div class="field">
@@ -1136,9 +1170,9 @@
   const CURRENT_USER_ID = 'p1';
 
   let events = [
-    {id:'e1', title:'晨間會議', date:T0, start:'09:00', end:'10:30', notes:'記得帶筆電與投影線材。', participants:['p1'], creatorId:'p1'},
-    {id:'e2', title:'研究冰淇淋機', date:T0, start:'14:00', end:'15:00', notes:'客廳桌上製作，不准上床。', participants:['p1'], creatorId:'p1'},
-    {id:'e3', title:'健身房', date:T0, start:'19:00', end:'20:00', notes:'', participants:['p1'], creatorId:'p1'}
+    {id:'e1', title:'晨間會議', date:T0, start:'09:00', end:'10:30', notes:'記得帶筆電與投影線材。', participants:['p1'], creatorId:'p1', color:'morandi-blue'},
+    {id:'e2', title:'研究冰淇淋機', date:T0, start:'14:00', end:'15:00', notes:'客廳桌上製作，不准上床。', participants:['p1'], creatorId:'p1', color:'macaron-peach'},
+    {id:'e3', title:'健身房', date:T0, start:'19:00', end:'20:00', notes:'', participants:['p1'], creatorId:'p1', color:'morandi-sage'}
   ];
 
   /* ---------------- 本機儲存（重新整理、關掉分頁再打開，資料還在） ----------------
@@ -1188,13 +1222,59 @@
     const h = Math.floor(min/60), m = min%60;
     return pad2(h)+':'+pad2(m);
   };
-  const colorClass = id => {
-    const arr=['c-gold','c-sage','c-dusk','c-blush'];
-    let h=0; for(const ch of String(id)) h = (h*31 + ch.charCodeAt(0))>>>0;
-    return arr[h % arr.length];
-  };
   const PALETTE = ['gold','sage','dusk','blush'];
   const colByIndex = idx => PALETTE[((idx%PALETTE.length)+PALETTE.length)%PALETTE.length];
+
+  // 行程自訂顏色：莫蘭迪＋馬卡龍色系，讓使用者以顏色為行程分類
+  // （跟上面 colByIndex 那組「依使用者欄位分色」的邏輯彼此獨立，
+  // 欄位標題用 colByIndex，行程卡片本身改用這裡的 EVENT_COLORS）
+  const EVENT_COLORS = [
+    {id:'morandi-mauve',  name:'霧霧藕色', hex:'#B79C97'},
+    {id:'morandi-blue',   name:'霧灰藍',   hex:'#8FA1B0'},
+    {id:'morandi-sage',   name:'鼠尾草綠', hex:'#A3AC93'},
+    {id:'morandi-oat',    name:'燕麥杏',   hex:'#CBBBA3'},
+    {id:'morandi-lilac',  name:'霧灰紫',   hex:'#A79BB0'},
+    {id:'morandi-teal',   name:'煙燻藍綠', hex:'#7E9C93'},
+    {id:'morandi-clay',   name:'陶土棕',   hex:'#BA8F76'},
+    {id:'morandi-fog',    name:'霧灰',     hex:'#B7B6AC'},
+    {id:'macaron-peach',  name:'粉桃',     hex:'#FBD3C4'},
+    {id:'macaron-mint',   name:'薄荷綠',   hex:'#CDEBD8'},
+    {id:'macaron-lavender', name:'淡紫',   hex:'#E4D6F5'},
+    {id:'macaron-lemon',  name:'檸檬黃',   hex:'#FCEFB4'},
+    {id:'macaron-sky',    name:'天空藍',   hex:'#CBE6F6'},
+    {id:'macaron-pink',   name:'草莓粉',   hex:'#FBCBD7'},
+    {id:'morandi-charcoal', name:'深灰藍', hex:'#5C6B73'},
+    {id:'morandi-plum',   name:'深梅紫',   hex:'#6E5265'}
+  ];
+  const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
+  const eventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
+
+  // 淺色格子配黑字、深色格子配白字：用感知亮度（YIQ）快速判斷，
+  // 不需要精確色彩科學，只要淺／深兩邊都選對就好。
+  function isLightColor(hex){
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    const yiq = (r*299 + g*587 + b*114) / 1000;
+    return yiq >= 150;
+  }
+
+  // 把把手顏色調得比格子本身的顏色略深一些，讓把手在同色格子上仍看得出輪廓。
+  function darkenHex(hex, amount){
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    const dr = Math.max(0, Math.round(r*(1-amount)));
+    const dg = Math.max(0, Math.round(g*(1-amount)));
+    const db = Math.max(0, Math.round(b*(1-amount)));
+    return '#' + [dr,dg,db].map(v => v.toString(16).padStart(2,'0')).join('');
+  }
+
+  // 套用行程自訂顏色到卡片：整個格子填滿該色，並依明暗決定文字用黑或白。
+  function applyEventColor(card, colorId){
+    const c = eventColorById(colorId);
+    const light = isLightColor(c.hex);
+    card.style.setProperty('--ecard-color', c.hex);
+    card.style.setProperty('--ecard-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
+    card.style.setProperty('--ecard-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
+    card.style.setProperty('--ecard-handle-color', darkenHex(c.hex, 0.22));
+  }
 
   function colIndex(colId){
     return columns.findIndex(c => c.id === colId);
@@ -1274,6 +1354,7 @@
             end: ov.end !== undefined ? ov.end : ev.end,
             notes: ov.notes !== undefined ? ov.notes : ev.notes,
             participants: ov.participants !== undefined ? ov.participants : ev.participants,
+            color: ev.color || DEFAULT_EVENT_COLOR,
             creatorId: creatorId,
             isRecurring: true,
             hasOverride: !!(ev.overrides && ev.overrides[dateStr])
@@ -1285,6 +1366,7 @@
           instanceDate: dateStr,
           title: ev.title, start: ev.start, end: ev.end,
           notes: ev.notes, participants: ev.participants,
+          color: ev.color || DEFAULT_EVENT_COLOR,
           creatorId: creatorId,
           isRecurring: false, hasOverride: false
         });
@@ -1352,6 +1434,7 @@
       end: inst.end,
       notes: inst.notes,
       participants: (inst.participants||[]).slice(),
+      color: inst.color,
       recurrence: null
     });
   }
@@ -1445,9 +1528,10 @@
     items.forEach(item => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.innerHTML = '<span></span><span></span>';
-      btn.querySelector('span:first-child').textContent = item.title;
-      btn.querySelector('span:last-child').textContent = item.timeStr;
+      btn.innerHTML = '<span class="cluster-dot"></span><span class="cluster-title"></span><span class="cluster-time"></span>';
+      btn.querySelector('.cluster-dot').style.background = eventColorById(item.color).hex;
+      btn.querySelector('.cluster-title').textContent = item.title;
+      btn.querySelector('.cluster-time').textContent = item.timeStr;
 
       if(selectMode){
         // 選取狀態下，清單項目改成勾選／取消勾選要刪除的行程，不會點進
@@ -1769,7 +1853,6 @@
       const height = Math.max(8, (endMin-startMin)/60*hourPx);
       const durationMin = endMin - startMin;
       const runs = eventColRuns(inst);
-      const firstIdx = runs[0][0]; // 顏色統一用第一位參與者，同一行程的每個分段顏色一致
       const recurMark = inst.isRecurring ? '<span class="ecard-recur-inline">↻</span>' : '';
       const title = escapeHtml(inst.title || '(未命名行程)');
       const timeStr = inst.start+' - '+inst.end;
@@ -1779,7 +1862,8 @@
         const widthPct = ((runMax-runMin+1)/n*100);
 
         const card = document.createElement('div');
-        card.className = 'event-card ' + 'c-' + colByIndex(firstIdx);
+        card.className = 'event-card';
+        applyEventColor(card, inst.color);
         card.style.top = top+'px';
         card.style.height = height+'px';
         card.style.left = 'calc(' + leftPct + '% + 3px)';
@@ -1832,20 +1916,65 @@
             rawTitle: inst.title || '(未命名行程)',
             isRecurring: !!inst.isRecurring,
             creatorId: inst.creatorId, participants: inst.participants,
+            color: inst.color,
             masterId: inst.masterId, instanceDate: inst.instanceDate
           });
         }
 
         attachCardInteractions(card, inst, runMin, runMax);
-        const handle = document.createElement('span');
-        handle.className = 'resize-handle';
-        handle.setAttribute('aria-hidden', 'true');
-        card.appendChild(handle);
-        attachResizeHandle(card, inst, handle, runMin, runMax, {title:title, recurMark:recurMark});
+        ['tl','tr','bl','br'].forEach(corner => {
+          const handle = document.createElement('span');
+          handle.className = 'resize-handle rh-' + corner;
+          handle.setAttribute('aria-hidden', 'true');
+          card.appendChild(handle);
+          attachResizeHandle(card, inst, handle, runMin, runMax, {title:title, recurMark:recurMark}, corner);
+        });
       });
     });
 
     renderFloatLabels(floatCandidates);
+    resolveFloatLabelOverlaps();
+  }
+
+  // 浮動標籤本身是貼在自己那格外面的色塊，寬度可能超出自己那一欄，
+  // 疊到旁邊其他正常顯示完整文字的行程格子上，把底下的字擋住。這裡
+  // 排版完成後統一檢查一次：先試著翻到另一側（上緣／下緣對調）看能不能
+  // 整個閃開；翻了還是會疊到，就限制寬度、讓被擋住的部分改用刪節號，
+  // 而不是硬蓋在別人的文字上面。
+  function resolveFloatLabelOverlaps(){
+    const solidRects = Array.from(eventsLayer.querySelectorAll('.event-card:not(.label-floated)'))
+      .map(c => c.getBoundingClientRect());
+    if(!solidRects.length) return;
+
+    function findOverlap(label){
+      const r = label.getBoundingClientRect();
+      for(const sr of solidRects){
+        if(r.left < sr.right && r.right > sr.left && r.top < sr.bottom && r.bottom > sr.top) return sr;
+      }
+      return null;
+    }
+
+    eventsLayer.querySelectorAll('.ecard-solo').forEach(label => {
+      label.style.maxWidth = '';
+      let hit = findOverlap(label);
+      if(!hit) return;
+
+      const card = label.closest('.event-card');
+      if(card){
+        card.classList.toggle('float-above');
+        card.classList.toggle('float-below');
+        if(!findOverlap(label)) return; // 翻面就閃開了
+        card.classList.toggle('float-above'); // 翻面沒用，切回原本那一側
+        card.classList.toggle('float-below');
+      }
+
+      hit = findOverlap(label);
+      if(hit){
+        const r = label.getBoundingClientRect();
+        const available = Math.max(28, hit.left - r.left - 4);
+        label.style.maxWidth = available + 'px';
+      }
+    });
   }
 
   // 幫「裝不下、需要浮動標籤」的候選項分群：只要欄位範圍相鄰或重疊、
@@ -1908,7 +2037,8 @@
             masterId: c.masterId,
             instanceDate: c.instanceDate,
             creatorId: c.creatorId,
-            participants: c.participants
+            participants: c.participants,
+            color: c.color
           })));
         });
       }
@@ -1987,13 +2117,13 @@
       const height = Math.max(8, (endMin-startMin)/60*hourPx);
       const durationMin = endMin-startMin;
       const runs = eventColRuns(inst);
-      const firstIdx = runs[0][0];
       const title = escapeHtml(inst.title||'(未命名行程)');
       const timeStr = inst.start+' - '+inst.end;
 
       runs.forEach(([runMin, runMax]) => {
         const card = document.createElement('div');
-        card.className = 'event-card c-'+colByIndex(firstIdx);
+        card.className = 'event-card';
+        applyEventColor(card, inst.color);
         card.style.top = top+'px';
         card.style.height = height+'px';
         card.style.left = 'calc(' + (runMin/n*100) + '% + 3px)';
@@ -2361,15 +2491,18 @@
       phase = 'idle';
       cancelledByScroll = false;
 
+      let pinchTouched = false; // 這次手勢期間是否曾經進入過雙指縮放狀態
+
       longPressTimer = setTimeout(function(){
         if(cancelledByScroll) return;
+        if(pinchActive){ pinchTouched = true; return; } // 計時器觸發當下才是真正該檢查雙指縮放的時機
         phase = 'menu';
         if(navigator.vibrate) navigator.vibrate(15);
         openCardMenu(card, inst.masterId, inst.instanceDate);
       }, 400);
 
       const onMove = function(ev2){
-        if(pinchActive) return; // 雙指縮放進行中，這個手勢不再繼續處理
+        if(pinchActive){ pinchTouched = true; return; } // 雙指縮放進行中，這個手勢不再繼續處理，並記住曾經縮放過
         const dy = ev2.clientY - startY;
 
         if(phase === 'idle'){
@@ -2423,6 +2556,8 @@
           // 或點畫面其他地方讓它自動收起。
         } else if(cancelledByScroll){
           startMomentumScroll(scrollVelocity);
+        } else if(pinchActive || pinchTouched){
+          // 這次手勢過程中發生過雙指縮放：不是真正的單擊，不開編輯頁
         } else {
           openEdit(inst.masterId, inst.instanceDate);
         }
@@ -2434,13 +2569,17 @@
     });
   }
 
-  // 長按卡片右下角的圓點並拖曳：可以同時調整區塊的「長」（時長，下緣）與
-  // 「寬」（參與者範圍，右緣）。起始時間與起始欄位（左上角）固定不動。
-  function attachResizeHandle(card, inst, handle, runMin, runMax, meta){
+  // 長按卡片四個角落的圓點並拖曳：每個角落固定「對角那一點」不動，拖曳這個角
+  // 同時調整鄰接的上/下緣（時長）與左/右緣（參與者範圍）。右下角＝原本的行為
+  // （起始時間、起始欄固定，往下往右延伸）；其餘三個角是同一套邏輯依方向鏡射。
+  function attachResizeHandle(card, inst, handle, runMin, runMax, meta, corner){
+    const vertDir = (corner === 'tl' || corner === 'tr') ? 'top' : 'bottom'; // 這次拖曳移動的是上緣還是下緣
+    const horizDir = (corner === 'tl' || corner === 'bl') ? 'left' : 'right'; // 移動的是左緣還是右緣
+
     let longPressTimer = null;
     let resizing = false;
     let startX = 0, startY = 0;
-    let origHeight = 0, origTop = 0, origWidthPx = 0;
+    let origHeight = 0, origTop = 0, origWidthPx = 0, origLeftPx = 0;
     let startScrollTop = 0;
     let finalHeight = 0, finalWidthPx = 0;
 
@@ -2450,15 +2589,21 @@
 
       startX = e.clientX;
       startY = e.clientY;
+      const cardRect = card.getBoundingClientRect();
+      const evRect0 = eventsLayer.getBoundingClientRect();
       origHeight = parseFloat(card.style.height) || 0;
       origTop = parseFloat(card.style.top) || 0;
-      origWidthPx = card.getBoundingClientRect().width;
+      origWidthPx = cardRect.width;
+      origLeftPx = cardRect.left - evRect0.left; // 換算成跟 card.style.top 同一套、相對 events-layer 的座標
       startScrollTop = timelineScroll.scrollTop;
       finalHeight = origHeight;
       finalWidthPx = origWidthPx;
       resizing = false;
 
+      handle.classList.add('touched'); // 手指一按下就先讓把手現形（觸控回饋），跟是否已經判定成縮放無關
+
       longPressTimer = setTimeout(function(){
+        if(pinchActive) return; // 計時器觸發當下才是真正該檢查雙指縮放的時機，避免縮放時誤觸調整時長
         resizing = true;
         card.classList.add('resizing');
         handle.classList.add('active');
@@ -2468,6 +2613,7 @@
 
       const onMove = function(e2){
         if(!resizing){
+          if(pinchActive){ clearTimeout(longPressTimer); return; } // 雙指縮放中，取消這次調整時長的長按判斷
           const dy = Math.abs(e2.clientY - startY);
           const realScrolled = Math.abs(timelineScroll.scrollTop - startScrollTop) > 2;
           if(realScrolled || dy > 16){
@@ -2477,59 +2623,108 @@
         }
         e2.preventDefault();
 
-        // 上下拖曳：高度直接跟著手指的原始位移連續變化，拖曳過程中不吸附，
-        // 起始時間固定，只延伸/縮短下緣，放開的那一刻才吸附到 15 分鐘格線。
-        let newHeight = origHeight + (e2.clientY - startY);
-        newHeight = Math.max(8, Math.min(newHeight, hourPx*24 - origTop));
-
-        // 左右拖曳：寬度同樣直接跟著手指的原始像素位移連續變化（不是整欄
-        // 整欄跳），左緣（起始欄）固定不動，放開才換算成實際涵蓋幾欄。
         const evRect = eventsLayer.getBoundingClientRect();
-        const cardLeft = card.getBoundingClientRect().left;
-        let newWidthPx = origWidthPx + (e2.clientX - startX);
-        newWidthPx = Math.max(20, Math.min(newWidthPx, evRect.right - cardLeft));
-
-        // 碰撞限制：不能延伸進已經被其他行程占用的地方（起始邊固定，只夾住
-        // 正在延伸的下緣／右緣）。
         const n = Math.max(1, columns.length);
         const colWidthPxEstimate = evRect.width / n;
-        const roughSpanCols = Math.max(1, Math.round(newWidthPx / colWidthPxEstimate));
-        const roughColMax = Math.min(n-1, runMin + roughSpanCols - 1);
         const otherInsts = getInstancesForDate(inst.instanceDate).filter(i =>
           !(i.masterId === inst.masterId && i.instanceDate === inst.instanceDate)
         );
 
-        let heightLimit = hourPx*24 - origTop;
-        otherInsts.forEach(other => {
-          const oTop = timeToMinutes(other.start)/60*hourPx;
-          if(oTop < origTop) return; // 只考慮起始時間之後（下方）的
-          eventColRuns(other).forEach(([oMin, oMax]) => {
-            if(runMin <= oMax && oMin <= roughColMax) heightLimit = Math.min(heightLimit, oTop - origTop);
-          });
-        });
-        newHeight = Math.max(8, Math.min(newHeight, heightLimit));
+        // ---- 垂直方向：拖曳的是上緣還是下緣，位移直接跟著手指連續變化，不吸附 ----
+        let newTop = origTop, newHeight = origHeight;
+        if(vertDir === 'bottom'){
+          newHeight = origHeight + (e2.clientY - startY);
+          newHeight = Math.max(8, Math.min(newHeight, hourPx*24 - origTop));
+        } else {
+          newTop = origTop + (e2.clientY - startY);
+          newTop = Math.max(0, Math.min(newTop, origTop + origHeight - 8));
+          newHeight = (origTop + origHeight) - newTop;
+        }
 
-        const curStartMin = Math.round(origTop/hourPx*60);
-        const curEndMin = Math.round((origTop+newHeight)/hourPx*60);
-        let widthLimit = evRect.right - cardLeft;
-        otherInsts.forEach(other => {
-          const oStart = timeToMinutes(other.start), oEnd = timeToMinutes(other.end);
-          if(!(curStartMin < oEnd && oStart < curEndMin)) return;
-          eventColRuns(other).forEach(([oMin, oMax]) => {
-            if(oMin > runMin) widthLimit = Math.min(widthLimit, (oMin - runMin) * colWidthPxEstimate);
+        // ---- 水平方向：拖曳的是左緣還是右緣 ----
+        let newLeftPx = origLeftPx, newWidthPx = origWidthPx;
+        if(horizDir === 'right'){
+          newWidthPx = origWidthPx + (e2.clientX - startX);
+          newWidthPx = Math.max(20, Math.min(newWidthPx, evRect.right - (evRect.left + origLeftPx)));
+        } else {
+          newLeftPx = origLeftPx + (e2.clientX - startX);
+          newLeftPx = Math.max(0, Math.min(newLeftPx, origLeftPx + origWidthPx - 20));
+          newWidthPx = (origLeftPx + origWidthPx) - newLeftPx;
+        }
+
+        // ---- 碰撞限制：不能延伸進已經被其他行程占用的地方；固定的那一邊不用管，
+        //      只需要夾住正在移動的那條邊。用「粗略換算的欄位範圍」跟原本邏輯一致。----
+        const roughSpanCols = Math.max(1, Math.round(newWidthPx / colWidthPxEstimate));
+        let roughColMin, roughColMax;
+        if(horizDir === 'right'){
+          roughColMin = runMin;
+          roughColMax = Math.min(n-1, runMin + roughSpanCols - 1);
+        } else {
+          roughColMax = runMax;
+          roughColMin = Math.max(0, runMax - roughSpanCols + 1);
+        }
+
+        if(vertDir === 'bottom'){
+          let heightLimit = hourPx*24 - origTop;
+          otherInsts.forEach(other => {
+            const oTop = timeToMinutes(other.start)/60*hourPx;
+            if(oTop < origTop) return; // 只考慮起始時間之後（下方）的
+            eventColRuns(other).forEach(([oMin, oMax]) => {
+              if(roughColMin <= oMax && oMin <= roughColMax) heightLimit = Math.min(heightLimit, oTop - origTop);
+            });
           });
-        });
-        newWidthPx = Math.max(20, Math.min(newWidthPx, widthLimit));
+          newHeight = Math.max(8, Math.min(newHeight, heightLimit));
+        } else {
+          let topLimit = 0;
+          const fixedBottomAbs = origTop + origHeight;
+          otherInsts.forEach(other => {
+            const oBottom = timeToMinutes(other.end)/60*hourPx;
+            if(oBottom > fixedBottomAbs) return; // 只考慮結束時間在這個行程原本上緣之前（上方）的
+            eventColRuns(other).forEach(([oMin, oMax]) => {
+              if(roughColMin <= oMax && oMin <= roughColMax) topLimit = Math.max(topLimit, oBottom);
+            });
+          });
+          newTop = Math.max(topLimit, Math.min(newTop, fixedBottomAbs - 8));
+          newHeight = fixedBottomAbs - newTop;
+        }
+
+        const curStartMin = Math.round(newTop/hourPx*60);
+        const curEndMin = Math.round((newTop+newHeight)/hourPx*60);
+        if(horizDir === 'right'){
+          let widthLimit = evRect.right - (evRect.left + origLeftPx);
+          otherInsts.forEach(other => {
+            const oStart = timeToMinutes(other.start), oEnd = timeToMinutes(other.end);
+            if(!(curStartMin < oEnd && oStart < curEndMin)) return;
+            eventColRuns(other).forEach(([oMin, oMax]) => {
+              if(oMin > runMin) widthLimit = Math.min(widthLimit, (oMin - runMin) * colWidthPxEstimate);
+            });
+          });
+          newWidthPx = Math.max(20, Math.min(newWidthPx, widthLimit));
+        } else {
+          let leftLimitPx = 0;
+          const fixedRightPx = origLeftPx + origWidthPx;
+          otherInsts.forEach(other => {
+            const oStart = timeToMinutes(other.start), oEnd = timeToMinutes(other.end);
+            if(!(curStartMin < oEnd && oStart < curEndMin)) return;
+            eventColRuns(other).forEach(([oMin, oMax]) => {
+              if(oMax < runMax) leftLimitPx = Math.max(leftLimitPx, (oMax + 1) * colWidthPxEstimate);
+            });
+          });
+          newLeftPx = Math.max(leftLimitPx, Math.min(newLeftPx, fixedRightPx - 20));
+          newWidthPx = fixedRightPx - newLeftPx;
+        }
 
         finalHeight = newHeight;
-        card.style.height = newHeight + 'px';
         finalWidthPx = newWidthPx;
+        card.style.top = newTop + 'px';
+        card.style.height = newHeight + 'px';
+        card.style.left = newLeftPx + 'px';
         card.style.width = newWidthPx + 'px';
 
-        // 即時預覽：用跟放開時完全相同的 5 分鐘吸附規則換算目前的結束時間，
+        // 即時預覽：用跟放開時完全相同的 5 分鐘吸附規則換算目前的時間，
         // 直接寫回卡片上的時間文字，這樣使用者放手時看到的數字
         // 就是最終會套用的結果，不會有落差。
-        const startMinAbs = Math.round(origTop/hourPx*60);
+        const startMinAbs = Math.round(newTop/hourPx*60);
         const previewDurationMin = Math.max(5, Math.round(newHeight/hourPx*60/5)*5);
         const previewEndMin = startMinAbs + previewDurationMin;
         updateCardTimeDisplay(card, meta, minutesToTime(startMinAbs)+' - '+minutesToTime(previewEndMin));
@@ -2537,6 +2732,7 @@
 
       const onUp = function(e2){
         clearTimeout(longPressTimer);
+        handle.classList.remove('touched');
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         document.removeEventListener('pointercancel', onUp);
@@ -2545,23 +2741,37 @@
           card.classList.remove('resizing');
           handle.classList.remove('active');
 
-          // 高度 → 吸附到 5 分鐘
+          // 時長 → 吸附到 5 分鐘；固定的那一端（上緣或下緣）直接沿用原本的時間，
+          // 不用重新從像素換算，避免抖動誤差。
           let durationMin = Math.round(finalHeight/hourPx*60/5)*5;
           durationMin = Math.max(5, durationMin);
-          const startMinAbs = Math.round(origTop/hourPx*60);
-          const newStart = minutesToTime(startMinAbs);
-          const newEnd = minutesToTime(startMinAbs + durationMin);
+          let newStart, newEnd;
+          if(vertDir === 'bottom'){
+            const startMinAbs = Math.round(origTop/hourPx*60);
+            newStart = minutesToTime(startMinAbs);
+            newEnd = minutesToTime(startMinAbs + durationMin);
+          } else {
+            newEnd = inst.end;
+            newStart = minutesToTime(Math.max(0, timeToMinutes(inst.end) - durationMin));
+          }
 
-          // 寬度 → 換算成實際涵蓋幾欄（四捨五入到最接近的整欄數，起始欄不變）
+          // 寬度 → 換算成實際涵蓋幾欄；固定的那一端（左欄或右欄）沿用原本的邊界。
           const evRect = eventsLayer.getBoundingClientRect();
           const n = Math.max(1, columns.length);
           const colWidthPx = evRect.width / n;
-          const spanCols = Math.max(1, Math.min(n - runMin, Math.round(finalWidthPx / colWidthPx)));
-          const pendingRunMax = runMin + spanCols - 1;
+          const spanCols = Math.max(1, Math.round(finalWidthPx / colWidthPx));
+          let pendingRunMin, pendingRunMax;
+          if(horizDir === 'right'){
+            pendingRunMin = runMin;
+            pendingRunMax = Math.min(n-1, runMin + spanCols - 1);
+          } else {
+            pendingRunMax = runMax;
+            pendingRunMin = Math.max(0, runMax - spanCols + 1);
+          }
 
-          // 把這個分段原本涵蓋的欄位，換成拖曳後的新範圍（runMin 不變）
+          // 把這個分段原本涵蓋的欄位，換成拖曳後的新範圍
           const origIds = columns.slice(runMin, runMax+1).map(c=>c.id);
-          const newIds = columns.slice(runMin, pendingRunMax+1).map(c=>c.id);
+          const newIds = columns.slice(pendingRunMin, pendingRunMax+1).map(c=>c.id);
           const pset = new Set(inst.participants||[]);
           origIds.forEach(id => { if(newIds.indexOf(id)===-1) pset.delete(id); });
           newIds.forEach(id => pset.add(id));
@@ -2817,6 +3027,7 @@
 
       longPressTimer = setTimeout(function(){
         if(cancelled) return;
+        if(pinchActive) return; // 計時器觸發當下才是真正該檢查雙指縮放的時機，避免縮放時誤建新行程
         selecting = true;
         if(navigator.vibrate) navigator.vibrate(15);
         let top = Math.max(0, snapToFiveMin(anchorPx));
@@ -2845,6 +3056,7 @@
       notes: '',
       participants: participantIds.slice(),
       creatorId: CURRENT_USER_ID,
+      color: EVENT_COLORS[events.length % EVENT_COLORS.length].id,
       recurrence: null
     };
     events.push(ev);
@@ -2883,14 +3095,32 @@
   const fieldDate = document.getElementById('fieldDate');
   const fieldStart = document.getElementById('fieldStart');
   const fieldEnd = document.getElementById('fieldEnd');
-  const fieldDuration = document.getElementById('fieldDuration');
   const fieldNotes = document.getElementById('fieldNotes');
   const participantsBox = document.getElementById('participantsBox');
+  const colorBox = document.getElementById('colorBox');
   const weekdayBox = document.getElementById('weekdayBox');
   const syncField = document.getElementById('syncField');
   const fieldSyncEdit = document.getElementById('fieldSyncEdit');
   let selectedParticipants = new Set();
   let selectedWeekdays = new Set();
+  let selectedColor = DEFAULT_EVENT_COLOR;
+
+  function renderColorSwatches(colorId){
+    selectedColor = colorId || DEFAULT_EVENT_COLOR;
+    colorBox.innerHTML = '';
+    EVENT_COLORS.forEach(c => {
+      const sw = document.createElement('div');
+      sw.className = 'color-swatch' + (selectedColor === c.id ? ' selected' : '');
+      sw.style.background = c.hex;
+      sw.title = c.name;
+      sw.addEventListener('click', function(){
+        selectedColor = c.id;
+        colorBox.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('selected'));
+        sw.classList.add('selected');
+      });
+      colorBox.appendChild(sw);
+    });
+  }
 
   function renderParticipantChips(selectedIds){
     selectedParticipants = new Set(selectedIds);
@@ -2936,32 +3166,12 @@
     fieldDate.disabled = !!isRecurring; // 重複行程的個別日期由「重複」規則決定，這裡不能單獨改
     fieldStart.value = data.start;
     fieldEnd.value = data.end;
-    fieldDuration.value = timeToMinutes(data.end) - timeToMinutes(data.start);
     fieldNotes.value = data.notes || '';
     renderParticipantChips(data.participants && data.participants.length ? data.participants : [columns[0].id]);
+    renderColorSwatches(data.color || DEFAULT_EVENT_COLOR);
   }
 
-  fieldStart.addEventListener('input', function(){
-    if(!fieldStart.value) return;
-    if(fieldDuration.value){
-      fieldEnd.value = minutesToTime(timeToMinutes(fieldStart.value) + Number(fieldDuration.value));
-    } else if(fieldEnd.value){
-      fieldDuration.value = Math.max(5, timeToMinutes(fieldEnd.value) - timeToMinutes(fieldStart.value));
-    }
-  });
-
-  fieldEnd.addEventListener('input', function(){
-    if(!fieldEnd.value) return;
-    if(fieldStart.value){
-      fieldDuration.value = Math.max(5, timeToMinutes(fieldEnd.value) - timeToMinutes(fieldStart.value));
-    }
-  });
-
-  fieldDuration.addEventListener('input', function(){
-    if(fieldDuration.value && fieldStart.value){
-      fieldEnd.value = minutesToTime(timeToMinutes(fieldStart.value) + Number(fieldDuration.value));
-    }
-  });
+  // 開始／結束時間各自獨立，使用者手動調整，不再互相連動或自動推算
 
   /* ---------------- 開啟／關閉編輯頁（SPA + History API） ----------------
      注意：某些內嵌預覽環境（例如聊天工具的沙盒 iframe）會擋掉
@@ -2985,7 +3195,7 @@
     );
     const data = inst || {
       title: master.title, start: master.start, end: master.end,
-      notes: master.notes, participants: master.participants
+      notes: master.notes, participants: master.participants, color: master.color
     };
 
     fillEditForm(data, instanceDate, !!master.recurrence);
@@ -3045,19 +3255,21 @@
     const newNotes = fieldNotes.value;
     const newParticipants = selectedParticipants.size ? Array.from(selectedParticipants) : [columns[0].id];
 
-    // 時間欄位改回從編輯頁讀取
-    let s = fieldStart.value || master.start;
-    let en = fieldEnd.value;
-    let dur = fieldDuration.value;
-    if(en && timeToMinutes(en) <= timeToMinutes(s) && dur){
-      en = minutesToTime(timeToMinutes(s) + Number(dur));
+    // 開始／結束時間各自獨立，直接讀取使用者手動填的值；
+    // 只有在結束時間沒填或不晚於開始時間時才做最低限度的保底（開始後5分鐘）
+    const newStart = fieldStart.value || master.start;
+    let newEnd = fieldEnd.value;
+    if(!newEnd || timeToMinutes(newEnd) <= timeToMinutes(newStart)){
+      newEnd = minutesToTime(Math.min(24*60, timeToMinutes(newStart) + 5));
     }
-    const newStart = s;
-    const newEnd = en || minutesToTime(timeToMinutes(s) + Number(dur||60));
 
     const newWeekdays = Array.from(selectedWeekdays).sort((a,b)=>a-b);
     const wasRecurring = !!master.recurrence;
     const syncOn = fieldSyncEdit.checked;
+
+    // 顏色是整個行程系列共用的分類標籤，不像時間/備註那樣需要區分「只改這一天」，
+    // 一律直接寫回本體，不放進 override。
+    master.color = selectedColor;
 
     // 「重複」規則永遠套用到整個系列，跟同步編輯開關無關（單一日期沒有自己的重複規則）
     master.recurrence = newWeekdays.length ? {weekdays:newWeekdays} : null;
