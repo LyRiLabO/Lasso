@@ -2736,6 +2736,10 @@
       finalHeight = origHeight;
       finalWidthPx = origWidthPx;
       resizing = false;
+      let cancelledByScroll = false;
+      let lastY = e.clientY;
+      let lastMoveTime = performance.now();
+      let scrollVelocity = 0;
 
       handle.classList.add('touched'); // 手指一按下就先讓把手現形（觸控回饋），跟是否已經判定成縮放無關
 
@@ -2751,10 +2755,26 @@
       const onMove = function(e2){
         if(!resizing){
           if(pinchActive){ clearTimeout(longPressTimer); return; } // 雙指縮放中，取消這次調整時長的長按判斷
+          if(cancelledByScroll){
+            // 已經判定成「其實是想捲動整個畫面」，不是要調整時長：接手驅動
+            // 捲動，做法跟卡片本體、空白處的捲動分支完全一樣（rAF 節流）。
+            e2.preventDefault();
+            const now = performance.now();
+            const dt = now - lastMoveTime || 16;
+            const deltaY = e2.clientY - lastY;
+            scheduleTimelineScroll(deltaY);
+            scrollVelocity = -deltaY / dt;
+            lastMoveTime = now;
+            lastY = e2.clientY;
+            return;
+          }
           const dy = Math.abs(e2.clientY - startY);
           const realScrolled = Math.abs(timelineScroll.scrollTop - startScrollTop) > 2;
           if(realScrolled || dy > 16){
             clearTimeout(longPressTimer); // 視為捲動，取消縮放
+            cancelledByScroll = true;
+            lastY = e2.clientY;
+            lastMoveTime = performance.now();
           }
           return;
         }
@@ -2873,6 +2893,12 @@
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         document.removeEventListener('pointercancel', onUp);
+
+        if(cancelledByScroll){
+          flushTimelineScrollNow();
+          startMomentumScroll(scrollVelocity);
+          return; // 這次手勢是捲動，不當作縮放結果處理
+        }
 
         if(resizing){
           card.classList.remove('resizing');
