@@ -680,7 +680,6 @@
   }
 
   .column-header-row{
-    position:sticky; top:0; z-index:3;
     display:flex;
     padding:10px 14px 8px 58px;
     background:var(--paper);
@@ -1083,8 +1082,8 @@
       </div>
     </header>
 
+    <div class="column-header-row" id="columnHeaderRow"></div>
     <div class="timeline-scroll" id="timelineScroll">
-      <div class="column-header-row" id="columnHeaderRow"></div>
       <div class="day-slider" id="daySlider">
         <div class="timeline-grid" id="timelineGrid">
           <div class="margin-rule"></div>
