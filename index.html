@@ -242,6 +242,9 @@
     position:absolute;
     top:0; left:0; right:16px;
     height:calc(var(--hour-px) * 24px);
+    will-change:transform; /* 提示瀏覽器把這層獨立出來合成，捲動/切日時直接搬移
+      已經算好的畫面，不用每一影格都重新畫一次卡片的陰影跟圓角，事件多的
+      那天感受會最明顯。純渲染提示，畫面呈現跟互動邏輯完全不變。 */
   }
   .timeline-grid{
     touch-action:none;
