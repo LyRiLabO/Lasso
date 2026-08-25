@@ -1232,6 +1232,29 @@
     }
   }
 
+  /* ---------------- 存檔節流 ----------------
+     saveToStorage() 是同步的 localStorage 寫入，資料量越大越花時間。
+     renderEvents() 幾乎每個操作（拖曳、調整、縮放…）都會觸發一次重繪，
+     如果每次都馬上同步存檔，資料一多或連續操作時就容易卡頓。改成
+     debounce：連續操作期間先不存，停下來 400ms 後才真正寫入一次；
+     離開分頁前則強制立刻存檔，確保資料不會遺失。 */
+  let saveDebounceTimer = null;
+  function scheduleSaveToStorage(){
+    if(saveDebounceTimer) clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = setTimeout(function(){
+      saveDebounceTimer = null;
+      saveToStorage();
+    }, 400);
+  }
+  function flushSaveToStorage(){
+    if(saveDebounceTimer){ clearTimeout(saveDebounceTimer); saveDebounceTimer = null; }
+    saveToStorage();
+  }
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'hidden') flushSaveToStorage();
+  });
+  window.addEventListener('pagehide', flushSaveToStorage);
+
   function loadFromStorage(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -1744,7 +1767,7 @@
     const newName = (window.prompt('修改編輯者姓名：', col.name) || '').trim();
     if(!newName || newName === col.name) return;
     col.name = newName;
-    saveToStorage();
+    scheduleSaveToStorage();
     renderColumnHeader();
     renderEvents(); // 行程卡片上顯示的參與者名字（"· 小明、小華"）也要跟著更新
   }
@@ -1872,7 +1895,7 @@
   }
 
   function renderEvents(){
-    saveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來
+    scheduleSaveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來（debounce，不會每次都同步寫入）
     closeCardMenu(); // 畫面要重繪了，任何還開著的快捷選單先收起來，避免指到舊卡片
     closeClusterMenu();
     eventsLayer.innerHTML = '';
@@ -3490,11 +3513,20 @@
     const downPositions = new Map();  // pointerId -> {x, y}，記錄按下當下的位置，判斷放開時是不是「真的只是輕點」
     let pinchStartDist = 0;
     let pinchStartHourPx = HOUR_PX_DEFAULT;
+    let pinchRAF = null;
+    let pendingPinch = null; // 存最新一次算出來的目標 hourPx / 縮放中心，等下一影格才真的套用
 
     function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
     function currentTwoPoints(){
       const pts = Array.from(activePointers.values());
       return pts.length >= 2 ? [pts[0], pts[1]] : null;
+    }
+    function flushPinchZoom(){
+      pinchRAF = null;
+      if(pendingPinch){
+        setHourPx(pendingPinch.hourPx, pendingPinch.midY);
+        pendingPinch = null;
+      }
     }
 
     timelineScroll.addEventListener('pointerdown', function(e){
@@ -3518,7 +3550,11 @@
       const [p1, p2] = currentTwoPoints();
       const curDist = dist(p1, p2) || 1;
       const midY = (p1.y+p2.y)/2;
-      setHourPx(pinchStartHourPx * (curDist / pinchStartDist), midY);
+      // setHourPx 內部會整個重繪行程卡片，原始 pointermove 觸發頻率遠高於
+      // 畫面更新頻率，這裡改成只記下最新目標值，真正的縮放動作節流到
+      // 每個影格只做一次，跟捲動用同樣的節流手法。
+      pendingPinch = { hourPx: pinchStartHourPx * (curDist / pinchStartDist), midY: midY };
+      if(!pinchRAF) pinchRAF = requestAnimationFrame(flushPinchZoom);
     }, true);
 
     // 雙擊快速切換「預設／放大一級」，方便單指操作、不方便用雙指 pinch 的人。
@@ -3531,7 +3567,11 @@
       const downPos = downPositions.get(e.pointerId);
       activePointers.delete(e.pointerId);
       downPositions.delete(e.pointerId);
-      if(activePointers.size < 2) pinchActive = false;
+      if(activePointers.size < 2){
+        pinchActive = false;
+        if(pinchRAF){ cancelAnimationFrame(pinchRAF); pinchRAF = null; }
+        flushPinchZoom(); // 手指放開時，確保最後一次算出來的縮放結果一定有套用到，不會卡在上一影格
+      }
       if(wasPinching || !downPos) return; // 剛結束一次 pinch，這一放開不算輕點
 
       const movedSinceDown = dist(downPos, {x:e.clientX, y:e.clientY});
@@ -3554,7 +3594,11 @@
     timelineScroll.addEventListener('pointercancel', function(e){
       activePointers.delete(e.pointerId);
       downPositions.delete(e.pointerId);
-      if(activePointers.size < 2) pinchActive = false;
+      if(activePointers.size < 2){
+        pinchActive = false;
+        if(pinchRAF){ cancelAnimationFrame(pinchRAF); pinchRAF = null; }
+        pendingPinch = null; // 手勢被取消，不要再套用殘留的縮放目標
+      }
     }, true);
   })();
 
