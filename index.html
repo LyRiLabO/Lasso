@@ -340,16 +340,40 @@
     color:var(--ecard-text-soft, var(--ink-soft));
     margin-top:1px;
   }
+  .event-card .ecard-notes{
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:9.5px;
+    line-height:1.35;
+    color:var(--ecard-text-soft, var(--ink-soft));
+    margin-top:3px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    word-break:break-word;
+  }
+  /* 格子小到只剩標題一行時，讓標題在格子裡「垂直置中、水平靠左」，
+     不要用預設文字排版那種貼在上緣（字體縮小後看起來像貼在下緣）的
+     錨點方式。 */
+  .event-card.title-only{
+    display:flex;
+    align-items:center;
+  }
+  .event-card.title-only .ecard-title{
+    width:100%;
+  }
   .event-card .resize-handle::after{background:var(--ecard-handle-color, var(--ecard-color, var(--gold)));}
-  /* 選取狀態：拖曳圓點收起（避免跟選取手勢打架），
-     已選取的行程整張卡片變灰，沒有權限選取的行程則半透明淡出、無法點擊。 */
+  /* 選取狀態：拖曳圓點收起（避免跟選取手勢打架）。進入選取模式時維持
+     行程原本的顏色，只有實際被勾選的那一項才變灰；沒有權限選取的
+     行程則疊上半透明淡出、無法點擊。 */
   .event-card.select-mode .resize-handle{display:none;}
   .event-card.select-picked{
     background:#CBCDD4 !important;
-    border-left-color:#8A8FA0 !important;
   }
   .event-card.select-picked .ecard-title,
-  .event-card.select-picked .ecard-time{
+  .event-card.select-picked .ecard-time,
+  .event-card.select-picked .ecard-notes{
     color:#4B5066;
   }
   .event-card.select-locked{
@@ -424,6 +448,21 @@
     overflow:visible;
     z-index:1000;
   }
+  /* 只有標題被縮小過字體的行程，長按時才會多這一行，直接顯示完整
+     名稱，不用再多點一次按鈕。 */
+  .card-menu-title-row{
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:11px;
+    padding:10px 16px;
+    max-width:240px;
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13px;
+    font-weight:700;
+    line-height:1.4;
+    word-break:break-word;
+    box-shadow:0 10px 24px rgba(32,38,58,0.4);
+  }
   .card-menu-actions{
     display:flex;
     background:var(--ink);
@@ -490,8 +529,8 @@
   }
   .cluster-menu button{
     border:none;
-    background:none;
-    color:var(--paper);
+    background:var(--item-bg, var(--ink));
+    color:var(--item-text, var(--paper));
     font-family:'Noto Sans TC', sans-serif;
     font-size:13.5px;
     font-weight:700;
@@ -504,11 +543,6 @@
     white-space:nowrap;
     overflow:hidden;
   }
-  .cluster-menu button span.cluster-dot{
-    width:9px; height:9px;
-    border-radius:50%;
-    flex:0 0 auto;
-  }
   .cluster-menu button span.cluster-title{
     overflow:hidden;
     text-overflow:ellipsis;
@@ -520,14 +554,19 @@
     flex:0 0 auto;
     font-weight:600;
     font-size:11.5px;
-    color:var(--ink-faint);
+    color:var(--item-text-soft, var(--ink-faint));
   }
-  .cluster-menu button:active{background:rgba(246,241,228,0.14);}
-  .cluster-menu button + button{border-top:1px solid rgba(246,241,228,0.14);}
+  .cluster-menu button:active{filter:brightness(0.92);}
+  .cluster-menu button + button{border-top:1px solid rgba(255,255,255,0.22);}
+  /* 進入選取模式時維持行程原本的顏色，只有實際被勾選的那一項才變灰
+     （跟時間軸上的卡片邏輯一致：選取狀態本身不改變顏色，勾選才改變）。 */
   .cluster-menu button.selected{
-    background:rgba(192,138,46,0.24);
+    background:#CBCDD4 !important;
+    color:#4B5066;
   }
-  .cluster-menu button.selected span.cluster-title{color:var(--gold);}
+  .cluster-menu button.selected span.cluster-time{
+    color:#6B7086;
+  }
   .cluster-menu button.locked{
     opacity:.4;
     cursor:not-allowed;
@@ -1084,6 +1123,11 @@
       </div>
 
       <div class="field">
+        <span class="field-label">詳細備註</span>
+        <textarea id="fieldNotes" rows="2"></textarea>
+      </div>
+
+      <div class="field">
         <span class="field-label">日期</span>
         <input id="fieldDate" type="date">
       </div>
@@ -1125,11 +1169,6 @@
       <div class="field">
         <span class="field-label">參與者</span>
         <div class="participants-box" id="participantsBox"></div>
-      </div>
-
-      <div class="field">
-        <span class="field-label">詳細備註</span>
-        <textarea id="fieldNotes" rows="2"></textarea>
       </div>
 
       <button id="btnDelete" class="delete-btn">刪除此行程</button>
@@ -1459,17 +1498,19 @@
     if(cardMenuEl){ cardMenuEl.remove(); cardMenuEl = null; }
   }
 
-  function openCardMenu(card, masterId, instanceDate){
+  function openCardMenu(card, masterId, instanceDate, shrunkTitle){
     closeCardMenu();
     const rect = card.getBoundingClientRect();
 
     const menu = document.createElement('div');
     menu.className = 'card-menu';
     menu.innerHTML =
+      (shrunkTitle ? '<div class="card-menu-title-row"></div>' : '') +
       '<div class="card-menu-actions">' +
         '<button type="button" data-action="dup">複製</button>' +
         '<button type="button" data-action="del" class="danger">刪除</button>' +
       '</div>';
+    if(shrunkTitle) menu.querySelector('.card-menu-title-row').textContent = shrunkTitle;
     document.body.appendChild(menu);
 
     const menuRect = menu.getBoundingClientRect();
@@ -1529,8 +1570,12 @@
     items.forEach(item => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.innerHTML = '<span class="cluster-dot"></span><span class="cluster-title"></span><span class="cluster-time"></span>';
-      btn.querySelector('.cluster-dot').style.background = eventColorById(item.color).hex;
+      btn.innerHTML = '<span class="cluster-title"></span><span class="cluster-time"></span>';
+      const colorInfo = eventColorById(item.color);
+      const light = isLightColor(colorInfo.hex);
+      btn.style.setProperty('--item-bg', colorInfo.hex);
+      btn.style.setProperty('--item-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
+      btn.style.setProperty('--item-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
       btn.querySelector('.cluster-title').textContent = item.title;
       btn.querySelector('.cluster-time').textContent = item.timeStr;
 
@@ -1538,6 +1583,7 @@
         // 選取狀態下，清單項目改成勾選／取消勾選要刪除的行程，不會點進
         // 編輯頁；沒有權限的（別人建立的共同行程）直接鎖住、無法點擊。
         const key = item.masterId+'@'+item.instanceDate;
+        btn.classList.add('select-mode');
         if(!canSelectInstance(item)){
           btn.classList.add('locked');
           btn.disabled = true;
@@ -1857,6 +1903,7 @@
       const recurMark = inst.isRecurring ? '<span class="ecard-recur-inline">↻</span>' : '';
       const title = escapeHtml(inst.title || '(未命名行程)');
       const timeStr = inst.start+' - '+inst.end;
+      const notesHtml = inst.notes ? escapeHtml(inst.notes) : '';
 
       runs.forEach(([runMin, runMax]) => {
         const leftPct = (runMin/n*100);
@@ -1893,21 +1940,32 @@
         } else {
           // 行程格子本身不顯示參與者名單：橫跨的欄位範圍已經很清楚表達
           // 「誰參與了」，格子裡再重複列一次名字反而佔位置又多餘。
+          // 時間下方如果有備註就順便顯示，格子太小裝不下時最優先被拿掉。
           card.innerHTML =
             (inst.isRecurring ? '<span class="ecard-recur-tag">↻</span>' : '') +
             '<div class="ecard-title">'+title+'</div>'+
-            '<div class="ecard-time">'+timeStr+'</div>';
+            '<div class="ecard-time">'+timeStr+'</div>' +
+            (notesHtml ? '<div class="ecard-notes">'+notesHtml+'</div>' : '');
         }
 
         eventsLayer.appendChild(card); // 先掛進 DOM 才能量出實際渲染尺寸
 
         // 量測剛剛這個排版是否真的裝得下（不管是被高度夾住，還是文字
-        // 太長被截斷）。裝不下的話，依序退讓：先拿掉時間只留標題，
-        // 標題單獨顯示還是放不下的話才開始縮小字體，直到剛好塞進格子。
-        let measureTitle = card.querySelector('.ecard-title');
-        let overflowsV = card.scrollHeight - card.clientHeight > 1;
-        let overflowsH = measureTitle && (measureTitle.scrollWidth - measureTitle.clientWidth > 1);
-        if(overflowsV || overflowsH){
+        // 太長被截斷）。裝不下的話，依序退讓：先拿掉備註，還是不行就
+        // 拿掉時間只留標題，標題單獨顯示還是放不下的話才開始縮小字體，
+        // 直到剛好塞進格子。
+        function overflowCheck(){
+          const t = card.querySelector('.ecard-title');
+          return (card.scrollHeight - card.clientHeight > 1) ||
+                 (t && t.scrollWidth - t.clientWidth > 1);
+        }
+
+        if(overflowCheck()){
+          const notesEl = card.querySelector('.ecard-notes');
+          if(notesEl) notesEl.remove();
+        }
+
+        if(overflowCheck()){
           const fitted = fitTitleOnly(card, recurMark, title);
           if(!fitted){
             // 縮到最小字體還是放不下：極端情況下才交給「N 項行程」機制，
@@ -2028,8 +2086,10 @@
         // 放不下的部分交給 CSS 的刪節號處理，不再另外跳出提示。
         const only = cluster[0];
         only.card.classList.remove('label-floated');
+        only.card.classList.add('title-only');
         only.card.innerHTML = '<div class="ecard-title">'+only.recurMark+only.title+'</div>';
         only.card.querySelector('.ecard-title').style.fontSize = '8px';
+        only.card.dataset.shrunk = '1';
         return;
       }
       const anchor = cluster[0]; // 群組一律貼在最上面（同高度則最左）那一個項目的位置
@@ -2063,12 +2123,16 @@
     }
   }
 
-  // 格子裝不下「標題＋時間」時的退讓順序：先拿掉時間、只留標題（字體
-  // 大小不變）；標題單獨顯示還是放不下的話，才開始一路縮小字體，
-  // 直到整段文字剛好塞進格子裡，或縮到最小可讀大小為止。
+  // 格子裝不下「標題＋時間＋備註」時的退讓順序：先拿掉備註，再拿掉時間、
+  // 只留標題（字體大小不變）；標題單獨顯示還是放不下的話，才開始一路
+  // 縮小字體，直到整段文字剛好塞進格子裡，或縮到最小可讀大小為止。
   // 回傳 true 表示最後有塞進去；false 表示縮到最小還是放不下（極端情況）。
   function fitTitleOnly(card, recurMark, title){
     card.classList.remove('compact');
+    // 只剩標題這一行時，讓它在格子裡「垂直置中、水平靠左」：錨點是最
+    // 左側的垂直中點，不是預設文字排版那種左上（或字體縮小後看起來
+    // 像左下）的錨點。
+    card.classList.add('title-only');
     card.innerHTML = '<div class="ecard-title">'+recurMark+title+'</div>';
     const titleEl = card.querySelector('.ecard-title');
 
@@ -2084,8 +2148,12 @@
     while(size > MIN_FONT){
       size -= 0.5;
       titleEl.style.fontSize = size + 'px';
-      if(fits()) return true;
+      if(fits()){
+        card.dataset.shrunk = '1'; // 字體被縮小過：長按時額外顯示完整名稱
+        return true;
+      }
     }
+    card.dataset.shrunk = '1';
     return false;
   }
 
@@ -2540,7 +2608,8 @@
         if(pinchActive){ pinchTouched = true; return; } // 計時器觸發當下才是真正該檢查雙指縮放的時機
         phase = 'menu';
         if(navigator.vibrate) navigator.vibrate(15);
-        openCardMenu(card, inst.masterId, inst.instanceDate);
+        const shrunkTitle = card.dataset.shrunk === '1' ? (inst.title || '(未命名行程)') : null;
+        openCardMenu(card, inst.masterId, inst.instanceDate, shrunkTitle);
       }, 400);
 
       const onMove = function(ev2){
@@ -3134,6 +3203,11 @@
   const pageTimeline = document.getElementById('page-timeline');
   const pageEdit = document.getElementById('page-edit');
   const fieldTitle = document.getElementById('fieldTitle');
+  // 新建立的行程預設標題是「新行程」：點進標題欄位準備輸入時，
+  // 如果還是這個預設值，直接幫使用者清空，不用自己手動刪除。
+  fieldTitle.addEventListener('focus', function(){
+    if(fieldTitle.value === '新行程') fieldTitle.value = '';
+  });
   const fieldDate = document.getElementById('fieldDate');
   const fieldStart = document.getElementById('fieldStart');
   const fieldEnd = document.getElementById('fieldEnd');
