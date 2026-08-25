@@ -419,13 +419,19 @@
   .card-menu{
     position:fixed;
     display:flex;
-    background:var(--ink);
-    border-radius:11px;
-    box-shadow:0 10px 24px rgba(32,38,58,0.4);
+    flex-direction:column;
+    gap:6px;
     overflow:visible;
     z-index:1000;
   }
-  .card-menu button{
+  .card-menu-actions{
+    display:flex;
+    background:var(--ink);
+    border-radius:11px;
+    box-shadow:0 10px 24px rgba(32,38,58,0.4);
+    overflow:hidden;
+  }
+  .card-menu-actions button{
     border:none;
     background:none;
     color:var(--paper);
@@ -436,17 +442,11 @@
     cursor:pointer;
     white-space:nowrap;
   }
-  .card-menu button:first-child{
-    border-radius:11px 0 0 11px;
-  }
-  .card-menu button:last-child{
-    border-radius:0 11px 11px 0;
-  }
-  .card-menu button + button{
+  .card-menu-actions button + button{
     border-left:1px solid rgba(246,241,228,0.22);
   }
-  .card-menu button:active{background:rgba(246,241,228,0.14);}
-  .card-menu button.danger{color:#F4B8AA;}
+  .card-menu-actions button:active{background:rgba(246,241,228,0.14);}
+  .card-menu-actions button.danger{color:#F4B8AA;}
   .card-menu.arrow-down::after,
   .card-menu.arrow-up::after{
     content:"";
@@ -561,11 +561,10 @@
     margin:0;
   }
 
-  /* 格子不管用哪種排版都裝不下行程名稱＋時間時（不管是被高度夾住，
-     還是寬度太窄被截斷），改用這個統一的「浮動標籤」：字體大小固定
-     不再動態縮小，文字整段貼在格子正上方（貼在時間軸最上緣、上面
-     沒有空間時改貼下方），永遠完整顯示。格子本身留一條乾淨的色塊
-     當作這段時間的視覺提示即可。 */
+  /* 好幾個緊挨在一起、疊到快分不清的行程，合併顯示成一個「N 項行程」
+     浮動提示，點下去才展開完整清單，點清單裡的項目就直接跳去那個行程的
+     編輯頁（跟平常點行程卡片一樣）。格子本身留一條乾淨的色塊當作這段
+     時間的視覺提示即可。 */
   .event-card.label-floated{
     overflow:visible;
     padding:0;
@@ -1467,8 +1466,10 @@
     const menu = document.createElement('div');
     menu.className = 'card-menu';
     menu.innerHTML =
-      '<button type="button" data-action="dup">複製</button>' +
-      '<button type="button" data-action="del" class="danger">刪除</button>';
+      '<div class="card-menu-actions">' +
+        '<button type="button" data-action="dup">複製</button>' +
+        '<button type="button" data-action="del" class="danger">刪除</button>' +
+      '</div>';
     document.body.appendChild(menu);
 
     const menuRect = menu.getBoundingClientRect();
@@ -1900,25 +1901,30 @@
 
         eventsLayer.appendChild(card); // 先掛進 DOM 才能量出實際渲染尺寸
 
-        // 量測剛剛這個排版是否真的裝得下：不管是被高度夾住，還是文字
-        // 太長被 ellipsis 截斷，只要顯示不完整，就先清空、記錄成候選項，
-        // 稍後統一交給 renderFloatLabels 決定要單獨顯示還是合併。
-        const measureTitle = card.querySelector('.ecard-title');
-        const overflowsV = card.scrollHeight - card.clientHeight > 1;
-        const overflowsH = measureTitle && (measureTitle.scrollWidth - measureTitle.clientWidth > 1);
+        // 量測剛剛這個排版是否真的裝得下（不管是被高度夾住，還是文字
+        // 太長被截斷）。裝不下的話，依序退讓：先拿掉時間只留標題，
+        // 標題單獨顯示還是放不下的話才開始縮小字體，直到剛好塞進格子。
+        let measureTitle = card.querySelector('.ecard-title');
+        let overflowsV = card.scrollHeight - card.clientHeight > 1;
+        let overflowsH = measureTitle && (measureTitle.scrollWidth - measureTitle.clientWidth > 1);
         if(overflowsV || overflowsH){
-          card.classList.remove('compact');
-          card.classList.add('label-floated');
-          card.innerHTML = '';
-          floatCandidates.push({
-            card, top, height, runMin, runMax,
-            recurMark, title, timeStr,
-            rawTitle: inst.title || '(未命名行程)',
-            isRecurring: !!inst.isRecurring,
-            creatorId: inst.creatorId, participants: inst.participants,
-            color: inst.color,
-            masterId: inst.masterId, instanceDate: inst.instanceDate
-          });
+          const fitted = fitTitleOnly(card, recurMark, title);
+          if(!fitted){
+            // 縮到最小字體還是放不下：極端情況下才交給「N 項行程」機制，
+            // 跟鄰近同樣放不下的行程合併成一個提示。
+            card.classList.remove('compact');
+            card.classList.add('label-floated');
+            card.innerHTML = '';
+            floatCandidates.push({
+              card, top, height, runMin, runMax,
+              recurMark, title, timeStr,
+              rawTitle: inst.title || '(未命名行程)',
+              isRecurring: !!inst.isRecurring,
+              creatorId: inst.creatorId, participants: inst.participants,
+              color: inst.color,
+              masterId: inst.masterId, instanceDate: inst.instanceDate
+            });
+          }
         }
 
         attachCardInteractions(card, inst, runMin, runMax);
@@ -2017,34 +2023,70 @@
     });
 
     function flushCluster(cluster){
-      const anchor = cluster[0]; // 群組一律貼在最上面（同高度則最左）那一個項目的位置
-      const label = document.createElement('span');
-      label.className = 'ecard-solo';
       if(cluster.length === 1){
-        label.innerHTML = anchor.recurMark + anchor.title + ' · ' + anchor.timeStr;
-      } else {
-        label.classList.add('ecard-cluster');
-        label.textContent = cluster.length + ' 項行程';
-        // 卡片本身是靠 pointerdown 判斷「點一下開編輯頁」的，click 事件
-        // 發生得太晚（pointerdown 早就先冒泡上去把編輯頁打開了），所以
-        // 這裡要在 pointerdown 階段就攔截並直接開清單，不能只擋 click。
-        label.addEventListener('pointerdown', function(ev){
-          ev.stopPropagation();
-          ev.preventDefault();
-          openClusterMenu(label, cluster.map(c => ({
-            title: (c.isRecurring ? '↻ ' : '') + c.rawTitle,
-            timeStr: c.timeStr,
-            masterId: c.masterId,
-            instanceDate: c.instanceDate,
-            creatorId: c.creatorId,
-            participants: c.participants,
-            color: c.color
-          })));
-        });
+        // 縮到最小字體還是放不下的極端情況：直接用最小字體顯示，
+        // 放不下的部分交給 CSS 的刪節號處理，不再另外跳出提示。
+        const only = cluster[0];
+        only.card.classList.remove('label-floated');
+        only.card.innerHTML = '<div class="ecard-title">'+only.recurMark+only.title+'</div>';
+        only.card.querySelector('.ecard-title').style.fontSize = '8px';
+        return;
       }
+      const anchor = cluster[0]; // 群組一律貼在最上面（同高度則最左）那一個項目的位置
+      // 這幾個都要合併顯示成一個「N 項行程」，每張卡自己先前暫時顯示的
+      // 內容都要清掉，改成單純的色塊（只有 anchor 上面會貼那個提示）。
+      cluster.forEach(c => {
+        c.card.classList.add('label-floated');
+        c.card.innerHTML = '';
+      });
+      const label = document.createElement('span');
+      label.className = 'ecard-solo ecard-cluster';
+      label.textContent = cluster.length + ' 項行程';
+      // 卡片本身是靠 pointerdown 判斷「點一下開編輯頁」的，click 事件
+      // 發生得太晚（pointerdown 早就先冒泡上去把編輯頁打開了），所以
+      // 這裡要在 pointerdown 階段就攔截並直接開清單，不能只擋 click。
+      label.addEventListener('pointerdown', function(ev){
+        ev.stopPropagation();
+        ev.preventDefault();
+        openClusterMenu(label, cluster.map(c => ({
+          title: (c.isRecurring ? '↻ ' : '') + c.rawTitle,
+          timeStr: c.timeStr,
+          masterId: c.masterId,
+          instanceDate: c.instanceDate,
+          creatorId: c.creatorId,
+          participants: c.participants,
+          color: c.color
+        })));
+      });
       anchor.card.classList.add(anchor.top < 28 ? 'float-below' : 'float-above');
       anchor.card.appendChild(label);
     }
+  }
+
+  // 格子裝不下「標題＋時間」時的退讓順序：先拿掉時間、只留標題（字體
+  // 大小不變）；標題單獨顯示還是放不下的話，才開始一路縮小字體，
+  // 直到整段文字剛好塞進格子裡，或縮到最小可讀大小為止。
+  // 回傳 true 表示最後有塞進去；false 表示縮到最小還是放不下（極端情況）。
+  function fitTitleOnly(card, recurMark, title){
+    card.classList.remove('compact');
+    card.innerHTML = '<div class="ecard-title">'+recurMark+title+'</div>';
+    const titleEl = card.querySelector('.ecard-title');
+
+    function fits(){
+      return (card.scrollHeight - card.clientHeight <= 1) &&
+             (titleEl.scrollWidth - titleEl.clientWidth <= 1);
+    }
+
+    if(fits()) return true;
+
+    const MIN_FONT = 8;
+    let size = 12.5;
+    while(size > MIN_FONT){
+      size -= 0.5;
+      titleEl.style.fontSize = size + 'px';
+      if(fits()) return true;
+    }
+    return false;
   }
 
   function escapeHtml(s){
