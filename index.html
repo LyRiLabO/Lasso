@@ -2629,7 +2629,7 @@
             const now = performance.now();
             const dt = now - lastMoveTime || 16;
             const deltaY = ev2.clientY - lastY;
-            timelineScroll.scrollTop -= deltaY;
+            scheduleTimelineScroll(deltaY);
             scrollVelocity = -deltaY / dt; // 記錄最後的捲動速度，放開時延續當慣性
             lastMoveTime = now;
           }
@@ -2666,6 +2666,7 @@
           // 長按後直接放開：選單維持顯示，等使用者點選單裡的按鈕，
           // 或點畫面其他地方讓它自動收起。
         } else if(cancelledByScroll){
+          flushTimelineScrollNow();
           startMomentumScroll(scrollVelocity);
         } else if(pinchActive || pinchTouched){
           // 這次手勢過程中發生過雙指縮放：不是真正的單擊，不開編輯頁
@@ -2937,6 +2938,27 @@
     momentumRAF = requestAnimationFrame(step);
   }
 
+  /* ---------------- 手動捲動的 rAF 節流 ----------------
+     pointermove 觸發頻率可能遠高於畫面更新頻率（一秒數十到上百次），
+     若每次都直接寫 scrollTop，會強迫瀏覽器同步做版面重算，手感容易卡頓。
+     這裡把同一影格內的多次位移量先累加起來，改成每個影格只真正寫入
+     scrollTop 一次，讓瀏覽器有機會把重算跟繪製合併在一起處理。 */
+  let pendingScrollDelta = 0;
+  let scrollFlushRAF = null;
+  function scheduleTimelineScroll(deltaY){
+    pendingScrollDelta -= deltaY;
+    if(scrollFlushRAF) return;
+    scrollFlushRAF = requestAnimationFrame(function(){
+      scrollFlushRAF = null;
+      timelineScroll.scrollTop += pendingScrollDelta;
+      pendingScrollDelta = 0;
+    });
+  }
+  function flushTimelineScrollNow(){ // 手指放開的當下要立刻套用剩餘位移，不要等下一影格
+    if(scrollFlushRAF){ cancelAnimationFrame(scrollFlushRAF); scrollFlushRAF = null; }
+    if(pendingScrollDelta){ timelineScroll.scrollTop += pendingScrollDelta; pendingScrollDelta = 0; }
+  }
+
   function snapToFiveMin(px){ const step = hourPx/12; return Math.round(px/step)*step; } // hourPx/12px = 5分鐘（每小時高度 ÷ 12），格線視覺上仍只畫到15分刻度，只是拖曳吸附變細
   function fiveMinPx(){ return hourPx/12; } // 5 分鐘對應的像素高度，供各處拖曳/縮放/建立行程的最小單位統一使用；隨 hourPx 縮放即時變動，所以寫成函式而不是常數
 
@@ -3031,9 +3053,10 @@
     let selecting = false;
     let cancelled = false;
     let gestureMode = null; // 一旦離開長按判斷，決定是 'scroll'（捲動）還是 'swipeday'（左右滑動切日），決定後就不再切換
+    let cachedRect = null; // 手勢開始時量一次就好，過程中 eventsLayer 不會捲動（見下方說明），不用每次 pointermove 重量
 
     function colIdxFromX(clientX){
-      const rect = eventsLayer.getBoundingClientRect();
+      const rect = cachedRect || eventsLayer.getBoundingClientRect();
       const n = Math.max(1, columns.length);
       const ratio = (clientX - rect.left) / rect.width;
       return Math.max(0, Math.min(n-1, Math.floor(ratio * n)));
@@ -3041,8 +3064,6 @@
 
     function onMove(e){
       if(pinchActive) return; // 雙指縮放進行中，這個手勢不再繼續處理
-      const rect = eventsLayer.getBoundingClientRect();
-      const curPx = e.clientY - rect.top;
 
       if(!selecting){
         // timeline-grid 是 touch-action:none，瀏覽器不會自動幫忙捲動，
@@ -3062,7 +3083,7 @@
           const now = performance.now();
           const dt = now - lastMoveTime || 16;
           const deltaY = e.clientY - lastY;
-          timelineScroll.scrollTop -= deltaY;
+          scheduleTimelineScroll(deltaY);
           scrollVelocity = -deltaY / dt; // 記錄最後的捲動速度，放開時延續當慣性
           lastMoveTime = now;
         } else if(gestureMode === 'swipeday'){
@@ -3073,6 +3094,10 @@
         return;
       }
       e.preventDefault();
+      // 選取框拖曳期間畫面不會捲動（上面 scroll 分支只會在 !selecting 時觸發），
+      // 所以用手勢開始時量到的 cachedRect 換算目前位置即可，不用每次 pointermove
+      // 都重新呼叫 getBoundingClientRect() 強迫瀏覽器同步重算版面。
+      const curPx = e.clientY - cachedRect.top;
       let top = Math.min(anchorPx, curPx);
       let bottom = Math.max(anchorPx, curPx);
       top = Math.max(0, snapToFiveMin(top));
@@ -3112,6 +3137,7 @@
         // 放開手指：滑動幅度夠大就用動畫接續完成切日，不夠就彈回原位
         endDaySlide(e.clientX - downX);
       } else if(gestureMode === 'scroll'){
+        flushTimelineScrollNow();
         startMomentumScroll(scrollVelocity);
       }
       selecting = false;
@@ -3132,8 +3158,8 @@
       cancelled = false;
       selecting = false;
       gestureMode = null;
-      const rect = eventsLayer.getBoundingClientRect();
-      anchorPx = e.clientY - rect.top;
+      cachedRect = eventsLayer.getBoundingClientRect(); // 這次手勢期間都重複用這份，不再逐格重量
+      anchorPx = e.clientY - cachedRect.top;
       anchorColIdx = colIdxFromX(e.clientX);
 
       longPressTimer = setTimeout(function(){
