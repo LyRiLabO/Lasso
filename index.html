@@ -242,18 +242,8 @@
     position:absolute;
     top:0; left:0; right:16px;
     height:calc(var(--hour-px) * 24px);
-    will-change:transform; /* 提示瀏覽器把這層獨立出來合成，捲動/切日時直接搬移
-      已經算好的畫面，不用每一影格都重新畫一次卡片的陰影跟圓角，事件多的
-      那天感受會最明顯。純渲染提示，畫面呈現跟互動邏輯完全不變。 */
   }
   .timeline-grid{
-    /* 這裡原本試過改成 pan-y 讓瀏覽器原生處理捲動，但發現行不通：
-       長按進入選取模式之後，往下/往上拖曳調整範圍的那個動作，剛好是
-       這次觸控裡第一次出現的垂直位移，瀏覽器會把它當成「這是要開始
-       原生捲動」直接接管，等我們的 JS 收到事件、想 preventDefault()
-       時已經來不及了——結果就是長按拉框新增行程整個失效。所以改回
-       touch-action:none，捲動交給 JS 自己處理（下面 pointerdown 這段），
-       跟一開始的做法一樣，才能讓長按拖曳建立行程正常運作。 */
     touch-action:none;
   }
   .day-preview-panel{
@@ -687,6 +677,7 @@
   }
 
   .column-header-row{
+    position:sticky; top:0; z-index:3;
     display:flex;
     padding:10px 14px 8px 58px;
     background:var(--paper);
@@ -1089,8 +1080,8 @@
       </div>
     </header>
 
-    <div class="column-header-row" id="columnHeaderRow"></div>
     <div class="timeline-scroll" id="timelineScroll">
+      <div class="column-header-row" id="columnHeaderRow"></div>
       <div class="day-slider" id="daySlider">
         <div class="timeline-grid" id="timelineGrid">
           <div class="margin-rule"></div>
@@ -1240,29 +1231,6 @@
       storageAvailable = false;
     }
   }
-
-  /* ---------------- 存檔節流 ----------------
-     saveToStorage() 是同步的 localStorage 寫入，資料量越大越花時間。
-     renderEvents() 幾乎每個操作（拖曳、調整、縮放…）都會觸發一次重繪，
-     如果每次都馬上同步存檔，資料一多或連續操作時就容易卡頓。改成
-     debounce：連續操作期間先不存，停下來 400ms 後才真正寫入一次；
-     離開分頁前則強制立刻存檔，確保資料不會遺失。 */
-  let saveDebounceTimer = null;
-  function scheduleSaveToStorage(){
-    if(saveDebounceTimer) clearTimeout(saveDebounceTimer);
-    saveDebounceTimer = setTimeout(function(){
-      saveDebounceTimer = null;
-      saveToStorage();
-    }, 400);
-  }
-  function flushSaveToStorage(){
-    if(saveDebounceTimer){ clearTimeout(saveDebounceTimer); saveDebounceTimer = null; }
-    saveToStorage();
-  }
-  document.addEventListener('visibilitychange', function(){
-    if(document.visibilityState === 'hidden') flushSaveToStorage();
-  });
-  window.addEventListener('pagehide', flushSaveToStorage);
 
   function loadFromStorage(){
     try{
@@ -1776,7 +1744,7 @@
     const newName = (window.prompt('修改編輯者姓名：', col.name) || '').trim();
     if(!newName || newName === col.name) return;
     col.name = newName;
-    scheduleSaveToStorage();
+    saveToStorage();
     renderColumnHeader();
     renderEvents(); // 行程卡片上顯示的參與者名字（"· 小明、小華"）也要跟著更新
   }
@@ -1904,7 +1872,7 @@
   }
 
   function renderEvents(){
-    scheduleSaveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來（debounce，不會每次都同步寫入）
+    saveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來
     closeCardMenu(); // 畫面要重繪了，任何還開著的快捷選單先收起來，避免指到舊卡片
     closeClusterMenu();
     eventsLayer.innerHTML = '';
@@ -2661,7 +2629,7 @@
             const now = performance.now();
             const dt = now - lastMoveTime || 16;
             const deltaY = ev2.clientY - lastY;
-            scheduleTimelineScroll(deltaY);
+            timelineScroll.scrollTop -= deltaY;
             scrollVelocity = -deltaY / dt; // 記錄最後的捲動速度，放開時延續當慣性
             lastMoveTime = now;
           }
@@ -2698,7 +2666,6 @@
           // 長按後直接放開：選單維持顯示，等使用者點選單裡的按鈕，
           // 或點畫面其他地方讓它自動收起。
         } else if(cancelledByScroll){
-          flushTimelineScrollNow();
           startMomentumScroll(scrollVelocity);
         } else if(pinchActive || pinchTouched){
           // 這次手勢過程中發生過雙指縮放：不是真正的單擊，不開編輯頁
@@ -2743,10 +2710,6 @@
       finalHeight = origHeight;
       finalWidthPx = origWidthPx;
       resizing = false;
-      let cancelledByScroll = false;
-      let lastY = e.clientY;
-      let lastMoveTime = performance.now();
-      let scrollVelocity = 0;
 
       handle.classList.add('touched'); // 手指一按下就先讓把手現形（觸控回饋），跟是否已經判定成縮放無關
 
@@ -2762,26 +2725,10 @@
       const onMove = function(e2){
         if(!resizing){
           if(pinchActive){ clearTimeout(longPressTimer); return; } // 雙指縮放中，取消這次調整時長的長按判斷
-          if(cancelledByScroll){
-            // 已經判定成「其實是想捲動整個畫面」，不是要調整時長：接手驅動
-            // 捲動，做法跟卡片本體、空白處的捲動分支完全一樣（rAF 節流）。
-            e2.preventDefault();
-            const now = performance.now();
-            const dt = now - lastMoveTime || 16;
-            const deltaY = e2.clientY - lastY;
-            scheduleTimelineScroll(deltaY);
-            scrollVelocity = -deltaY / dt;
-            lastMoveTime = now;
-            lastY = e2.clientY;
-            return;
-          }
           const dy = Math.abs(e2.clientY - startY);
           const realScrolled = Math.abs(timelineScroll.scrollTop - startScrollTop) > 2;
           if(realScrolled || dy > 16){
             clearTimeout(longPressTimer); // 視為捲動，取消縮放
-            cancelledByScroll = true;
-            lastY = e2.clientY;
-            lastMoveTime = performance.now();
           }
           return;
         }
@@ -2901,12 +2848,6 @@
         document.removeEventListener('pointerup', onUp);
         document.removeEventListener('pointercancel', onUp);
 
-        if(cancelledByScroll){
-          flushTimelineScrollNow();
-          startMomentumScroll(scrollVelocity);
-          return; // 這次手勢是捲動，不當作縮放結果處理
-        }
-
         if(resizing){
           card.classList.remove('resizing');
           handle.classList.remove('active');
@@ -2994,27 +2935,6 @@
       momentumRAF = requestAnimationFrame(step);
     }
     momentumRAF = requestAnimationFrame(step);
-  }
-
-  /* ---------------- 手動捲動的 rAF 節流 ----------------
-     pointermove 觸發頻率可能遠高於畫面更新頻率（一秒數十到上百次），
-     若每次都直接寫 scrollTop，會強迫瀏覽器同步做版面重算，手感容易卡頓。
-     這裡把同一影格內的多次位移量先累加起來，改成每個影格只真正寫入
-     scrollTop 一次，讓瀏覽器有機會把重算跟繪製合併在一起處理。 */
-  let pendingScrollDelta = 0;
-  let scrollFlushRAF = null;
-  function scheduleTimelineScroll(deltaY){
-    pendingScrollDelta -= deltaY;
-    if(scrollFlushRAF) return;
-    scrollFlushRAF = requestAnimationFrame(function(){
-      scrollFlushRAF = null;
-      timelineScroll.scrollTop += pendingScrollDelta;
-      pendingScrollDelta = 0;
-    });
-  }
-  function flushTimelineScrollNow(){ // 手指放開的當下要立刻套用剩餘位移，不要等下一影格
-    if(scrollFlushRAF){ cancelAnimationFrame(scrollFlushRAF); scrollFlushRAF = null; }
-    if(pendingScrollDelta){ timelineScroll.scrollTop += pendingScrollDelta; pendingScrollDelta = 0; }
   }
 
   function snapToFiveMin(px){ const step = hourPx/12; return Math.round(px/step)*step; } // hourPx/12px = 5分鐘（每小時高度 ÷ 12），格線視覺上仍只畫到15分刻度，只是拖曳吸附變細
@@ -3111,10 +3031,9 @@
     let selecting = false;
     let cancelled = false;
     let gestureMode = null; // 一旦離開長按判斷，決定是 'scroll'（捲動）還是 'swipeday'（左右滑動切日），決定後就不再切換
-    let cachedRect = null; // 手勢開始時量一次就好，過程中 eventsLayer 不會捲動（見下方說明），不用每次 pointermove 重量
 
     function colIdxFromX(clientX){
-      const rect = cachedRect || eventsLayer.getBoundingClientRect();
+      const rect = eventsLayer.getBoundingClientRect();
       const n = Math.max(1, columns.length);
       const ratio = (clientX - rect.left) / rect.width;
       return Math.max(0, Math.min(n-1, Math.floor(ratio * n)));
@@ -3122,6 +3041,8 @@
 
     function onMove(e){
       if(pinchActive) return; // 雙指縮放進行中，這個手勢不再繼續處理
+      const rect = eventsLayer.getBoundingClientRect();
+      const curPx = e.clientY - rect.top;
 
       if(!selecting){
         // timeline-grid 是 touch-action:none，瀏覽器不會自動幫忙捲動，
@@ -3141,7 +3062,7 @@
           const now = performance.now();
           const dt = now - lastMoveTime || 16;
           const deltaY = e.clientY - lastY;
-          scheduleTimelineScroll(deltaY);
+          timelineScroll.scrollTop -= deltaY;
           scrollVelocity = -deltaY / dt; // 記錄最後的捲動速度，放開時延續當慣性
           lastMoveTime = now;
         } else if(gestureMode === 'swipeday'){
@@ -3152,10 +3073,6 @@
         return;
       }
       e.preventDefault();
-      // 選取框拖曳期間畫面不會捲動（上面 scroll 分支只會在 !selecting 時觸發），
-      // 所以用手勢開始時量到的 cachedRect 換算目前位置即可，不用每次 pointermove
-      // 都重新呼叫 getBoundingClientRect() 強迫瀏覽器同步重算版面。
-      const curPx = e.clientY - cachedRect.top;
       let top = Math.min(anchorPx, curPx);
       let bottom = Math.max(anchorPx, curPx);
       top = Math.max(0, snapToFiveMin(top));
@@ -3195,7 +3112,6 @@
         // 放開手指：滑動幅度夠大就用動畫接續完成切日，不夠就彈回原位
         endDaySlide(e.clientX - downX);
       } else if(gestureMode === 'scroll'){
-        flushTimelineScrollNow();
         startMomentumScroll(scrollVelocity);
       }
       selecting = false;
@@ -3216,8 +3132,8 @@
       cancelled = false;
       selecting = false;
       gestureMode = null;
-      cachedRect = eventsLayer.getBoundingClientRect(); // 這次手勢期間都重複用這份，不再逐格重量
-      anchorPx = e.clientY - cachedRect.top;
+      const rect = eventsLayer.getBoundingClientRect();
+      anchorPx = e.clientY - rect.top;
       anchorColIdx = colIdxFromX(e.clientX);
 
       longPressTimer = setTimeout(function(){
@@ -3548,20 +3464,11 @@
     const downPositions = new Map();  // pointerId -> {x, y}，記錄按下當下的位置，判斷放開時是不是「真的只是輕點」
     let pinchStartDist = 0;
     let pinchStartHourPx = HOUR_PX_DEFAULT;
-    let pinchRAF = null;
-    let pendingPinch = null; // 存最新一次算出來的目標 hourPx / 縮放中心，等下一影格才真的套用
 
     function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
     function currentTwoPoints(){
       const pts = Array.from(activePointers.values());
       return pts.length >= 2 ? [pts[0], pts[1]] : null;
-    }
-    function flushPinchZoom(){
-      pinchRAF = null;
-      if(pendingPinch){
-        setHourPx(pendingPinch.hourPx, pendingPinch.midY);
-        pendingPinch = null;
-      }
     }
 
     timelineScroll.addEventListener('pointerdown', function(e){
@@ -3585,11 +3492,7 @@
       const [p1, p2] = currentTwoPoints();
       const curDist = dist(p1, p2) || 1;
       const midY = (p1.y+p2.y)/2;
-      // setHourPx 內部會整個重繪行程卡片，原始 pointermove 觸發頻率遠高於
-      // 畫面更新頻率，這裡改成只記下最新目標值，真正的縮放動作節流到
-      // 每個影格只做一次，跟捲動用同樣的節流手法。
-      pendingPinch = { hourPx: pinchStartHourPx * (curDist / pinchStartDist), midY: midY };
-      if(!pinchRAF) pinchRAF = requestAnimationFrame(flushPinchZoom);
+      setHourPx(pinchStartHourPx * (curDist / pinchStartDist), midY);
     }, true);
 
     // 雙擊快速切換「預設／放大一級」，方便單指操作、不方便用雙指 pinch 的人。
@@ -3602,11 +3505,7 @@
       const downPos = downPositions.get(e.pointerId);
       activePointers.delete(e.pointerId);
       downPositions.delete(e.pointerId);
-      if(activePointers.size < 2){
-        pinchActive = false;
-        if(pinchRAF){ cancelAnimationFrame(pinchRAF); pinchRAF = null; }
-        flushPinchZoom(); // 手指放開時，確保最後一次算出來的縮放結果一定有套用到，不會卡在上一影格
-      }
+      if(activePointers.size < 2) pinchActive = false;
       if(wasPinching || !downPos) return; // 剛結束一次 pinch，這一放開不算輕點
 
       const movedSinceDown = dist(downPos, {x:e.clientX, y:e.clientY});
@@ -3629,11 +3528,7 @@
     timelineScroll.addEventListener('pointercancel', function(e){
       activePointers.delete(e.pointerId);
       downPositions.delete(e.pointerId);
-      if(activePointers.size < 2){
-        pinchActive = false;
-        if(pinchRAF){ cancelAnimationFrame(pinchRAF); pinchRAF = null; }
-        pendingPinch = null; // 手勢被取消，不要再套用殘留的縮放目標
-      }
+      if(activePointers.size < 2) pinchActive = false;
     }, true);
   })();
 
