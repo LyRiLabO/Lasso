@@ -231,6 +231,7 @@
     position:relative;
     touch-action:pan-y;
     overscroll-behavior:contain;
+    padding-top:110px; /* 讓接近00:00的時段可以捲離畫面頂端，方便觸控 */
     padding-bottom:110px; /* 讓接近24:00的時段可以捲離畫面底部，方便觸控 */
   }
   .day-slider{
@@ -1645,7 +1646,6 @@
   const HOUR_PX_DEFAULT = 50;
   const HOUR_PX_MIN = 24;
   const HOUR_PX_MAX = 300;
-  const HOUR_PX_ZOOM_STEP = 100; // 雙擊「放大一級」要跳到的高度
   let hourPx = HOUR_PX_DEFAULT;
   let pinchActive = false; // 雙指縮放進行中時，讓其他單指手勢（拖曳/調整時長/長按新增）全部按兵不動
   const datePicker = document.getElementById('datePicker');
@@ -3495,34 +3495,10 @@
       setHourPx(pinchStartHourPx * (curDist / pinchStartDist), midY);
     }, true);
 
-    // 雙擊快速切換「預設／放大一級」，方便單指操作、不方便用雙指 pinch 的人。
-    // 只有「按下到放開之間幾乎沒有移動」才算數，避免拖曳搬移行程、調整
-    // 時長、放開慣性捲動之類的操作被誤判成點擊。
-    let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
-
     timelineScroll.addEventListener('pointerup', function(e){
-      const wasPinching = activePointers.size >= 2;
-      const downPos = downPositions.get(e.pointerId);
       activePointers.delete(e.pointerId);
       downPositions.delete(e.pointerId);
       if(activePointers.size < 2) pinchActive = false;
-      if(wasPinching || !downPos) return; // 剛結束一次 pinch，這一放開不算輕點
-
-      const movedSinceDown = dist(downPos, {x:e.clientX, y:e.clientY});
-      if(movedSinceDown > 12) return; // 手指移動過，代表這是拖曳/長按類的放開，不是輕點
-
-      const now = performance.now();
-      const dt = now - lastTapTime;
-      const movedFromLastTap = Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY);
-      if(dt < 300 && movedFromLastTap < 25){
-        lastTapTime = 0; // 消耗掉這次雙擊，避免連續多擊又誤觸發
-        const target = (Math.abs(hourPx - HOUR_PX_DEFAULT) < 1) ? HOUR_PX_ZOOM_STEP : HOUR_PX_DEFAULT;
-        setHourPx(target, e.clientY);
-      } else {
-        lastTapTime = now;
-        lastTapX = e.clientX;
-        lastTapY = e.clientY;
-      }
     }, true);
 
     timelineScroll.addEventListener('pointercancel', function(e){
