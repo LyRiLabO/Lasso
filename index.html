@@ -176,6 +176,32 @@
   #phone.select-mode-active .add-col-btn{
     display:none;
   }
+  /* 「移動」鍵：位置比照新增共編者鍵（right:0，同樣的垂直置中），
+     大小/字體比照左側「選取」鍵（.select-toggle-btn），維持整排按鍵
+     視覺一致。預設用 [hidden] 隱藏，只有選取模式中且至少勾選一個
+     行程時才由 JS 拿掉 hidden。 */
+  .select-move-btn{
+    position:absolute;
+    right:0; top:50%;
+    transform:translateY(-50%);
+    padding:7px 14px;
+    border-radius:10px;
+    border:1.5px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.02em;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .select-move-btn:active{opacity:.8;}
+  .select-move-btn[hidden]{display:none;}
   .date-display{
     position:relative;
     text-align:center;
@@ -1092,6 +1118,16 @@
             </g>
           </svg>
         </button>
+        <!-- 選取模式下、有勾選任何行程時才出現的「移動」鍵，佔用跟新增共編者
+             鍵一樣的右上角位置（兩者互斥：進入選取模式時新增共編者鍵本來就
+             會被隱藏，見 #phone.select-mode-active .add-col-btn）。點下去就是
+             一個蓋在按鍵上、完全透明的原生日期輸入框，跟頂部日期切換鍵
+             （#datePicker）用的是同一套「透明 input[type=date] 疊在按鍵上」手法，
+             選完日期後只搬日期、不動行程原本的時間。 -->
+        <div id="btnMoveSelected" class="select-move-btn" aria-label="移動選取的行程" hidden>
+          <span>移動</span>
+          <input type="date" id="moveTargetDatePicker" class="date-picker-input" aria-label="選擇要移動到的日期">
+        </div>
       </div>
     </header>
 
@@ -1635,6 +1671,7 @@
             if(selectedEventKeys.has(key)) selectedEventKeys.delete(key);
             else selectedEventKeys.add(key);
             btn.classList.toggle('selected', selectedEventKeys.has(key));
+            updateMoveButtonVisibility();
             // 只同步時間軸上那個小色塊本身的灰底狀態，不整個重繪畫面，
             // 這樣清單才不會因為 renderEvents() 把自己也重置掉。
             document.querySelectorAll(
@@ -1731,6 +1768,14 @@
   const selectToggleBtn = document.getElementById('btnSelectToggle');
   const selectToggleIcon = document.getElementById('selectToggleIcon');
   const deleteSelectedBtn = document.getElementById('btnDeleteSelected');
+  const moveSelectedBtn = document.getElementById('btnMoveSelected');
+  const moveTargetDatePicker = document.getElementById('moveTargetDatePicker');
+
+  // 「移動」鍵只在選取模式中、且至少勾選一個行程時才顯示；使用者欄位的
+  // 勾選（selectedColumnIds）不會讓它出現，移動功能目前只針對行程本身。
+  function updateMoveButtonVisibility(){
+    moveSelectedBtn.hidden = !(selectMode && selectedEventKeys.size > 0);
+  }
 
   function setSelectMode(on){
     selectMode = on;
@@ -1740,6 +1785,7 @@
     selectToggleBtn.setAttribute('aria-label', on ? '取消選取' : '選取');
     selectToggleIcon.textContent = on ? '×' : '選取';
     deleteSelectedBtn.hidden = !on;
+    updateMoveButtonVisibility();
     phoneEl.classList.toggle('select-mode-active', on);
     renderColumnHeader();
     renderEvents();
@@ -1786,6 +1832,30 @@
     }
 
     setSelectMode(false); // 刪除完成後自動關閉選取狀態
+  });
+
+  // 「移動」鍵本身只是蓋著一個透明的 input[type=date]（跟頂部日期切換鍵
+  // 同一套手法），真正的動作在原生日期選擇器的 change 事件裡處理：
+  // 把每個被勾選的行程搬到新日期，時間、參與者都維持原樣不變。
+  // 重複行程沿用 applyQuickPlacement 既有規則──會從系列中拆成一筆獨立
+  // 的單次行程搬走，其餘日期不受影響（跟拖曳搬移單一行程的行為一致）。
+  moveTargetDatePicker.addEventListener('change', function(){
+    const targetDate = moveTargetDatePicker.value;
+    moveTargetDatePicker.value = ''; // 用完立刻清空，下次點開才不會殘留上次選的日期
+    if(!targetDate || selectedEventKeys.size === 0) return;
+
+    selectedEventKeys.forEach(key => {
+      const at = key.lastIndexOf('@');
+      const masterId = key.slice(0, at);
+      const instanceDate = key.slice(at+1);
+      const inst = getInstancesForDate(instanceDate).find(i => i.masterId === masterId);
+      if(!inst) return;
+      applyQuickPlacement(masterId, instanceDate, targetDate, inst.start, inst.end, inst.participants);
+    });
+
+    currentDate = targetDate; // 直接跳到目標日期，讓使用者馬上看到搬過去的結果
+    setSelectMode(false); // 跟刪除一致：動作完成後自動離開選取狀態
+    renderTimeline(); // 補齊 setSelectMode 沒處理到的日期標籤/星期/今天樣式
   });
 
   function renameColumn(col){
@@ -1923,6 +1993,7 @@
 
   function renderEvents(){
     scheduleSaveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來（debounce，避免同步阻塞）
+    updateMoveButtonVisibility(); // 勾選狀態常常伴隨重繪一起變動，這裡統一同步一次
     closeCardMenu(); // 畫面要重繪了，任何還開著的快捷選單先收起來，避免指到舊卡片
     closeClusterMenu();
     eventsLayer.innerHTML = '';
