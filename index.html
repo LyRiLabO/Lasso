@@ -231,17 +231,20 @@
     position:relative;
     touch-action:pan-y;
     overscroll-behavior:contain;
-    padding-top:110px; /* 讓接近00:00的時段可以捲離畫面頂端，方便觸控 */
-    padding-bottom:110px; /* 讓接近24:00的時段可以捲離畫面底部，方便觸控 */
   }
   .day-slider{
     position:relative;
-    height:calc(var(--hour-px) * 24px);
+    /* 24 小時本體高度 + 上下各 110px 緩衝，讓 00:00/24:00 附近能捲離畫面邊緣。
+       這裡直接算進 day-slider 自己的高度（真正的版面內容），不是用 timeline-scroll
+       的 padding 做——捲動容器的 padding-bottom 在部分瀏覽器不會確實算進可捲動範圍，
+       是常見的跨瀏覽器相容性陷阱。這個 220px（=上下各110px）要跟 JS 裡的
+       TIMELINE_BUFFER_PX 保持一致，改其中一邊記得另一邊也要跟著改。 */
+    height:calc(var(--hour-px) * 24px + 220px);
     overflow-x:hidden;
   }
   .timeline-grid, .day-preview-panel{
     position:absolute;
-    top:0; left:0; right:16px;
+    top:110px; left:0; right:16px;
     height:calc(var(--hour-px) * 24px);
     will-change:transform;
   }
@@ -1566,6 +1569,12 @@
     if(!cardMenuEl) return;
     if(cardMenuEl.contains(e.target)) return; // 點選單本身不算「點空白處」
     closeCardMenu();
+    // 這一下點擊的目的只是收起選單，不該讓同一次點擊繼續被底下的卡片/空白處
+    // 當成一次全新的手勢處理（否則點卡片收起選單的同時，又會被判定成單擊
+    // 而跳進編輯頁；點空白處也可能誤觸長按新建）。在 capture 階段就攔下來，
+    // 之後不會再傳到任何卡片或空白處自己的 pointerdown 監聽器。
+    e.stopPropagation();
+    e.preventDefault();
   }, true);
 
   /* ---------------- 緊鄰短行程合併後的「N 項行程」清單彈窗 ----------------
@@ -1649,6 +1658,8 @@
     if(!clusterMenuEl) return;
     if(clusterMenuEl.contains(e.target)) return;
     closeClusterMenu();
+    e.stopPropagation();
+    e.preventDefault();
   }, true);
 
   /* ---------------- 時間軸主頁 ---------------- */
@@ -1667,6 +1678,12 @@
   const HOUR_PX_MIN = 24;
   const HOUR_PX_MAX = 300;
   let hourPx = HOUR_PX_DEFAULT;
+  // 時間軸上下各保留的緩衝空間（px），讓 00:00 / 24:00 附近也能捲離畫面邊緣方便觸控。
+  // 這個緩衝區是「day-slider 自己的額外高度」，不是用 timeline-scroll 的 padding 做
+  // （padding-bottom 在部分瀏覽器的捲動容器裡不會確實計入可捲動範圍，是已知的跨瀏覽器
+  // 相容性陷阱），必須跟 CSS 裡 .day-slider 的 220px（=2*110）常數維持一致，改這裡記得
+  // CSS 那邊也要一起改。
+  const TIMELINE_BUFFER_PX = 110;
   let pinchActive = false; // 雙指縮放進行中時，讓其他單指手勢（拖曳/調整時長/長按新增）全部按兵不動
   const datePicker = document.getElementById('datePicker');
   const dateDisplayBtn = document.getElementById('dateDisplayBtn');
@@ -1852,19 +1869,21 @@
 
     const scrollRect = timelineScroll.getBoundingClientRect();
     const refClientY = anchorClientY != null ? anchorClientY : (scrollRect.top + timelineScroll.clientHeight/2);
-    // 用「舊」hourPx 換算出縮放中心目前對應到的絕對分鐘數
-    const anchorMin = (timelineScroll.scrollTop + (refClientY - scrollRect.top)) / hourPx * 60;
+    // 用「舊」hourPx 換算出縮放中心目前對應到的絕對分鐘數（scrollTop=0 對應到緩衝區
+    // 開頭，不是 00:00，所以要先扣掉緩衝區高度才是真正的時間軸座標）
+    const anchorMin = (timelineScroll.scrollTop + (refClientY - scrollRect.top) - TIMELINE_BUFFER_PX) / hourPx * 60;
 
     hourPx = newHourPx;
     document.documentElement.style.setProperty('--hour-px', hourPx);
-    daySlider.style.height = (hourPx*24)+'px';
+    daySlider.style.height = (hourPx*24 + TIMELINE_BUFFER_PX*2)+'px';
     timelineGrid.style.height = (hourPx*24)+'px';
     buildHourRows();
     renderEvents();
     renderNowLine();
 
-    // 縮放後，把同一個時間點（anchorMin）重新對齊回 refClientY 這個螢幕座標
-    const newTop = anchorMin/60*hourPx;
+    // 縮放後，把同一個時間點（anchorMin）重新對齊回 refClientY 這個螢幕座標，
+    // 換算回捲動座標時要把緩衝區高度加回來
+    const newTop = TIMELINE_BUFFER_PX + anchorMin/60*hourPx;
     const targetScrollTop = newTop - (refClientY - scrollRect.top);
     const maxScroll = Math.max(0, timelineScroll.scrollHeight - timelineScroll.clientHeight);
     timelineScroll.scrollTop = Math.max(0, Math.min(maxScroll, targetScrollTop));
@@ -2872,7 +2891,11 @@
         // 即時預覽：用跟放開時完全相同的 5 分鐘吸附規則換算目前的時間，
         // 直接寫回卡片上的時間文字，這樣使用者放手時看到的數字
         // 就是最終會套用的結果，不會有落差。
-        const startMinAbs = Math.round(newTop/hourPx*60);
+        // 即時預覽：畫面上顯示的分鐘數統一吸附成5的倍數（跟放開時真正套用的
+        // 5分鐘吸附規則一致），不用顯示到1分鐘這麼細——拖曳下緣時因為上緣沒動、
+        // 剛好本來就是5的倍數所以看起來沒問題，但拖曳上緣時上緣本身在連續變化，
+        // 不吸附的話畫面會跳出1、2、3…這種細碎分鐘數。
+        const startMinAbs = Math.round(newTop/hourPx*60/5)*5;
         const previewDurationMin = Math.max(5, Math.round(newHeight/hourPx*60/5)*5);
         const previewEndMin = startMinAbs + previewDurationMin;
         updateCardTimeDisplay(card, meta, minutesToTime(startMinAbs)+' - '+minutesToTime(previewEndMin));
@@ -3016,6 +3039,20 @@
       });
     });
     if(blockers.length === 0) return {top, bottom, colMin, colMax};
+
+    // 固定端（不是正在延伸的那一端，也就是長按/拖曳的起點）如果本身就已經落在
+    // 某個既有行程的時間＋欄位範圍裡面，代表這個起點根本不該拿來建立新行程——
+    // 不管延伸端怎麼夾都沒用，直接回傳沒有空間。這種情況通常發生在：卡片因為
+    // 「N 項行程」群組合併等原因，沒有實際 DOM 元素蓋住那個時段（長按穿透到
+    // 空白處的判斷邏輯），如果沒有這道檢查，新行程就會跟底下既有行程重疊。
+    const fixedPos = growingDown ? top : bottom;
+    const fixedCol = growingRight ? colMin : colMax;
+    const anchorBlocked = blockers.some(b =>
+      fixedPos >= b.iTop - 0.01 && fixedPos < b.iBottom + 0.01 && fixedCol >= b.runMin && fixedCol <= b.runMax
+    );
+    if(anchorBlocked){
+      return {top, bottom: top, colMin, colMax: colMin}; // 高度／欄位範圍歸零，代表這裡放不下
+    }
 
     let newTop = top, newBottom = bottom;
     if(growingDown){
@@ -3589,12 +3626,12 @@
   // 停在捲動範圍的最底端，不會硬要維持在 1/3 處造成過捲。
   function scrollToNowLine(){
     if(currentDate !== todayStr()){
-      timelineScroll.scrollTop = 7*hourPx; // 不是今天就沒有「現在時間線」，退回原本的預設位置
+      timelineScroll.scrollTop = TIMELINE_BUFFER_PX + 7*hourPx; // 不是今天就沒有「現在時間線」，退回原本的預設位置
       return;
     }
     const now = new Date();
     const nowMin = now.getHours()*60 + now.getMinutes();
-    const nowTopPx = nowMin/60*hourPx;
+    const nowTopPx = TIMELINE_BUFFER_PX + nowMin/60*hourPx;
     const visibleHeight = timelineScroll.clientHeight;
     let target = nowTopPx - visibleHeight/3;
     const maxScroll = Math.max(0, timelineScroll.scrollHeight - timelineScroll.clientHeight);
