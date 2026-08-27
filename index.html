@@ -44,7 +44,7 @@
     -webkit-user-select:text; user-select:text;
     -webkit-touch-callout:default;
   }
-  html,body{height:100%;}
+  html,body{height:100%; overflow:hidden;}
   body{
     margin:0;
     background:#DDD5C0;
@@ -53,11 +53,22 @@
     display:flex;
     justify-content:center;
     min-height:100%;
+    position:fixed;
+    inset:0;
+    width:100%;
   }
   #phone{
     width:100%;
     max-width:430px;
     min-height:100vh;
+    min-height:100dvh; /* iOS Safari 的網址列會動態伸縮，100vh 是「網址列全收合」時的高度，
+                           比實際看到的畫面還高，會讓整個 #phone 變得比可視區域高，
+                           進而讓整個頁面（不是時間軸內部）被拖著捲動——這正是使用者
+                           反應「日期列上方可以往下滑、捲到底時 23:00 後面留白跟右下角
+                           鉛筆按鈕都看不到」的原因：#phone 整體被推出畫面外了，不是
+                           時間軸緩衝區本身的問題。100dvh 會跟著網址列即時調整，把
+                           #phone 鎖在實際看得到的範圍內。舊版 Safari 不支援 100dvh 時
+                           這行會被忽略，自動退回上面的 100vh。 */
     background:var(--paper);
     position:relative;
     overflow:hidden;
