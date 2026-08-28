@@ -928,6 +928,219 @@
     -moz-appearance:textfield;
   }
 
+  /* 取代原生 input[type=date] 的日期欄位按鍵，樣式照抄原本 .field
+     input[type=date] 的排版（Noto Serif TC、底線），行程編輯頁「日期」
+     那一列用。 */
+  .date-value-btn{
+    display:block;
+    font-family:'Noto Serif TC', serif;
+    font-size:17px;
+    color:var(--ink);
+    border:none;
+    border-bottom:1.5px solid var(--line);
+    background:transparent;
+    padding:6px 2px 10px 2px;
+    outline:none;
+    width:100%;
+    text-align:left;
+    cursor:pointer;
+  }
+  .date-value-btn:active{opacity:.6;}
+  .date-value-btn.disabled{
+    color:var(--ink-faint);
+    pointer-events:none;
+  }
+  /* 取代原生 input[type=time] 的時間欄位按鍵，樣式照抄原本 .time-trio
+     input。 */
+  .time-value-btn{
+    display:block;
+    border:none;
+    background:transparent;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:15px;
+    color:var(--ink);
+    padding:2px 0;
+    width:100%;
+    text-align:left;
+    cursor:pointer;
+  }
+  .time-value-btn:active{opacity:.6;}
+
+  /* ---------------- 自訂日期／時間選擇器（見 #pickerOverlay） ----------------
+     從畫面底部滑出的紙感卡片，取代原生 iOS 選擇器。日期一律點選即刻套用
+     （跟原生日期選擇器選完馬上換日的手感一致，不用再按一次確定）；
+     時間因為要選「時＋分」兩個值，才保留一個「確定」鍵。 */
+  .picker-overlay{
+    position:absolute; inset:0;
+    z-index:60;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .picker-overlay[hidden]{display:none;}
+  .picker-backdrop{
+    position:absolute; inset:0;
+    background:rgba(32,38,58,0.42);
+  }
+  .picker-sheet{
+    position:relative;
+    width:100%;
+    background:var(--paper);
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -10px 30px rgba(32,38,58,0.28);
+    padding:20px 20px calc(14px + env(safe-area-inset-bottom, 0px)) 20px;
+    display:flex; flex-direction:column; gap:14px;
+    animation:picker-sheet-in .22s ease;
+  }
+  @keyframes picker-sheet-in{
+    from{ transform:translateY(28px); opacity:0; }
+    to{ transform:translateY(0); opacity:1; }
+  }
+  .picker-cal-head{
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .picker-nav-btn{
+    width:32px; height:32px;
+    border-radius:9px;
+    border:1.5px solid var(--line);
+    background:var(--card);
+    color:var(--ink);
+    font-size:17px;
+    line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .picker-nav-btn:active{opacity:.6;}
+  .picker-cal-title{
+    display:flex; align-items:baseline; gap:6px;
+  }
+  .picker-cal-title .picker-cal-year{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    color:var(--ink-faint);
+  }
+  .picker-cal-title .picker-cal-month{
+    font-family:'Noto Serif TC', serif;
+    font-size:19px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .picker-cal-weekdays{
+    display:grid; grid-template-columns:repeat(7,1fr);
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    color:var(--ink-faint);
+    text-align:center;
+    letter-spacing:.03em;
+  }
+  .picker-cal-grid{
+    display:grid; grid-template-columns:repeat(7,1fr);
+    row-gap:2px;
+  }
+  .picker-cal-cell{
+    aspect-ratio:1;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:14px;
+    color:var(--ink);
+    border-radius:50%;
+    cursor:pointer;
+  }
+  .picker-cal-cell.empty{ cursor:default; }
+  .picker-cal-cell.today{ color:var(--red); font-weight:700; }
+  .picker-cal-cell.selected{
+    background:var(--red);
+    color:var(--paper);
+    font-weight:700;
+  }
+  .picker-cal-cell:active{opacity:.6;}
+  .picker-today-btn{
+    align-self:center;
+    padding:6px 18px;
+    border-radius:10px;
+    border:1.5px dashed var(--line);
+    background:none;
+    color:var(--ink-soft);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:12px;
+    cursor:pointer;
+  }
+  .picker-today-btn:active{opacity:.6;}
+
+  .picker-time-title{
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:.14em;
+    color:var(--ink-faint);
+    text-transform:uppercase;
+  }
+  .picker-time-wheels{
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    gap:8px;
+    height:200px;
+  }
+  .picker-wheel{
+    height:200px;
+    width:76px;
+    overflow-y:auto;
+    scroll-snap-type:y mandatory;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    padding:80px 0;
+  }
+  .picker-wheel::-webkit-scrollbar{display:none;}
+  .picker-wheel-item{
+    height:40px;
+    display:flex; align-items:center; justify-content:center;
+    scroll-snap-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:16px;
+    color:var(--ink-faint);
+  }
+  .picker-wheel-item.picked{
+    color:var(--ink);
+    font-weight:700;
+    font-size:20px;
+  }
+  .picker-wheel-colon{
+    font-family:'JetBrains Mono', monospace;
+    font-size:20px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .picker-wheel-highlight{
+    position:absolute;
+    left:10px; right:10px; top:50%;
+    transform:translateY(-50%);
+    height:40px;
+    border-top:1.5px solid var(--line);
+    border-bottom:1.5px solid var(--line);
+    pointer-events:none;
+  }
+  .picker-confirm-btn{
+    padding:12px;
+    border-radius:10px;
+    border:none;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .picker-confirm-btn:active{opacity:.8;}
+  .picker-cancel-btn{
+    padding:8px;
+    border:none;
+    background:none;
+    color:var(--ink-faint);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .picker-cancel-btn:active{opacity:.6;}
+
   .delete-btn{
     margin-top:6px;
     width:100%;
@@ -1106,7 +1319,7 @@
             <span class="weekday" id="weekdayLabel">—</span>
             <span class="date-num" id="dateLabel">—</span>
           </div>
-          <input type="date" id="datePicker" class="date-picker-input" aria-label="選擇日期">
+          <input type="date" id="datePicker" hidden>
         </div>
         <button id="btnAddColumn" class="add-col-btn" aria-label="新增使用者欄位">
           <svg width="23" height="18" viewBox="0 0 30 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1120,13 +1333,12 @@
         </button>
         <!-- 選取模式下、有勾選任何行程時才出現的「移動」鍵，佔用跟新增共編者
              鍵一樣的右上角位置（兩者互斥：進入選取模式時新增共編者鍵本來就
-             會被隱藏，見 #phone.select-mode-active .add-col-btn）。點下去就是
-             一個蓋在按鍵上、完全透明的原生日期輸入框，跟頂部日期切換鍵
-             （#datePicker）用的是同一套「透明 input[type=date] 疊在按鍵上」手法，
-             選完日期後只搬日期、不動行程原本的時間。 -->
+             會被隱藏，見 #phone.select-mode-active .add-col-btn）。點下去會
+             打開跟其他日期欄位共用的自訂日期選擇器（#pickerOverlay），選完
+             日期後只搬日期、不動行程原本的時間。 -->
         <div id="btnMoveSelected" class="select-move-btn" aria-label="移動選取的行程" hidden>
           <span>移動</span>
-          <input type="date" id="moveTargetDatePicker" class="date-picker-input" aria-label="選擇要移動到的日期">
+          <input type="date" id="moveTargetDatePicker" hidden>
         </div>
       </div>
     </header>
@@ -1180,7 +1392,8 @@
 
       <div class="field">
         <span class="field-label">日期</span>
-        <input id="fieldDate" type="date">
+        <button type="button" id="fieldDateBtn" class="date-value-btn">—</button>
+        <input id="fieldDate" type="date" hidden>
       </div>
 
       <div class="field">
@@ -1188,12 +1401,14 @@
         <div class="ticket">
           <div class="time-trio">
             <div class="tcell">
-              <label for="fieldStart">開始時間</label>
-              <input id="fieldStart" type="time" step="300">
+              <label for="fieldStartBtn">開始時間</label>
+              <button type="button" id="fieldStartBtn" class="time-value-btn">—</button>
+              <input id="fieldStart" type="time" step="300" hidden>
             </div>
             <div class="tcell">
-              <label for="fieldEnd">結束時間</label>
-              <input id="fieldEnd" type="time" step="300">
+              <label for="fieldEndBtn">結束時間</label>
+              <button type="button" id="fieldEndBtn" class="time-value-btn">—</button>
+              <input id="fieldEnd" type="time" step="300" hidden>
             </div>
           </div>
         </div>
@@ -1225,6 +1440,49 @@
       <button id="btnDelete" class="delete-btn">刪除此行程</button>
     </div>
   </section>
+
+  <!-- ============ 共用元件：自訂日期／時間選擇器 ============
+       取代原生 input[type=date] / input[type=time]，套用手帳曆本身的紙感
+       配色與字體（JetBrains Mono 數字、Noto Serif TC 標題）。放在 #phone
+       這一層、兩個 .page 之外，這樣不管目前在時間軸頁還是編輯頁，都能疊在
+       最上層（#phone 本身是 position:relative + overflow:hidden，這個
+       overlay 用 position:absolute; inset:0 剛好貼齊整個手機畫面）。
+       實際資料還是寫回原本那些 input（fieldDate/fieldStart/fieldEnd/
+       datePicker/moveTargetDatePicker），只是那些 input 現在改成 hidden，
+       純粹當「資料容器」用，選完後照樣 dispatch 一個 change 事件，周邊
+       既有的存檔/連動邏輯完全不用改。 -->
+  <div id="pickerOverlay" class="picker-overlay" hidden>
+    <div class="picker-backdrop" id="pickerBackdrop"></div>
+    <div class="picker-sheet" role="dialog" aria-modal="true">
+
+      <div class="picker-date" id="pickerDateView">
+        <div class="picker-cal-head">
+          <button type="button" class="picker-nav-btn" id="calPrevBtn" aria-label="上個月">‹</button>
+          <div class="picker-cal-title">
+            <span class="picker-cal-year" id="calYearLabel">—</span>
+            <span class="picker-cal-month" id="calMonthLabel">—</span>
+          </div>
+          <button type="button" class="picker-nav-btn" id="calNextBtn" aria-label="下個月">›</button>
+        </div>
+        <div class="picker-cal-weekdays" id="calWeekdaysRow"></div>
+        <div class="picker-cal-grid" id="calGrid"></div>
+        <button type="button" class="picker-today-btn" id="calTodayBtn">回到今天</button>
+      </div>
+
+      <div class="picker-time" id="pickerTimeView" hidden>
+        <div class="picker-time-title">選擇時間</div>
+        <div class="picker-time-wheels">
+          <div class="picker-wheel-highlight" aria-hidden="true"></div>
+          <div class="picker-wheel" id="hourWheel"></div>
+          <div class="picker-wheel-colon">:</div>
+          <div class="picker-wheel" id="minuteWheel"></div>
+        </div>
+        <button type="button" class="picker-confirm-btn" id="timeConfirmBtn">確定</button>
+      </div>
+
+      <button type="button" class="picker-cancel-btn" id="pickerCancelBtn">取消</button>
+    </div>
+  </div>
 
 </div>
 
@@ -1436,6 +1694,195 @@
     const [y,m,d] = dateStr.split('-').map(Number);
     return new Date(y, m-1, d).getDay();
   }
+
+  /* ---------------- 共用元件：自訂日期／時間選擇器 ----------------
+     取代所有原生 input[type=date] / input[type=time]（頂部日期切換、
+     行程編輯頁的日期/開始/結束時間、選取模式的「移動」）。每個呼叫端
+     只需要給「目前值」跟「選完要做什麼」，實際的畫面/手勢都在這裡統一
+     處理，之後要再調整風格只用改這一塊。 */
+  const pickerOverlay = document.getElementById('pickerOverlay');
+  const pickerBackdrop = document.getElementById('pickerBackdrop');
+  const pickerDateView = document.getElementById('pickerDateView');
+  const pickerTimeView = document.getElementById('pickerTimeView');
+  const pickerCancelBtn = document.getElementById('pickerCancelBtn');
+
+  const calPrevBtn = document.getElementById('calPrevBtn');
+  const calNextBtn = document.getElementById('calNextBtn');
+  const calYearLabel = document.getElementById('calYearLabel');
+  const calMonthLabel = document.getElementById('calMonthLabel');
+  const calWeekdaysRow = document.getElementById('calWeekdaysRow');
+  const calGrid = document.getElementById('calGrid');
+  const calTodayBtn = document.getElementById('calTodayBtn');
+
+  const hourWheel = document.getElementById('hourWheel');
+  const minuteWheel = document.getElementById('minuteWheel');
+  const timeConfirmBtn = document.getElementById('timeConfirmBtn');
+
+  let pickerOnConfirm = null; // 目前這次呼叫的 callback，關閉時清掉避免殘留
+  let calViewYear = 0, calViewMonth = 0; // 月曆目前顯示（不代表已選）的年月，0-based month
+  let calSelectedDate = ''; // 'YYYY-MM-DD'
+  let pickedHour = 0, pickedMinute = 0;
+
+  function closePicker(){
+    pickerOverlay.hidden = true;
+    pickerOnConfirm = null;
+  }
+  pickerBackdrop.addEventListener('click', closePicker);
+  pickerCancelBtn.addEventListener('click', closePicker);
+
+  function renderCalGrid(){
+    calYearLabel.textContent = calViewYear + '年';
+    calMonthLabel.textContent = (calViewMonth+1) + '月';
+    if(calWeekdaysRow.children.length === 0){
+      WEEKDAYS.forEach(w => {
+        const el = document.createElement('span');
+        el.textContent = w.slice(1); // 週日→日
+        calWeekdaysRow.appendChild(el);
+      });
+    }
+    calGrid.innerHTML = '';
+    const firstOfMonth = new Date(calViewYear, calViewMonth, 1);
+    const startOffset = firstOfMonth.getDay(); // 0=日
+    const daysInMonth = new Date(calViewYear, calViewMonth+1, 0).getDate();
+    const today = todayStr();
+    for(let i=0; i<startOffset; i++){
+      const cell = document.createElement('div');
+      cell.className = 'picker-cal-cell empty';
+      calGrid.appendChild(cell);
+    }
+    for(let day=1; day<=daysInMonth; day++){
+      const dateStr = calViewYear+'-'+pad2(calViewMonth+1)+'-'+pad2(day);
+      const cell = document.createElement('div');
+      cell.className = 'picker-cal-cell';
+      if(dateStr === today) cell.classList.add('today');
+      if(dateStr === calSelectedDate) cell.classList.add('selected');
+      cell.textContent = day;
+      cell.addEventListener('click', function(){
+        calSelectedDate = dateStr;
+        closePicker();
+        if(pickerOnConfirm) pickerOnConfirm(dateStr);
+      });
+      calGrid.appendChild(cell);
+    }
+  }
+
+  calPrevBtn.addEventListener('click', function(){
+    calViewMonth--;
+    if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
+    renderCalGrid();
+  });
+  calNextBtn.addEventListener('click', function(){
+    calViewMonth++;
+    if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
+    renderCalGrid();
+  });
+  calTodayBtn.addEventListener('click', function(){
+    const [y,m,d] = todayStr().split('-').map(Number);
+    calViewYear = y; calViewMonth = m-1;
+    renderCalGrid();
+  });
+
+  // 打開日期選擇器。initialDateStr 是 'YYYY-MM-DD'；onSelect(dateStr) 在
+  // 使用者點選某一天之後立刻被呼叫（點了就套用，不用另外按確定，
+  // 跟原本原生日期選擇器的手感一致）。
+  function openDatePicker(initialDateStr, onSelect){
+    const base = initialDateStr || todayStr();
+    const [y,m] = base.split('-').map(Number);
+    calViewYear = y; calViewMonth = m-1;
+    calSelectedDate = base;
+    pickerOnConfirm = onSelect;
+    pickerDateView.hidden = false;
+    pickerTimeView.hidden = true;
+    renderCalGrid();
+    pickerOverlay.hidden = false;
+  }
+
+  const HOURS = Array.from({length:24}, (_,i) => i);
+  const MINUTES = Array.from({length:12}, (_,i) => i*5); // 跟原本 step="300" 的 5 分鐘間隔一致
+  const WHEEL_ROW_H = 40;
+
+  function buildWheel(container, values, formatFn){
+    container.innerHTML = '';
+    values.forEach(v => {
+      const item = document.createElement('div');
+      item.className = 'picker-wheel-item';
+      item.textContent = formatFn(v);
+      item.dataset.value = v;
+      container.appendChild(item);
+    });
+  }
+  buildWheel(hourWheel, HOURS, v => pad2(v));
+  buildWheel(minuteWheel, MINUTES, v => pad2(v));
+
+  function nearestIndex(container){
+    return Math.round(container.scrollTop / WHEEL_ROW_H);
+  }
+  function markPicked(container, index){
+    Array.from(container.children).forEach((el,i) => {
+      el.classList.toggle('picked', i === index);
+    });
+  }
+  function scrollWheelTo(container, index, smooth){
+    container.scrollTo({ top: index*WHEEL_ROW_H, behavior: smooth ? 'smooth' : 'auto' });
+  }
+
+  let hourScrollTimer = null, minuteScrollTimer = null;
+  hourWheel.addEventListener('scroll', function(){
+    const idx = nearestIndex(hourWheel);
+    markPicked(hourWheel, idx);
+    clearTimeout(hourScrollTimer);
+    hourScrollTimer = setTimeout(function(){
+      pickedHour = HOURS[Math.max(0, Math.min(HOURS.length-1, idx))];
+    }, 100);
+  });
+  minuteWheel.addEventListener('scroll', function(){
+    const idx = nearestIndex(minuteWheel);
+    markPicked(minuteWheel, idx);
+    clearTimeout(minuteScrollTimer);
+    minuteScrollTimer = setTimeout(function(){
+      pickedMinute = MINUTES[Math.max(0, Math.min(MINUTES.length-1, idx))];
+    }, 100);
+  });
+  hourWheel.addEventListener('click', function(e){
+    const item = e.target.closest('.picker-wheel-item');
+    if(!item) return;
+    scrollWheelTo(hourWheel, Array.from(hourWheel.children).indexOf(item), true);
+  });
+  minuteWheel.addEventListener('click', function(e){
+    const item = e.target.closest('.picker-wheel-item');
+    if(!item) return;
+    scrollWheelTo(minuteWheel, Array.from(minuteWheel.children).indexOf(item), true);
+  });
+
+  // 打開時間選擇器。initialTimeStr 是 'HH:MM'；onSelect(timeStr) 在使用者
+  // 按下「確定」之後才呼叫（時間要同時選「時」跟「分」兩個值，比較適合
+  // 用一個明確的確定鍵，不像日期點了就能直接確定）。
+  function openTimePicker(initialTimeStr, onSelect){
+    const [h,mi] = (initialTimeStr || '09:00').split(':').map(Number);
+    pickedHour = h;
+    // 把分鐘吸附到最近的 5 分鐘刻度，跟原本 input[type=time] step=300 一致
+    pickedMinute = MINUTES.reduce((closest, v) => Math.abs(v-mi) < Math.abs(closest-mi) ? v : closest, 0);
+    pickerOnConfirm = onSelect;
+    pickerDateView.hidden = true;
+    pickerTimeView.hidden = false;
+    pickerOverlay.hidden = false;
+    // 要等 overlay 從 hidden 變成可見、版面量得到高度之後才能量測捲動位置，
+    // 用 rAF 讓瀏覽器先跑完一次排版。
+    requestAnimationFrame(function(){
+      const hIdx = HOURS.indexOf(pickedHour);
+      const mIdx = MINUTES.indexOf(pickedMinute);
+      scrollWheelTo(hourWheel, hIdx, false);
+      scrollWheelTo(minuteWheel, mIdx, false);
+      markPicked(hourWheel, hIdx);
+      markPicked(minuteWheel, mIdx);
+    });
+  }
+  timeConfirmBtn.addEventListener('click', function(){
+    const timeStr = pad2(pickedHour)+':'+pad2(pickedMinute);
+    const cb = pickerOnConfirm;
+    closePicker();
+    if(cb) cb(timeStr);
+  });
 
   // 把「行程資料」展開成某一天實際要顯示的「實例」清單。
   // 一般行程：date 完全相符才顯示。
@@ -1834,11 +2281,18 @@
     setSelectMode(false); // 刪除完成後自動關閉選取狀態
   });
 
-  // 「移動」鍵本身只是蓋著一個透明的 input[type=date]（跟頂部日期切換鍵
-  // 同一套手法），真正的動作在原生日期選擇器的 change 事件裡處理：
-  // 把每個被勾選的行程搬到新日期，時間、參與者都維持原樣不變。
-  // 重複行程沿用 applyQuickPlacement 既有規則──會從系列中拆成一筆獨立
-  // 的單次行程搬走，其餘日期不受影響（跟拖曳搬移單一行程的行為一致）。
+  // 按下「移動」鍵會打開共用的自訂日期選擇器；選完日期後才觸發
+  // moveTargetDatePicker 的 change 事件，把每個被勾選的行程搬到新日期，
+  // 時間、參與者都維持原樣不變。重複行程沿用 applyQuickPlacement 既有
+  // 規則──會從系列中拆成一筆獨立的單次行程搬走，其餘日期不受影響
+  // （跟拖曳搬移單一行程的行為一致）。
+  moveSelectedBtn.addEventListener('click', function(){
+    if(selectedEventKeys.size === 0) return;
+    openDatePicker(currentDate, function(dateStr){
+      moveTargetDatePicker.value = dateStr;
+      moveTargetDatePicker.dispatchEvent(new Event('change'));
+    });
+  });
   moveTargetDatePicker.addEventListener('change', function(){
     const targetDate = moveTargetDatePicker.value;
     moveTargetDatePicker.value = ''; // 用完立刻清空，下次點開才不會殘留上次選的日期
@@ -3380,6 +3834,12 @@
     currentDate = datePicker.value;
     renderTimeline();
   });
+  dateDisplayBtn.addEventListener('click', function(){
+    openDatePicker(currentDate, function(dateStr){
+      datePicker.value = dateStr;
+      datePicker.dispatchEvent(new Event('change'));
+    });
+  });
 
   /* ---------------- 編輯頁：欄位連動 ---------------- */
   const pageTimeline = document.getElementById('page-timeline');
@@ -3393,6 +3853,39 @@
   const fieldDate = document.getElementById('fieldDate');
   const fieldStart = document.getElementById('fieldStart');
   const fieldEnd = document.getElementById('fieldEnd');
+  const fieldDateBtn = document.getElementById('fieldDateBtn');
+  const fieldStartBtn = document.getElementById('fieldStartBtn');
+  const fieldEndBtn = document.getElementById('fieldEndBtn');
+
+  // 「2026年8月27日 · 週四」，跟頂部日期切換鍵同一套格式，比原生
+  // input[type=date] 的 YYYY-MM-DD 好讀。
+  function formatDateForDisplay(dateStr){
+    if(!dateStr) return '—';
+    const [y,m,d] = dateStr.split('-').map(Number);
+    return y+'年'+m+'月'+d+'日 · '+WEEKDAYS[weekdayOf(dateStr)];
+  }
+  fieldDateBtn.addEventListener('click', function(){
+    if(fieldDate.disabled) return;
+    openDatePicker(fieldDate.value, function(dateStr){
+      fieldDate.value = dateStr;
+      fieldDateBtn.textContent = formatDateForDisplay(dateStr);
+      fieldDate.dispatchEvent(new Event('change'));
+    });
+  });
+  fieldStartBtn.addEventListener('click', function(){
+    openTimePicker(fieldStart.value, function(timeStr){
+      fieldStart.value = timeStr;
+      fieldStartBtn.textContent = timeStr;
+      fieldStart.dispatchEvent(new Event('change'));
+    });
+  });
+  fieldEndBtn.addEventListener('click', function(){
+    openTimePicker(fieldEnd.value, function(timeStr){
+      fieldEnd.value = timeStr;
+      fieldEndBtn.textContent = timeStr;
+      fieldEnd.dispatchEvent(new Event('change'));
+    });
+  });
   const fieldNotes = document.getElementById('fieldNotes');
   const participantsBox = document.getElementById('participantsBox');
   const colorBox = document.getElementById('colorBox');
@@ -3462,8 +3955,12 @@
     fieldTitle.value = data.title || '';
     fieldDate.value = dateStr;
     fieldDate.disabled = !!isRecurring; // 重複行程的個別日期由「重複」規則決定，這裡不能單獨改
+    fieldDateBtn.textContent = formatDateForDisplay(dateStr);
+    fieldDateBtn.classList.toggle('disabled', !!isRecurring);
     fieldStart.value = data.start;
     fieldEnd.value = data.end;
+    fieldStartBtn.textContent = data.start || '—';
+    fieldEndBtn.textContent = data.end || '—';
     fieldNotes.value = data.notes || '';
     renderParticipantChips(data.participants && data.participants.length ? data.participants : [columns[0].id]);
     renderColorSwatches(data.color || DEFAULT_EVENT_COLOR);
