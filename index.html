@@ -89,6 +89,8 @@
   .page.hidden{visibility:hidden; pointer-events:none;}
   #page-edit{transform:translateX(100%);}
   #page-edit.active{transform:translateX(0);}
+  #page-month{transform:translateX(100%);}
+  #page-month.active{transform:translateX(0);}
   #page-timeline.pushed{transform:translateX(-18%); filter:brightness(0.9);}
 
   /* ---------- Timeline page ---------- */
@@ -690,6 +692,9 @@
     z-index:5;
   }
   .fab:active{opacity:.6;}
+  .month-fab{
+    left:16px; right:auto; /* 跟右下角鉛筆鍵鏡像，蓋在時間軸左側的時間刻度欄上面 */
+  }
 
   .undo-redo-stack{
     position:absolute;
@@ -1183,6 +1188,96 @@
   }
   .picker-cancel-btn:active{opacity:.6;}
 
+  /* ---------------- 月曆檢視頁面（#page-month） ---------------- */
+  .month-back-btn{
+    position:absolute;
+    left:0; top:50%;
+    transform:translateY(-50%);
+    width:34px; height:34px;
+    padding:0;
+    border-radius:10px;
+    border:none;
+    background:none;
+    color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .month-back-btn:active{opacity:.6;}
+  .month-title-nav{
+    display:flex; align-items:center; gap:10px;
+  }
+  .month-weekdays{
+    display:grid; grid-template-columns:repeat(7,1fr);
+    padding:4px 8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    color:var(--ink-faint);
+    text-align:center;
+    letter-spacing:.03em;
+  }
+  .month-grid{
+    display:grid; grid-template-columns:repeat(7,1fr);
+    grid-auto-rows:min-content;
+    align-content:start;
+    gap:3px;
+    padding:0 8px 8px 8px;
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .month-cell{
+    aspect-ratio:1; /* 寬高固定相同，不管螢幕多寬都是正方形 */
+    display:flex; flex-direction:column;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    padding:3px 2px 2px 2px;
+    overflow:hidden;
+    cursor:pointer;
+    min-width:0;
+  }
+  .month-cell:active{opacity:.7;}
+  .month-cell.outside-month{opacity:.4;}
+  .month-cell .cell-date{
+    flex:0 0 auto;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--ink);
+    text-align:center;
+    line-height:18px;
+  }
+  .month-cell.today .cell-date{
+    width:18px; height:18px;
+    line-height:18px;
+    border-radius:50%;
+    background:var(--red);
+    color:var(--paper);
+    font-weight:700;
+    margin:0 auto;
+  }
+  .month-cell .cell-events{
+    flex:1 1 auto;
+    min-height:0; /* 沒有這行 flex 子項目預設不會被壓縮，內容一多就會撐爆格子而不是自己捲動 */
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    display:flex; flex-direction:column;
+    gap:1.5px;
+    margin-top:2px;
+  }
+  .month-cell .cell-events::-webkit-scrollbar{display:none;}
+  .month-cell .cell-event-pill{
+    flex:0 0 auto;
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:9px;
+    line-height:1.4;
+    padding:0 3px;
+    border-radius:3px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
   .delete-btn{
     margin-top:6px;
     width:100%;
@@ -1395,6 +1490,17 @@
       </div>
     </div>
 
+    <!-- 月曆檢視入口：疊在時間軸左下角（蓋到左側時間刻度那一欄），跟右下角
+         鉛筆鍵是同一顆 .fab 的鏡像版本，只是換了邊、換了圖示。 -->
+    <button class="fab month-fab" id="btnOpenMonth" aria-label="月曆檢視">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="18" rx="3"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+    </button>
+
     <button class="fab" id="fabAdd" aria-label="新增行程">
       <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true">
         <g transform="rotate(45 50 50)" fill="currentColor">
@@ -1499,6 +1605,34 @@
 
       <button id="btnDelete" class="delete-btn">刪除此行程</button>
     </div>
+  </section>
+
+  <!-- ============ 頁面三：月曆檢視 ============
+       只負責「一眼看到整個月每天有什麼行程」跟「點某一天跳去那天的時間軸」，
+       本身不編輯任何資料，所以不用接復原/重做系統。行程清單直接重用
+       getInstancesForDate()（跟時間軸主頁抓當天行程是同一個函式），顏色
+       也是重用 eventColorById()/isLightColor()，確保跟時間軸上看到的顏色
+       永遠一致，不會有兩邊各自維護一套顏色邏輯結果對不上的問題。 -->
+  <section id="page-month" class="page">
+    <header class="planner-header">
+      <div class="date-center-nav">
+        <button type="button" id="btnMonthBack" class="month-back-btn" aria-label="返回時間軸">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div class="month-title-nav">
+          <button type="button" id="monthPrevBtn" class="picker-nav-btn" aria-label="上個月">‹</button>
+          <div class="picker-cal-title">
+            <span class="picker-cal-year" id="monthYearLabel">—</span>
+            <span class="picker-cal-month" id="monthMonthLabel">—</span>
+          </div>
+          <button type="button" id="monthNextBtn" class="picker-nav-btn" aria-label="下個月">›</button>
+        </div>
+      </div>
+    </header>
+    <div class="month-weekdays" id="monthWeekdaysRow"></div>
+    <div class="month-grid" id="monthGrid"></div>
   </section>
 
   <!-- ============ 共用元件：自訂日期／時間選擇器 ============
@@ -4068,6 +4202,7 @@
   /* ---------------- 編輯頁：欄位連動 ---------------- */
   const pageTimeline = document.getElementById('page-timeline');
   const pageEdit = document.getElementById('page-edit');
+  const pageMonth = document.getElementById('page-month');
   const fieldTitle = document.getElementById('fieldTitle');
   // 新建立的行程預設標題是「新行程」：點進標題欄位準備輸入時，
   // 如果還是這個預設值，直接幫使用者清空，不用自己手動刪除。
@@ -4232,13 +4367,123 @@
     showPage('edit');
   }
 
+  /* ---------------- 月曆檢視（#page-month） ----------------
+     只是「瀏覽」用的頁面，不改資料，所以完全不用碰復原/重做系統。
+     每天格子裡的行程清單直接重用 getInstancesForDate()——跟時間軸主頁
+     抓當天行程是同一個函式，顏色也是重用 eventColorById()/isLightColor()，
+     這樣月曆上看到的顏色永遠跟時間軸上的一致，不會兩邊各自維護一套顏色
+     邏輯結果對不上。 */
+  const monthYearLabel = document.getElementById('monthYearLabel');
+  const monthMonthLabel = document.getElementById('monthMonthLabel');
+  const monthWeekdaysRow = document.getElementById('monthWeekdaysRow');
+  const monthGrid = document.getElementById('monthGrid');
+  let monthViewYear = 0, monthViewMonth = 0; // 目前月曆頁顯示的年月，0-based month
+
+  function renderMonthGrid(){
+    monthYearLabel.textContent = monthViewYear + '年';
+    monthMonthLabel.textContent = (monthViewMonth+1) + '月';
+    if(monthWeekdaysRow.children.length === 0){
+      WEEKDAYS.forEach(w => {
+        const el = document.createElement('span');
+        el.textContent = w.slice(1); // 週日 → 日
+        monthWeekdaysRow.appendChild(el);
+      });
+    }
+
+    monthGrid.innerHTML = '';
+    const startOffset = new Date(monthViewYear, monthViewMonth, 1).getDay(); // 0=日
+    const daysInMonth = new Date(monthViewYear, monthViewMonth+1, 0).getDate();
+    const daysInPrevMonth = new Date(monthViewYear, monthViewMonth, 0).getDate();
+    const today = todayStr();
+    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7; // 補滿整數週
+
+    for(let i=0; i<totalCells; i++){
+      const dayNum = i - startOffset + 1;
+      let cellDate, displayNum, outside = false;
+
+      if(dayNum < 1){
+        displayNum = daysInPrevMonth + dayNum;
+        const pm = monthViewMonth === 0 ? 11 : monthViewMonth - 1;
+        const py = monthViewMonth === 0 ? monthViewYear - 1 : monthViewYear;
+        cellDate = py + '-' + pad2(pm+1) + '-' + pad2(displayNum);
+        outside = true;
+      } else if(dayNum > daysInMonth){
+        displayNum = dayNum - daysInMonth;
+        const nm = monthViewMonth === 11 ? 0 : monthViewMonth + 1;
+        const ny = monthViewMonth === 11 ? monthViewYear + 1 : monthViewYear;
+        cellDate = ny + '-' + pad2(nm+1) + '-' + pad2(displayNum);
+        outside = true;
+      } else {
+        displayNum = dayNum;
+        cellDate = monthViewYear + '-' + pad2(monthViewMonth+1) + '-' + pad2(dayNum);
+      }
+
+      const cell = document.createElement('div');
+      cell.className = 'month-cell'
+        + (outside ? ' outside-month' : '')
+        + (cellDate === today ? ' today' : '');
+
+      const dateEl = document.createElement('div');
+      dateEl.className = 'cell-date';
+      dateEl.textContent = displayNum;
+      cell.appendChild(dateEl);
+
+      const listEl = document.createElement('div');
+      listEl.className = 'cell-events';
+      const insts = getInstancesForDate(cellDate).sort((a,b) => a.start.localeCompare(b.start));
+      insts.forEach(inst => {
+        const pill = document.createElement('div');
+        pill.className = 'cell-event-pill';
+        const colorInfo = eventColorById(inst.color);
+        pill.style.background = colorInfo.hex;
+        pill.style.color = isLightColor(colorInfo.hex) ? 'rgba(30,26,22,0.92)' : '#FFFFFF';
+        pill.textContent = inst.title;
+        listEl.appendChild(pill);
+      });
+      cell.appendChild(listEl);
+
+      // 點格子（不管本月還是延伸出來的上/下個月）直接跳去那一天的時間軸。
+      cell.addEventListener('click', function(){
+        currentDate = cellDate;
+        renderTimeline();
+        goBackToTimeline();
+      });
+
+      monthGrid.appendChild(cell);
+    }
+  }
+
+  function openMonthView(){
+    const [y,m] = currentDate.split('-').map(Number);
+    monthViewYear = y; monthViewMonth = m-1;
+    renderMonthGrid();
+    if(usingRealHistory){
+      try{
+        history.pushState({page:'month'}, '', '#month');
+      }catch(err){
+        usingRealHistory = false;
+      }
+    }
+    showPage('month');
+  }
+  document.getElementById('btnOpenMonth').addEventListener('click', openMonthView);
+  document.getElementById('btnMonthBack').addEventListener('click', goBackToTimeline);
+  document.getElementById('monthPrevBtn').addEventListener('click', function(){
+    monthViewMonth--;
+    if(monthViewMonth < 0){ monthViewMonth = 11; monthViewYear--; }
+    renderMonthGrid();
+  });
+  document.getElementById('monthNextBtn').addEventListener('click', function(){
+    monthViewMonth++;
+    if(monthViewMonth > 11){ monthViewMonth = 0; monthViewYear++; }
+    renderMonthGrid();
+  });
+
   function showPage(name){
-    if(name === 'edit'){
-      pageEdit.classList.add('active');
-      pageTimeline.classList.add('pushed');
-    } else {
-      pageEdit.classList.remove('active');
-      pageTimeline.classList.remove('pushed');
+    pageEdit.classList.toggle('active', name === 'edit');
+    pageMonth.classList.toggle('active', name === 'month');
+    pageTimeline.classList.toggle('pushed', name === 'edit' || name === 'month');
+    if(name !== 'edit'){
       editingMasterId = null;
       editingInstanceDate = null;
     }
