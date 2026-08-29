@@ -158,6 +158,9 @@
     border-color:var(--red);
   }
   .select-delete-btn{
+    position:absolute;
+    right:0; top:50%;
+    transform:translateY(-50%);
     padding:7px 10px;
     border-radius:10px;
     border:1.5px solid var(--ink);
@@ -173,17 +176,15 @@
   .select-delete-btn:active{opacity:.8;}
   .select-delete-btn[hidden]{display:none;}
   #phone.select-mode-active .fab,
-  #phone.select-mode-active .add-col-btn{
+  #phone.select-mode-active .add-col-btn,
+  #phone.select-mode-active .undo-redo-stack{
     display:none;
   }
-  /* 「移動」鍵：位置比照新增共編者鍵（right:0，同樣的垂直置中），
+  /* 「移動」鍵：跟「選取」鍵放在同一個 .select-controls 群組裡（左側），
      大小/字體比照左側「選取」鍵（.select-toggle-btn），維持整排按鍵
      視覺一致。預設用 [hidden] 隱藏，只有選取模式中且至少勾選一個
      行程時才由 JS 拿掉 hidden。 */
   .select-move-btn{
-    position:absolute;
-    right:0; top:50%;
-    transform:translateY(-50%);
     padding:7px 14px;
     border-radius:10px;
     border:1.5px solid var(--ink);
@@ -313,7 +314,7 @@
   .hour-row:first-child{border-top:none;}
   .hour-row .hlabel{
     position:absolute;
-    left:12px; top:-7px;
+    left:6px; top:-7px;
     font-family:'JetBrains Mono', monospace;
     font-size:12.5px;
     color:var(--ink-faint);
@@ -1345,15 +1346,13 @@
           <button id="btnSelectToggle" class="select-toggle-btn" aria-label="選取">
             <span id="selectToggleIcon">選取</span>
           </button>
-          <button id="btnDeleteSelected" class="select-delete-btn" aria-label="刪除已選取的項目" hidden>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-              <path d="M10 11v6"></path>
-              <path d="M14 11v6"></path>
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
-            </svg>
-          </button>
+          <!-- 選取模式下、有勾選任何行程時才出現的「移動」鍵。點下去會打開
+               跟其他日期欄位共用的自訂日期選擇器（#pickerOverlay），選完
+               日期後只搬日期、不動行程原本的時間。 -->
+          <div id="btnMoveSelected" class="select-move-btn" aria-label="移動選取的行程" hidden>
+            <span>移動</span>
+            <input type="date" id="moveTargetDatePicker" hidden>
+          </div>
         </div>
         <div class="date-display" id="dateDisplayBtn">
           <div class="date-content" id="dateContentCurrent">
@@ -1372,15 +1371,15 @@
             </g>
           </svg>
         </button>
-        <!-- 選取模式下、有勾選任何行程時才出現的「移動」鍵，佔用跟新增共編者
-             鍵一樣的右上角位置（兩者互斥：進入選取模式時新增共編者鍵本來就
-             會被隱藏，見 #phone.select-mode-active .add-col-btn）。點下去會
-             打開跟其他日期欄位共用的自訂日期選擇器（#pickerOverlay），選完
-             日期後只搬日期、不動行程原本的時間。 -->
-        <div id="btnMoveSelected" class="select-move-btn" aria-label="移動選取的行程" hidden>
-          <span>移動</span>
-          <input type="date" id="moveTargetDatePicker" hidden>
-        </div>
+        <button id="btnDeleteSelected" class="select-delete-btn" aria-label="刪除已選取的項目" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+            <path d="M10 11v6"></path>
+            <path d="M14 11v6"></path>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -2207,6 +2206,7 @@
     });
     menu.querySelector('[data-action="del"]').addEventListener('click', function(ev){
       ev.stopPropagation();
+      if(!window.confirm('確定刪除？')) return;
       deleteInstanceQuick(masterId, instanceDate);
       closeCardMenu();
       renderEvents();
@@ -2406,6 +2406,7 @@
 
   deleteSelectedBtn.addEventListener('click', function(){
     if(selectedEventKeys.size === 0 && selectedColumnIds.size === 0) return;
+    if(!window.confirm('確定刪除？')) return;
 
     // 1) 刪除被選取的行程：只刪除「目前這一天」看到的這一場，
     //    重複行程的其他日期不受影響（跟單一編輯頁「不同步」刪除的規則一致）。
@@ -4326,6 +4327,7 @@
 
   document.getElementById('btnDelete').addEventListener('click', function(){
     if(!editingMasterId) return;
+    if(!window.confirm('確定刪除？')) return;
     const master = events.find(e => e.id === editingMasterId);
     if(!master) return;
     const syncOn = fieldSyncEdit.checked;
