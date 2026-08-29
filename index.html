@@ -15,7 +15,7 @@
     --line-soft:#E8E0CC;
     --ink:#20263A;
     --ink-soft:#5B6178;
-    --ink-faint:#9096A8;
+    --ink-faint:#96876F; /* 低飽和度咖啡色，取代原本偏藍灰的淡字色 */
     --red:#B23A2F;
     --red-deep:#8E2C24;
     --card:#FFFDF8;
@@ -234,7 +234,7 @@
   .date-display .weekday{
     display:block;
     font-family:'JetBrains Mono', monospace;
-    font-size:10px;
+    font-size:12px;
     letter-spacing:.12em;
     color:var(--ink-faint);
   }
@@ -315,7 +315,7 @@
     position:absolute;
     left:12px; top:-7px;
     font-family:'JetBrains Mono', monospace;
-    font-size:10.5px;
+    font-size:12.5px;
     color:var(--ink-faint);
     background:var(--paper);
     padding:0 3px;
@@ -473,7 +473,9 @@
   .card-ghost{
     position:fixed !important;
     right:auto !important;
-    z-index:999;
+    z-index:2; /* 故意比 .planner-header 跟 .column-header-row 低（見下方），
+                  拖曳經過畫面上方時卡片會滑到日期列／使用者欄位「後面」，
+                  不會蓋住那兩排固定的介面。 */
     pointer-events:none;
     box-shadow:0 14px 30px rgba(32,38,58,0.38);
     transform:scale(1.06);
@@ -565,7 +567,7 @@
   .cluster-menu-title{
     color:var(--ink-faint);
     font-family:'Noto Sans TC', sans-serif;
-    font-size:11px;
+    font-size:13px;
     font-weight:700;
     padding:10px 14px 4px;
   }
@@ -595,7 +597,7 @@
   .cluster-menu button span.cluster-time{
     flex:0 0 auto;
     font-weight:600;
-    font-size:11.5px;
+    font-size:14px;
     color:var(--item-text-soft, var(--ink-faint));
   }
   .cluster-menu button:active{filter:brightness(0.92);}
@@ -688,6 +690,32 @@
   }
   .fab:active{opacity:.6;}
 
+  .undo-redo-stack{
+    position:absolute;
+    right:16px; bottom:84px; /* 鉛筆鍵(bottom:22px + 約52px高) 再加一點間距 */
+    display:flex; flex-direction:column;
+    gap:10px;
+    z-index:5;
+  }
+  .undo-redo-btn{
+    width:40px; height:40px;
+    padding:0;
+    border-radius:12px;
+    border:none;
+    background:none;
+    color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    filter:drop-shadow(0 3px 6px rgba(32,38,58,0.28));
+  }
+  .undo-redo-btn:active{opacity:.6;}
+  .undo-redo-btn:disabled{
+    color:var(--ink-faint);
+    opacity:.5;
+    cursor:default;
+    filter:none;
+  }
+
   .selection-box{
     position:absolute;
     left:58px; right:14px;
@@ -716,6 +744,7 @@
   }
   .selection-box.no-room .selection-label{
     color:var(--ink-faint);
+    font-size:13px;
   }
 
   .column-header-row{
@@ -724,6 +753,8 @@
     background:var(--paper);
     border-bottom:1px solid var(--line);
     gap:0;
+    position:relative;
+    z-index:3; /* 跟 .planner-header 同一層，兩者都要蓋在拖曳中的 .card-ghost（z-index:2）上面 */
   }
   .column-header-row .col-head{
     flex:1 1 0;
@@ -791,8 +822,8 @@
 
   .hint-empty{
     position:absolute;
-    left:58px; right:14px; top:14px;
-    font-size:11px; color:var(--ink-faint);
+    left:0; right:0; top:14px;
+    font-size:13px; color:var(--ink-faint);
     font-family:'JetBrains Mono', monospace;
     text-align:center;
     pointer-events:none;
@@ -806,7 +837,7 @@
   }
   .edit-title-label{
     font-family:'JetBrains Mono', monospace;
-    font-size:10.5px;
+    font-size:12.5px;
     letter-spacing:.18em;
     color:var(--ink-faint);
   }
@@ -839,7 +870,7 @@
   .field{display:flex; flex-direction:column; gap:6px;}
   .field-label{
     font-family:'JetBrains Mono', monospace;
-    font-size:10px;
+    font-size:12px;
     letter-spacing:.14em;
     color:var(--ink-faint);
     text-transform:uppercase;
@@ -909,7 +940,7 @@
   }
   .time-trio label{
     font-family:'JetBrains Mono', monospace;
-    font-size:9px;
+    font-size:11px;
     letter-spacing:.08em;
     color:var(--ink-faint);
     text-transform:uppercase;
@@ -948,6 +979,7 @@
   .date-value-btn:active{opacity:.6;}
   .date-value-btn.disabled{
     color:var(--ink-faint);
+    font-size:20px;
     pointer-events:none;
   }
   /* 取代原生 input[type=time] 的時間欄位按鍵，樣式照抄原本 .time-trio
@@ -995,6 +1027,15 @@
     from{ transform:translateY(28px); opacity:0; }
     to{ transform:translateY(0); opacity:1; }
   }
+  /* 關閉時往下滑走消失，不管是取消、按確定、還是選好日期，統一都是這個
+     動畫，不會有「畫面忽然跳掉」的感覺。 */
+  .picker-sheet.closing{
+    animation:picker-sheet-out .22s ease forwards;
+  }
+  @keyframes picker-sheet-out{
+    from{ transform:translateY(0); opacity:1; }
+    to{ transform:translateY(100%); opacity:0; }
+  }
   .picker-cal-head{
     display:flex; align-items:center; justify-content:space-between;
   }
@@ -1015,7 +1056,7 @@
   }
   .picker-cal-title .picker-cal-year{
     font-family:'JetBrains Mono', monospace;
-    font-size:11.5px;
+    font-size:14px;
     color:var(--ink-faint);
   }
   .picker-cal-title .picker-cal-month{
@@ -1027,7 +1068,7 @@
   .picker-cal-weekdays{
     display:grid; grid-template-columns:repeat(7,1fr);
     font-family:'JetBrains Mono', monospace;
-    font-size:10.5px;
+    font-size:12.5px;
     color:var(--ink-faint);
     text-align:center;
     letter-spacing:.03em;
@@ -1059,9 +1100,9 @@
     border-radius:10px;
     border:1.5px dashed var(--line);
     background:none;
-    color:var(--ink-soft);
+    color:var(--ink-faint);
     font-family:'Noto Sans TC', sans-serif;
-    font-size:12px;
+    font-size:14.5px;
     cursor:pointer;
   }
   .picker-today-btn:active{opacity:.6;}
@@ -1069,7 +1110,7 @@
   .picker-time-title{
     text-align:center;
     font-family:'JetBrains Mono', monospace;
-    font-size:10.5px;
+    font-size:12.5px;
     letter-spacing:.14em;
     color:var(--ink-faint);
     text-transform:uppercase;
@@ -1095,13 +1136,13 @@
     display:flex; align-items:center; justify-content:center;
     scroll-snap-align:center;
     font-family:'JetBrains Mono', monospace;
-    font-size:16px;
+    font-size:19px;
     color:var(--ink-faint);
   }
   .picker-wheel-item.picked{
     color:var(--ink);
     font-weight:700;
-    font-size:20px;
+    font-size:24px;
   }
   .picker-wheel-colon{
     font-family:'JetBrains Mono', monospace;
@@ -1136,7 +1177,7 @@
     background:none;
     color:var(--ink-faint);
     font-family:'Noto Sans TC', sans-serif;
-    font-size:13px;
+    font-size:15.5px;
     cursor:pointer;
   }
   .picker-cancel-btn:active{opacity:.6;}
@@ -1369,6 +1410,26 @@
         </g>
       </svg>
     </button>
+
+    <!-- 回上一步／下一步：整個資料狀態（columns + events）的復原/重做，
+         垂直排列在鉛筆鍵正上方。實作方式見 JS 段落的「復原／重做」區塊：
+         用整包資料的快照比對，不是針對每種操作分別寫復原邏輯，這樣不管
+         是改行程內容、時間、日期、參與者、還是新增/改名/刪除共編者欄位，
+         全部都自動可以復原，不用每加一種新操作就要記得補一段復原邏輯。 -->
+    <div class="undo-redo-stack">
+      <button type="button" id="btnUndo" class="undo-redo-btn" aria-label="回上一步" disabled>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 14 4 9 9 4"></polyline>
+          <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+        </svg>
+      </button>
+      <button type="button" id="btnRedo" class="undo-redo-btn" aria-label="下一步" disabled>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 14 20 9 15 4"></polyline>
+          <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
+        </svg>
+      </button>
+    </div>
   </section>
 
   <!-- ============ 頁面二：行程編輯頁 ============ -->
@@ -1453,7 +1514,7 @@
        既有的存檔/連動邏輯完全不用改。 -->
   <div id="pickerOverlay" class="picker-overlay" hidden>
     <div class="picker-backdrop" id="pickerBackdrop"></div>
-    <div class="picker-sheet" role="dialog" aria-modal="true">
+    <div class="picker-sheet" id="pickerSheet" role="dialog" aria-modal="true">
 
       <div class="picker-date" id="pickerDateView">
         <div class="picker-cal-head">
@@ -1470,7 +1531,7 @@
       </div>
 
       <div class="picker-time" id="pickerTimeView" hidden>
-        <div class="picker-time-title">選擇時間</div>
+        <div class="picker-time-title" id="pickerTimeTitle">選擇時間</div>
         <div class="picker-time-wheels">
           <div class="picker-wheel-highlight" aria-hidden="true"></div>
           <div class="picker-wheel" id="hourWheel"></div>
@@ -1579,6 +1640,76 @@
   if(savedData){
     columns = savedData.columns;
     events = savedData.events;
+  }
+
+  /* ---------------- 復原／重做 ----------------
+     不是針對「刪除」「編輯」「拖曳」……每一種操作分別寫一段復原邏輯，而是
+     整包資料（columns + events —— 這剛好就是 saveToStorage() 存的東西，
+     行程內容/時間/日期/參與者、共編者欄位的新增/改名/刪除，全部都在裡面）
+     拍快照、比對前後差異。掛在跟 saveToStorage 完全同一組「資料可能剛
+     被動過」的偵測點上（renderColumnHeader/renderEvents），所以不用擔心
+     以後新加一種操作忘記補復原邏輯——只要那個操作會讓畫面重繪，就自動
+     被記錄進來。
+
+     每筆快照除了資料本身，也記錄「拍下這筆快照當下，畫面顯示的是哪一
+     天」（lastCommittedDate）。單純換日瀏覽不會被記成新的一步（資料沒變，
+     下面比對就直接跳過），但會順便更新 lastCommittedDate，這樣如果之後
+     做了個會換日的操作（例如把行程搬到別天、選取後用「移動」搬過去），
+     復原時才能連著畫面顯示的日期一起退回去，而不是只有資料復原、畫面
+     卻還留在搬移後的那一天。 */
+  let undoStack = [];
+  let redoStack = [];
+  let lastCommittedDataJSON = JSON.stringify({columns, events});
+  let lastCommittedDate = T0; // currentDate 這時候還沒宣告，用它的初始值 T0 代替
+  let isRestoringSnapshot = false; // 復原/重做本身在改資料時，不要又把這次改動記成新的一步
+  const UNDO_STACK_LIMIT = 50;
+
+  function captureUndoCheckpoint(){
+    if(isRestoringSnapshot) return;
+    const snap = JSON.stringify({columns, events});
+    if(snap === lastCommittedDataJSON){
+      lastCommittedDate = currentDate; // 資料沒變，只是換了顯示的日期，記住就好
+      return;
+    }
+    undoStack.push({data: lastCommittedDataJSON, date: lastCommittedDate});
+    if(undoStack.length > UNDO_STACK_LIMIT) undoStack.shift();
+    redoStack.length = 0; // 有新的動作了，原本能重做的「未來」就作廢
+    lastCommittedDataJSON = snap;
+    lastCommittedDate = currentDate;
+    updateUndoRedoButtons();
+  }
+
+  function applySnapshot(entry){
+    const data = JSON.parse(entry.data);
+    isRestoringSnapshot = true;
+    columns = data.columns;
+    events = data.events;
+    currentDate = entry.date;
+    selectedEventKeys.clear();
+    selectedColumnIds.clear();
+    renderTimeline(); // 資料 + 畫面顯示的日期一起換回去（日期標籤、星期、今天樣式也一併更新）
+    isRestoringSnapshot = false;
+    lastCommittedDataJSON = entry.data;
+    lastCommittedDate = entry.date;
+    scheduleSaveToStorage();
+    updateUndoRedoButtons();
+  }
+
+  function undo(){
+    if(undoStack.length === 0) return;
+    redoStack.push({data: lastCommittedDataJSON, date: lastCommittedDate});
+    const prev = undoStack.pop();
+    applySnapshot(prev);
+  }
+  function redo(){
+    if(redoStack.length === 0) return;
+    undoStack.push({data: lastCommittedDataJSON, date: lastCommittedDate});
+    const next = redoStack.pop();
+    applySnapshot(next);
+  }
+  function updateUndoRedoButtons(){
+    btnUndo.disabled = undoStack.length === 0;
+    btnRedo.disabled = redoStack.length === 0;
   }
 
   let currentDate = T0;      // 目前檢視的日期 (YYYY-MM-DD)
@@ -1702,6 +1833,7 @@
      處理，之後要再調整風格只用改這一塊。 */
   const pickerOverlay = document.getElementById('pickerOverlay');
   const pickerBackdrop = document.getElementById('pickerBackdrop');
+  const pickerSheet = document.getElementById('pickerSheet');
   const pickerDateView = document.getElementById('pickerDateView');
   const pickerTimeView = document.getElementById('pickerTimeView');
   const pickerCancelBtn = document.getElementById('pickerCancelBtn');
@@ -1717,15 +1849,30 @@
   const hourWheel = document.getElementById('hourWheel');
   const minuteWheel = document.getElementById('minuteWheel');
   const timeConfirmBtn = document.getElementById('timeConfirmBtn');
+  const pickerTimeTitle = document.getElementById('pickerTimeTitle');
 
   let pickerOnConfirm = null; // 目前這次呼叫的 callback，關閉時清掉避免殘留
   let calViewYear = 0, calViewMonth = 0; // 月曆目前顯示（不代表已選）的年月，0-based month
   let calSelectedDate = ''; // 'YYYY-MM-DD'
   let pickedHour = 0, pickedMinute = 0;
 
+  const PICKER_CLOSE_ANIM_MS = 220; // 要跟 CSS 的 picker-sheet-out 動畫時間一致
+
+  // 讓選擇器往下滑走消失，不是直接把整塊藏起來，動畫跑完才真的隱藏、
+  // 並且在這之後才呼叫 afterHidden（例如真正套用選好的日期/時間）。
+  function hidePickerSheet(afterHidden){
+    pickerSheet.classList.add('closing');
+    setTimeout(function(){
+      pickerSheet.classList.remove('closing');
+      pickerOverlay.hidden = true;
+      pickerOnConfirm = null;
+      if(afterHidden) afterHidden();
+    }, PICKER_CLOSE_ANIM_MS);
+  }
+
+  // 一般關閉（取消／點背景）：不用等待，直接開始往下滑走。
   function closePicker(){
-    pickerOverlay.hidden = true;
-    pickerOnConfirm = null;
+    hidePickerSheet(null);
   }
   pickerBackdrop.addEventListener('click', closePicker);
   pickerCancelBtn.addEventListener('click', closePicker);
@@ -1759,8 +1906,16 @@
       cell.textContent = day;
       cell.addEventListener('click', function(){
         calSelectedDate = dateStr;
-        closePicker();
-        if(pickerOnConfirm) pickerOnConfirm(dateStr);
+        // 先立刻給按鍵反饋（變成跟「選中」一樣的紅底），其他格子的反白拿掉，
+        // 讓使用者確定自己點到了哪一天。
+        calGrid.querySelectorAll('.picker-cal-cell.selected').forEach(el => el.classList.remove('selected'));
+        cell.classList.add('selected');
+        const cb = pickerOnConfirm;
+        // 停留一下讓使用者看清楚反饋，再讓整塊選擇器往下滑走消失，
+        // 消失後才真的套用日期——不要選了馬上跳頁，感覺太突兀。
+        setTimeout(function(){
+          hidePickerSheet(function(){ if(cb) cb(dateStr); });
+        }, 350);
       });
       calGrid.appendChild(cell);
     }
@@ -1786,6 +1941,7 @@
   // 使用者點選某一天之後立刻被呼叫（點了就套用，不用另外按確定，
   // 跟原本原生日期選擇器的手感一致）。
   function openDatePicker(initialDateStr, onSelect){
+    pickerSheet.classList.remove('closing');
     const base = initialDateStr || todayStr();
     const [y,m] = base.split('-').map(Number);
     calViewYear = y; calViewMonth = m-1;
@@ -1856,8 +2012,11 @@
 
   // 打開時間選擇器。initialTimeStr 是 'HH:MM'；onSelect(timeStr) 在使用者
   // 按下「確定」之後才呼叫（時間要同時選「時」跟「分」兩個值，比較適合
-  // 用一個明確的確定鍵，不像日期點了就能直接確定）。
-  function openTimePicker(initialTimeStr, onSelect){
+  // 用一個明確的確定鍵，不像日期點了就能直接確定）。label 是標題文字，
+  // 用來區分目前調的是開始還是結束時間，沒給的話退回「選擇時間」。
+  function openTimePicker(initialTimeStr, onSelect, label){
+    pickerSheet.classList.remove('closing');
+    pickerTimeTitle.textContent = label || '選擇時間';
     const [h,mi] = (initialTimeStr || '09:00').split(':').map(Number);
     pickedHour = h;
     // 把分鐘吸附到最近的 5 分鐘刻度，跟原本 input[type=time] step=300 一致
@@ -1880,8 +2039,7 @@
   timeConfirmBtn.addEventListener('click', function(){
     const timeStr = pad2(pickedHour)+':'+pad2(pickedMinute);
     const cb = pickerOnConfirm;
-    closePicker();
-    if(cb) cb(timeStr);
+    hidePickerSheet(function(){ if(cb) cb(timeStr); });
   });
 
   // 把「行程資料」展開成某一天實際要顯示的「實例」清單。
@@ -2217,6 +2375,10 @@
   const deleteSelectedBtn = document.getElementById('btnDeleteSelected');
   const moveSelectedBtn = document.getElementById('btnMoveSelected');
   const moveTargetDatePicker = document.getElementById('moveTargetDatePicker');
+  const btnUndo = document.getElementById('btnUndo');
+  const btnRedo = document.getElementById('btnRedo');
+  btnUndo.addEventListener('click', undo);
+  btnRedo.addEventListener('click', redo);
 
   // 「移動」鍵只在選取模式中、且至少勾選一個行程時才顯示；使用者欄位的
   // 勾選（selectedColumnIds）不會讓它出現，移動功能目前只針對行程本身。
@@ -2322,6 +2484,7 @@
   }
 
   function renderColumnHeader(){
+    captureUndoCheckpoint();
     columnHeaderRow.innerHTML = '';
     columns.forEach((col, idx) => {
       const cell = document.createElement('div');
@@ -2446,6 +2609,7 @@
   }
 
   function renderEvents(){
+    captureUndoCheckpoint();
     scheduleSaveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來（debounce，避免同步阻塞）
     updateMoveButtonVisibility(); // 勾選狀態常常伴隨重繪一起變動，這裡統一同步一次
     closeCardMenu(); // 畫面要重繪了，任何還開著的快捷選單先收起來，避免指到舊卡片
@@ -3006,6 +3170,37 @@
     if(edgeFlipTimer){ clearTimeout(edgeFlipTimer); edgeFlipTimer = null; }
   }
 
+  // 拖曳行程碰到時間軸可視範圍的上/下邊界時，連續捲動時間軸（跟左右
+  // 碰邊界連續換日是同一種手感，只是這裡捲的是同一天內的時段，不換日）。
+  let vAutoScrollRAF = null;
+  let vAutoScrollDir = null; // 'up' | 'down' | null
+  const V_AUTO_SCROLL_EDGE_PX = 40; // 手指距離可視範圍上/下邊多近算「碰到邊界」
+  const V_AUTO_SCROLL_SPEED = 7; // 每個 rAF frame 捲動幾 px
+
+  function armVerticalAutoScroll(dir){
+    vAutoScrollDir = dir;
+    if(vAutoScrollRAF) return; // 迴圈已經在跑了，換方向只要改上面那個變數就好
+    const step = function(){
+      if(!floatingDrag || !vAutoScrollDir){ vAutoScrollRAF = null; return; }
+      const before = timelineScroll.scrollTop;
+      timelineScroll.scrollTop += (vAutoScrollDir === 'down' ? V_AUTO_SCROLL_SPEED : -V_AUTO_SCROLL_SPEED);
+      if(timelineScroll.scrollTop === before){
+        // 已經捲到頂或捲到底了，沒有更多內容，停下來
+        vAutoScrollRAF = null;
+        return;
+      }
+      // 手指沒有動，但底下內容被捲動了，浮動卡片上顯示的時間預覽要跟著更新，
+      // 不然使用者會看到卡片位置沒變、時間卻是舊的。
+      if(floatingDrag.lastClientY != null) updateGhostTimePreview(floatingDrag.lastClientY);
+      vAutoScrollRAF = requestAnimationFrame(step);
+    };
+    vAutoScrollRAF = requestAnimationFrame(step);
+  }
+  function disarmVerticalAutoScroll(){
+    vAutoScrollDir = null;
+    if(vAutoScrollRAF){ cancelAnimationFrame(vAutoScrollRAF); vAutoScrollRAF = null; }
+  }
+
   function startFloatingDrag(inst, runMin, runMax, sourceCard, grabX, grabY, curX, curY){
     const rect = sourceCard.getBoundingClientRect();
     const ghost = sourceCard.cloneNode(true);
@@ -3042,25 +3237,38 @@
         title: escapeHtml(inst.title || '(未命名行程)'),
         recurMark: inst.isRecurring ? '<span class="ecard-recur-inline">↻</span>' : ''
       },
-      lastEdgeDir: null
+      lastEdgeDir: null,
+      lastClientX: curX,
+      lastClientY: curY
     };
     positionGhost(curX, curY);
     renderEvents(); // 立刻重繪一次：本尊卡片先隱藏，畫面上只剩浮動的 ghost
   }
 
-  function updateFloatingDrag(clientX, clientY){
+  // 把「拖曳目前放開的話會變成幾點」換算成文字、寫回浮動卡片，抽成獨立
+  // 函式是因為兩種情況都要更新同一段預覽文字：手指真的在移動時（來自
+  // pointermove），跟手指停在邊界沒動、但畫面因為自動捲動而底下內容
+  // 位移時（來自 armVerticalAutoScroll 的 rAF 迴圈）。
+  function updateGhostTimePreview(clientY){
     if(!floatingDrag) return;
-    positionGhost(clientX, clientY);
-
-    // 即時預覽：用跟放開時（endFloatingDrag）完全相同的 5 分鐘吸附規則，
-    // 讓浮動卡片上顯示的時間即時反映「現在放開的話會變成幾點」，
-    // 使用者可以直接看數字決定要在哪裡鬆手，不用肉眼對齊格線。
     const ghostTop = clientY - floatingDrag.grabOffsetY;
     const gridRect = timelineGrid.getBoundingClientRect();
     const rawMin = Math.round((ghostTop - gridRect.top)/hourPx*60);
     const snappedStart = Math.max(0, Math.min(23*60, Math.round(rawMin/5)*5));
     const previewStr = minutesToTime(snappedStart)+' - '+minutesToTime(snappedStart + floatingDrag.durationMin);
     updateCardTimeDisplay(floatingDrag.ghost, floatingDrag.meta, previewStr);
+  }
+
+  function updateFloatingDrag(clientX, clientY){
+    if(!floatingDrag) return;
+    floatingDrag.lastClientX = clientX;
+    floatingDrag.lastClientY = clientY;
+    positionGhost(clientX, clientY);
+
+    // 即時預覽：用跟放開時（endFloatingDrag）完全相同的 5 分鐘吸附規則，
+    // 讓浮動卡片上顯示的時間即時反映「現在放開的話會變成幾點」，
+    // 使用者可以直接看數字決定要在哪裡鬆手，不用肉眼對齊格線。
+    updateGhostTimePreview(clientY);
 
     const rect = eventsLayer.getBoundingClientRect();
     const nearLeft = clientX - rect.left < 34;
@@ -3075,6 +3283,20 @@
     } else if(floatingDrag.lastEdgeDir){
       floatingDrag.lastEdgeDir = null;
       disarmEdgeFlip();
+    }
+
+    // 上下邊界：碰到時間軸可視範圍的上緣/下緣就連續捲動，讓使用者可以把
+    // 行程拖到目前畫面看不到的更早/更晚時段，不用先放開、手動捲動、
+    // 再重新長按拖曳一次。
+    const scrollRect = timelineScroll.getBoundingClientRect();
+    const nearTop = clientY - scrollRect.top < V_AUTO_SCROLL_EDGE_PX;
+    const nearBottom = scrollRect.bottom - clientY < V_AUTO_SCROLL_EDGE_PX;
+    if(nearTop){
+      armVerticalAutoScroll('up');
+    } else if(nearBottom){
+      armVerticalAutoScroll('down');
+    } else {
+      disarmVerticalAutoScroll();
     }
   }
 
@@ -3101,6 +3323,7 @@
   function endFloatingDrag(clientX, clientY){
     if(!floatingDrag) return;
     disarmEdgeFlip();
+    disarmVerticalAutoScroll();
     const fd = floatingDrag;
 
     // 換算成 ghost 實際的左上角位置（用抓取時記錄的偏移量還原），
@@ -3877,14 +4100,14 @@
       fieldStart.value = timeStr;
       fieldStartBtn.textContent = timeStr;
       fieldStart.dispatchEvent(new Event('change'));
-    });
+    }, '開始時間');
   });
   fieldEndBtn.addEventListener('click', function(){
     openTimePicker(fieldEnd.value, function(timeStr){
       fieldEnd.value = timeStr;
       fieldEndBtn.textContent = timeStr;
       fieldEnd.dispatchEvent(new Event('change'));
-    });
+    }, '結束時間');
   });
   const fieldNotes = document.getElementById('fieldNotes');
   const participantsBox = document.getElementById('participantsBox');
