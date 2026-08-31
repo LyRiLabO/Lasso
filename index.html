@@ -28,6 +28,17 @@
                      所有跟每小時高度成比例的地方（格線、卡片容器）都跟著變 */
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  /* 按下去的反饋（變暗/變色）統一補上漸變時間，不要瞬間切換。快速點一下
+     的話，沒有 transition 的話變化常常只閃過一兩個 frame，很容易感覺不到；
+     有了漸變，即使放開得快，退回原本樣子的過程也會被看見，反饋自然更
+     明顯、有停留感。 */
+  .add-col-btn, .select-toggle-btn, .select-delete-btn, .select-move-btn,
+  .date-display, .fab, .month-fab, .undo-redo-btn, .date-value-btn,
+  .time-value-btn, .picker-nav-btn, .picker-cal-cell, .picker-today-btn,
+  .picker-confirm-btn, .picker-cancel-btn, .picker-confirm-ok-btn,
+  .picker-confirm-cancel-btn, .month-back-btn, .month-today-btn, .month-cell{
+    transition:opacity .16s ease, background-color .16s ease, filter .16s ease;
+  }
   /* 整個介面預設不能被框選文字，這是像手機 App 一樣操作的關鍵：
      手指誤觸不會選到文字。雙擊/雙指縮放已經靠 viewport 的
      user-scalable=no 擋掉了，這裡刻意不再疊加 touch-action:manipulation——
@@ -92,6 +103,12 @@
   #page-month{transform:translateX(100%);}
   #page-month.active{transform:translateX(0);}
   #page-timeline.pushed{transform:translateX(-18%); filter:brightness(0.9);}
+  #page-timeline.pushed-by-month{transform:translateX(-18%); filter:brightness(0.9);}
+  #page-timeline.circle-revealing{
+    z-index:20; /* 蓋到月曆頁（DOM 順序在後、預設疊在時間軸上面）之上，圓形範圍才看得到 */
+    transform:translateX(0); filter:none; /* 立刻歸位、不要滑動或變暗，只有 clip-path 這個圓在動 */
+    transition:clip-path .5s ease, transform 0s, filter 0s;
+  }
 
   /* ---------- Timeline page ---------- */
   .planner-header{
@@ -123,7 +140,7 @@
     flex:0 0 auto;
   }
   .add-col-btn svg{flex:0 0 auto;}
-  .add-col-btn:active{opacity:.8;}
+  .add-col-btn:active{opacity:.6;}
   /* 「選取」控制項：跟右側新增共編者按鍵左右對稱（left:0 對 right:0，
      同樣的 top:50% + translateY(-50%) 垂直置中），viewport 邊界間距一致。
      內含「選取／×」切換鍵本身，以及只有在選取狀態下才出現的垃圾桶鍵。
@@ -138,7 +155,8 @@
     flex:0 0 auto;
   }
   .select-toggle-btn{
-    padding:7px 14px;
+    height:30px;
+    padding:0 14px;
     border-radius:10px;
     border:1.5px solid var(--ink);
     background:var(--ink);
@@ -154,16 +172,23 @@
     cursor:pointer;
     flex:0 0 auto;
   }
-  .select-toggle-btn:active{opacity:.8;}
+  .select-toggle-btn:active{opacity:.6;}
   .select-toggle-btn.active{
     background:var(--red);
     border-color:var(--red);
   }
-  .select-delete-btn{
+  .select-right-controls{
     position:absolute;
     right:0; top:50%;
     transform:translateY(-50%);
-    padding:7px 10px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:0 0 auto;
+  }
+  .select-delete-btn{
+    height:30px;
+    padding:0 10px;
     border-radius:10px;
     border:1.5px solid var(--ink);
     background:var(--ink);
@@ -175,7 +200,7 @@
     flex:0 0 auto;
   }
   .select-delete-btn svg{flex:0 0 auto;}
-  .select-delete-btn:active{opacity:.8;}
+  .select-delete-btn:active{opacity:.6;}
   .select-delete-btn[hidden]{display:none;}
   #phone.select-mode-active .fab,
   #phone.select-mode-active .add-col-btn,
@@ -187,7 +212,8 @@
      視覺一致。預設用 [hidden] 隱藏，只有選取模式中且至少勾選一個
      行程時才由 JS 拿掉 hidden。 */
   .select-move-btn{
-    padding:7px 14px;
+    height:30px;
+    padding:0 8px;
     border-radius:10px;
     border:1.5px solid var(--ink);
     background:var(--ink);
@@ -203,7 +229,7 @@
     cursor:pointer;
     flex:0 0 auto;
   }
-  .select-move-btn:active{opacity:.8;}
+  .select-move-btn:active{opacity:.6;}
   .select-move-btn[hidden]{display:none;}
   .date-display{
     position:relative;
@@ -220,6 +246,7 @@
   .date-display.is-today{
     border-color:var(--red);
   }
+  .date-display:active{opacity:.6;}
   .date-content{
     display:flex; flex-direction:column; align-items:center; gap:2px;
     width:100%;
@@ -433,6 +460,10 @@
   .event-card.resizing{
     box-shadow:0 10px 26px var(--shadow);
     z-index:12;
+  }
+  .event-card.card-tapped-feedback{
+    filter:brightness(0.82);
+    transition:filter .1s ease;
   }
   .resize-handle{
     position:absolute;
@@ -694,7 +725,14 @@
   .fab:active{opacity:.6;}
   .month-fab{
     left:16px; right:auto; /* 跟右下角鉛筆鍵鏡像，蓋在時間軸左側的時間刻度欄上面 */
+    width:46px; height:46px;
+    padding:0;
+    border-radius:50%;
+    background:var(--paper); /* 跟整個行事曆的紙面背景同色 */
+    filter:none; /* 改用下面的 box-shadow 做陰影，不用 .fab 原本那種只描邊圖示的 drop-shadow */
+    box-shadow:0 4px 12px rgba(32,38,58,0.32);
   }
+  .month-fab:active{opacity:.7;}
 
   .undo-redo-stack{
     position:absolute;
@@ -768,12 +806,6 @@
     text-align:center;
     padding:0 4px;
   }
-  .col-head .col-dot{
-    display:inline-block;
-    width:7px; height:7px;
-    border-radius:50%;
-    margin-right:4px;
-  }
   .col-head .col-name{
     font-family:'Noto Sans TC', sans-serif;
     font-weight:700;
@@ -785,14 +817,13 @@
   }
   .col-head .col-name.col-name-editable{
     cursor:pointer;
+    border:1.5px solid var(--gold);
+    border-radius:6px;
+    padding:2px 7px;
   }
   .col-head .col-name.col-name-editable:active{
     opacity:.6;
   }
-  .col-head.col-gold .col-dot{background:var(--gold);}
-  .col-head.col-sage .col-dot{background:var(--sage);}
-  .col-head.col-dusk .col-dot{background:var(--dusk);}
-  .col-head.col-blush .col-dot{background:var(--blush);}
 
   /* 選取狀態下，欄位標題也是可點擊的選取對象：自己的欄位可以點擊圈選，
      別人的欄位變半透明表示不可操作；圈選後整欄（含標題）都會出現灰底。 */
@@ -1095,20 +1126,25 @@
   .picker-cal-cell.empty{ cursor:default; }
   .picker-cal-cell.today{ color:var(--red); font-weight:700; }
   .picker-cal-cell.selected{
-    background:var(--red);
+    background:var(--gold);
     color:var(--paper);
     font-weight:700;
+  }
+  .picker-cal-cell.selected.today{
+    background:var(--red); /* 選到的日期剛好是今天：直接用今天的紅色就好，不用金色再疊一層 */
   }
   .picker-cal-cell:active{opacity:.6;}
   .picker-today-btn{
     align-self:center;
-    padding:6px 18px;
-    border-radius:10px;
-    border:1.5px dashed var(--line);
+    margin-top:10px;
+    padding:5px 14px; /* 縮小約 20% */
+    border-radius:9px;
+    border:1.5px solid var(--red);
     background:none;
-    color:var(--ink-faint);
+    color:var(--red);
     font-family:'Noto Sans TC', sans-serif;
-    font-size:14.5px;
+    font-size:11.5px; /* 縮小約 20% */
+    font-weight:700;
     cursor:pointer;
   }
   .picker-today-btn:active{opacity:.6;}
@@ -1176,7 +1212,7 @@
     font-weight:700;
     cursor:pointer;
   }
-  .picker-confirm-btn:active{opacity:.8;}
+  .picker-confirm-btn:active{opacity:.6;}
   .picker-cancel-btn{
     padding:8px;
     border:none;
@@ -1187,6 +1223,64 @@
     cursor:pointer;
   }
   .picker-cancel-btn:active{opacity:.6;}
+
+  .picker-confirm{
+    display:flex; flex-direction:column;
+    gap:16px;
+    padding:10px 4px 4px 4px;
+  }
+  .picker-confirm[hidden]{display:none;}
+  .picker-confirm-message{
+    font-family:'Noto Serif TC', serif;
+    font-size:16px;
+    color:var(--ink);
+    text-align:center;
+    line-height:1.5;
+  }
+  .picker-confirm-input-wrap{
+    padding:0 4px;
+  }
+  .picker-confirm-input{
+    width:100%;
+    font-family:'Noto Serif TC', serif;
+    font-size:17px;
+    color:var(--ink);
+    border:none;
+    border-bottom:1.5px solid var(--line);
+    background:transparent;
+    padding:6px 2px 10px 2px;
+    outline:none;
+    box-sizing:border-box;
+  }
+  .picker-confirm-actions{
+    display:flex;
+    gap:10px;
+  }
+  .picker-confirm-cancel-btn,
+  .picker-confirm-ok-btn{
+    flex:1 1 0;
+    padding:12px;
+    border-radius:10px;
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .picker-confirm-cancel-btn{
+    border:1.5px solid var(--line);
+    background:none;
+    color:var(--ink-soft);
+  }
+  .picker-confirm-ok-btn{
+    border:none;
+    background:var(--ink);
+    color:var(--paper);
+  }
+  .picker-confirm-ok-btn.danger{
+    background:var(--red);
+  }
+  .picker-confirm-cancel-btn:active,
+  .picker-confirm-ok-btn:active{opacity:.7;}
 
   /* ---------------- 月曆檢視頁面（#page-month） ---------------- */
   .month-back-btn{
@@ -1203,6 +1297,21 @@
     cursor:pointer;
   }
   .month-back-btn:active{opacity:.6;}
+  .month-today-btn{
+    position:absolute;
+    right:0; top:50%;
+    transform:translateY(-50%);
+    padding:5px 14px; /* 比 .picker-today-btn 的 6px 18px 縮小約 20% */
+    border-radius:9px;
+    border:none;
+    background:var(--red);
+    color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:11.5px; /* 比 .picker-today-btn 的 14.5px 縮小約 20% */
+    font-weight:700;
+    cursor:pointer;
+  }
+  .month-today-btn:active{opacity:.7;}
   .month-title-nav{
     display:flex; align-items:center; gap:10px;
   }
@@ -1217,17 +1326,16 @@
   }
   .month-grid{
     display:grid; grid-template-columns:repeat(7,1fr);
-    grid-auto-rows:min-content;
-    align-content:start;
+    /* grid-template-rows 由 JS 依這個月實際幾週動態設成 repeat(N,1fr)，
+       每一列平分剩餘高度，最後一列會剛好貼齊頁面底部，不會留一截空白。 */
     gap:3px;
     padding:0 8px 8px 8px;
     flex:1 1 auto;
     min-height:0;
-    overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
+    overflow:hidden; /* 高度已經用 1fr 平分滿剩餘空間，不需要整體再捲動；每格內部的行程清單各自可以捲動 */
   }
   .month-cell{
-    aspect-ratio:1; /* 寬高固定相同，不管螢幕多寬都是正方形 */
+    width:100%; height:100%;
     display:flex; flex-direction:column;
     border-radius:8px;
     border:1px solid var(--line);
@@ -1238,6 +1346,10 @@
     min-width:0;
   }
   .month-cell:active{opacity:.7;}
+  .month-cell.cell-tapped-feedback{
+    filter:brightness(0.88); /* 加深格子原本的顏色，不換色 */
+    transition:filter .1s ease;
+  }
   .month-cell.outside-month{opacity:.4;}
   .month-cell .cell-date{
     flex:0 0 auto;
@@ -1246,6 +1358,15 @@
     color:var(--ink);
     text-align:center;
     line-height:18px;
+  }
+  .month-cell.current-day .cell-date{
+    width:18px; height:18px;
+    line-height:18px;
+    border-radius:50%;
+    background:var(--gold);
+    color:var(--paper);
+    font-weight:700;
+    margin:0 auto;
   }
   .month-cell.today .cell-date{
     width:18px; height:18px;
@@ -1441,13 +1562,6 @@
           <button id="btnSelectToggle" class="select-toggle-btn" aria-label="選取">
             <span id="selectToggleIcon">選取</span>
           </button>
-          <!-- 選取模式下、有勾選任何行程時才出現的「移動」鍵。點下去會打開
-               跟其他日期欄位共用的自訂日期選擇器（#pickerOverlay），選完
-               日期後只搬日期、不動行程原本的時間。 -->
-          <div id="btnMoveSelected" class="select-move-btn" aria-label="移動選取的行程" hidden>
-            <span>移動</span>
-            <input type="date" id="moveTargetDatePicker" hidden>
-          </div>
         </div>
         <div class="date-display" id="dateDisplayBtn">
           <div class="date-content" id="dateContentCurrent">
@@ -1466,15 +1580,24 @@
             </g>
           </svg>
         </button>
-        <button id="btnDeleteSelected" class="select-delete-btn" aria-label="刪除已選取的項目" hidden>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-            <path d="M10 11v6"></path>
-            <path d="M14 11v6"></path>
-            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
-          </svg>
-        </button>
+        <!-- 選取模式下、有勾選任何行程時才出現的「移動」+「刪除」鍵，兩個
+             綁在同一個右側群組裡（移動在左、刪除在右），群組整體貼右邊，
+             跟左邊日期顯示屏、右邊螢幕邊緣都留出間距，不會頂到。 -->
+        <div class="select-right-controls" id="selectRightControls">
+          <div id="btnMoveSelected" class="select-move-btn" aria-label="移動選取的行程" hidden>
+            <span>移動</span>
+            <input type="date" id="moveTargetDatePicker" hidden>
+          </div>
+          <button id="btnDeleteSelected" class="select-delete-btn" aria-label="刪除已選取的項目" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+              <path d="M10 11v6"></path>
+              <path d="M14 11v6"></path>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -1629,6 +1752,9 @@
           </div>
           <button type="button" id="monthNextBtn" class="picker-nav-btn" aria-label="下個月">›</button>
         </div>
+        <!-- 已經在今天所在的月份時，點下去直接跳今天的時間軸頁面；
+             不同月份時，只是把月曆切回今天所在的月份，留在月曆頁。 -->
+        <button type="button" id="btnMonthToday" class="month-today-btn" aria-label="回到今天">回到今天</button>
       </div>
     </header>
     <div class="month-weekdays" id="monthWeekdaysRow"></div>
@@ -1672,6 +1798,21 @@
           <div class="picker-wheel" id="minuteWheel"></div>
         </div>
         <button type="button" class="picker-confirm-btn" id="timeConfirmBtn">確定</button>
+      </div>
+
+      <!-- 取代原生 window.confirm()／window.prompt()，樣式跟日期/時間選擇器
+           共用同一張紙感卡片。confirmInputWrap 平常隱藏，只有 showPromptDialog
+           （目前是「修改編輯者姓名」在用）才會顯示成一個輸入框；純確認用的
+           showConfirmDialog（「確定刪除？」）不需要輸入框。 -->
+      <div class="picker-confirm" id="pickerConfirmView" hidden>
+        <div class="picker-confirm-message" id="pickerConfirmMessage">確定刪除？</div>
+        <div class="picker-confirm-input-wrap" id="pickerConfirmInputWrap" hidden>
+          <input type="text" id="pickerConfirmInput" class="picker-confirm-input">
+        </div>
+        <div class="picker-confirm-actions">
+          <button type="button" class="picker-confirm-cancel-btn" id="pickerConfirmCancelBtn">取消</button>
+          <button type="button" class="picker-confirm-ok-btn" id="pickerConfirmOkBtn">確定</button>
+        </div>
       </div>
 
       <button type="button" class="picker-cancel-btn" id="pickerCancelBtn">取消</button>
@@ -1971,6 +2112,13 @@
   const pickerTimeView = document.getElementById('pickerTimeView');
   const pickerCancelBtn = document.getElementById('pickerCancelBtn');
 
+  const pickerConfirmView = document.getElementById('pickerConfirmView');
+  const pickerConfirmMessage = document.getElementById('pickerConfirmMessage');
+  const pickerConfirmInputWrap = document.getElementById('pickerConfirmInputWrap');
+  const pickerConfirmInput = document.getElementById('pickerConfirmInput');
+  const pickerConfirmCancelBtn = document.getElementById('pickerConfirmCancelBtn');
+  const pickerConfirmOkBtn = document.getElementById('pickerConfirmOkBtn');
+
   const calPrevBtn = document.getElementById('calPrevBtn');
   const calNextBtn = document.getElementById('calNextBtn');
   const calYearLabel = document.getElementById('calYearLabel');
@@ -2065,9 +2213,22 @@
     renderCalGrid();
   });
   calTodayBtn.addEventListener('click', function(){
-    const [y,m,d] = todayStr().split('-').map(Number);
-    calViewYear = y; calViewMonth = m-1;
-    renderCalGrid();
+    const [y,m] = todayStr().split('-').map(Number);
+    if(calViewYear === y && calViewMonth === m-1){
+      // 已經在今天所在的月份：直接選定並套用今天，不用再多點一次格子
+      calSelectedDate = todayStr();
+      calGrid.querySelectorAll('.picker-cal-cell.selected').forEach(el => el.classList.remove('selected'));
+      const todayCell = calGrid.querySelector('.picker-cal-cell.today');
+      if(todayCell) todayCell.classList.add('selected');
+      const cb = pickerOnConfirm;
+      setTimeout(function(){
+        hidePickerSheet(function(){ if(cb) cb(calSelectedDate); });
+      }, 350);
+    } else {
+      // 不同月份：只是把月曆切回今天所在的月份，選擇器留著開
+      calViewYear = y; calViewMonth = m-1;
+      renderCalGrid();
+    }
   });
 
   // 打開日期選擇器。initialDateStr 是 'YYYY-MM-DD'；onSelect(dateStr) 在
@@ -2082,6 +2243,8 @@
     pickerOnConfirm = onSelect;
     pickerDateView.hidden = false;
     pickerTimeView.hidden = true;
+    pickerConfirmView.hidden = true;
+    pickerCancelBtn.hidden = false;
     renderCalGrid();
     pickerOverlay.hidden = false;
   }
@@ -2157,6 +2320,8 @@
     pickerOnConfirm = onSelect;
     pickerDateView.hidden = true;
     pickerTimeView.hidden = false;
+    pickerConfirmView.hidden = true;
+    pickerCancelBtn.hidden = false;
     pickerOverlay.hidden = false;
     // 要等 overlay 從 hidden 變成可見、版面量得到高度之後才能量測捲動位置，
     // 用 rAF 讓瀏覽器先跑完一次排版。
@@ -2173,6 +2338,45 @@
     const timeStr = pad2(pickedHour)+':'+pad2(pickedMinute);
     const cb = pickerOnConfirm;
     hidePickerSheet(function(){ if(cb) cb(timeStr); });
+  });
+
+  // 取代原生 window.confirm() / window.prompt()，用同一張紙感選擇器卡片
+  // 顯示訊息（+ 需要輸入時的一個文字框），跟日期/時間選擇器共用同一套
+  // 開關動畫。因為原生 confirm()/prompt() 是同步阻塞的寫法（直接 if(!confirm(...))
+  // return;），這裡改成非同步的 callback 寫法：只有使用者按下「確定」，
+  // onConfirm 才會被呼叫；按「取消」或點背景關閉則什麼都不做。
+  function showConfirmDialog(message, onConfirm, opts){
+    opts = opts || {};
+    pickerSheet.classList.remove('closing');
+    pickerConfirmMessage.textContent = message;
+    pickerConfirmInputWrap.hidden = true;
+    pickerConfirmOkBtn.textContent = opts.okLabel || '確定';
+    pickerConfirmOkBtn.classList.toggle('danger', !!opts.danger);
+    pickerOnConfirm = onConfirm;
+    pickerDateView.hidden = true;
+    pickerTimeView.hidden = true;
+    pickerConfirmView.hidden = false;
+    pickerCancelBtn.hidden = true; // 下面自己的取消/確定鍵就夠了，不用再疊一個
+    pickerOverlay.hidden = false;
+  }
+  // 取代原生 window.prompt()：多一個文字輸入框，預設值放 defaultValue，
+  // 使用者按下「確定」時 onConfirm 會收到輸入框目前的文字（沒有 trim，
+  // 呼叫端自己處理，跟原本 window.prompt() 的回傳值習慣一致）。
+  function showPromptDialog(message, defaultValue, onConfirm, opts){
+    showConfirmDialog(message, onConfirm, opts);
+    pickerConfirmInputWrap.hidden = false;
+    pickerConfirmInput.value = defaultValue || '';
+    requestAnimationFrame(function(){
+      pickerConfirmInput.focus();
+      pickerConfirmInput.select();
+    });
+  }
+  pickerConfirmCancelBtn.addEventListener('click', closePicker);
+  pickerConfirmOkBtn.addEventListener('click', function(){
+    const cb = pickerOnConfirm;
+    const isPrompt = !pickerConfirmInputWrap.hidden;
+    const val = isPrompt ? pickerConfirmInput.value : true;
+    hidePickerSheet(function(){ if(cb) cb(val); });
   });
 
   // 把「行程資料」展開成某一天實際要顯示的「實例」清單。
@@ -2340,10 +2544,11 @@
     });
     menu.querySelector('[data-action="del"]').addEventListener('click', function(ev){
       ev.stopPropagation();
-      if(!window.confirm('確定刪除？')) return;
-      deleteInstanceQuick(masterId, instanceDate);
       closeCardMenu();
-      renderEvents();
+      showConfirmDialog('確定刪除？', function(){
+        deleteInstanceQuick(masterId, instanceDate);
+        renderEvents();
+      }, {danger:true});
     });
 
     cardMenuEl = menu;
@@ -2540,42 +2745,42 @@
 
   deleteSelectedBtn.addEventListener('click', function(){
     if(selectedEventKeys.size === 0 && selectedColumnIds.size === 0) return;
-    if(!window.confirm('確定刪除？')) return;
-
-    // 1) 刪除被選取的行程：只刪除「目前這一天」看到的這一場，
-    //    重複行程的其他日期不受影響（跟單一編輯頁「不同步」刪除的規則一致）。
-    selectedEventKeys.forEach(key => {
-      const at = key.lastIndexOf('@');
-      const masterId = key.slice(0, at);
-      const instanceDate = key.slice(at+1);
-      const master = events.find(e => e.id === masterId);
-      if(!master) return;
-      if(!master.recurrence){
-        events = events.filter(e => e !== master);
-      } else {
-        master.excluded = master.excluded || [];
-        if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
-        if(master.overrides) delete master.overrides[instanceDate];
-      }
-    });
-
-    // 2) 刪除被選取的使用者欄位：從所有行程的參與者名單中移除該欄位，
-    //    行程若因此變成沒有任何參與者，代表整段都只掛在被刪除的人身上，一併刪除。
-    if(selectedColumnIds.size){
-      columns = columns.filter(c => !selectedColumnIds.has(c.id));
-      events = events.filter(ev => {
-        ev.participants = (ev.participants||[]).filter(pid => !selectedColumnIds.has(pid));
-        if(ev.overrides){
-          Object.keys(ev.overrides).forEach(d => {
-            const ov = ev.overrides[d];
-            if(ov.participants) ov.participants = ov.participants.filter(pid => !selectedColumnIds.has(pid));
-          });
+    showConfirmDialog('確定刪除？', function(){
+      // 1) 刪除被選取的行程：只刪除「目前這一天」看到的這一場，
+      //    重複行程的其他日期不受影響（跟單一編輯頁「不同步」刪除的規則一致）。
+      selectedEventKeys.forEach(key => {
+        const at = key.lastIndexOf('@');
+        const masterId = key.slice(0, at);
+        const instanceDate = key.slice(at+1);
+        const master = events.find(e => e.id === masterId);
+        if(!master) return;
+        if(!master.recurrence){
+          events = events.filter(e => e !== master);
+        } else {
+          master.excluded = master.excluded || [];
+          if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
+          if(master.overrides) delete master.overrides[instanceDate];
         }
-        return ev.participants.length > 0;
       });
-    }
 
-    setSelectMode(false); // 刪除完成後自動關閉選取狀態
+      // 2) 刪除被選取的使用者欄位：從所有行程的參與者名單中移除該欄位，
+      //    行程若因此變成沒有任何參與者，代表整段都只掛在被刪除的人身上，一併刪除。
+      if(selectedColumnIds.size){
+        columns = columns.filter(c => !selectedColumnIds.has(c.id));
+        events = events.filter(ev => {
+          ev.participants = (ev.participants||[]).filter(pid => !selectedColumnIds.has(pid));
+          if(ev.overrides){
+            Object.keys(ev.overrides).forEach(d => {
+              const ov = ev.overrides[d];
+              if(ov.participants) ov.participants = ov.participants.filter(pid => !selectedColumnIds.has(pid));
+            });
+          }
+          return ev.participants.length > 0;
+        });
+      }
+
+      setSelectMode(false); // 刪除完成後自動關閉選取狀態
+    }, {danger:true});
   });
 
   // 按下「移動」鍵會打開共用的自訂日期選擇器；選完日期後才觸發
@@ -2610,12 +2815,14 @@
   });
 
   function renameColumn(col){
-    const newName = (window.prompt('修改編輯者姓名：', col.name) || '').trim();
-    if(!newName || newName === col.name) return;
-    col.name = newName;
-    scheduleSaveToStorage();
-    renderColumnHeader();
-    renderEvents(); // 行程卡片上顯示的參與者名字（"· 小明、小華"）也要跟著更新
+    showPromptDialog('修改編輯者姓名：', col.name, function(value){
+      const newName = (value || '').trim();
+      if(!newName || newName === col.name) return;
+      col.name = newName;
+      scheduleSaveToStorage();
+      renderColumnHeader();
+      renderEvents(); // 行程卡片上顯示的參與者名字（"· 小明、小華"）也要跟著更新
+    });
   }
 
   function renderColumnHeader(){
@@ -2623,8 +2830,8 @@
     columnHeaderRow.innerHTML = '';
     columns.forEach((col, idx) => {
       const cell = document.createElement('div');
-      cell.className = 'col-head col-' + colByIndex(idx);
-      cell.innerHTML = '<span class="col-dot"></span><span class="col-name"></span>';
+      cell.className = 'col-head';
+      cell.innerHTML = '<span class="col-name"></span>';
       cell.querySelector('.col-name').textContent = col.name;
 
       if(selectMode){
@@ -3604,7 +3811,11 @@
         } else if(pinchActive || pinchTouched){
           // 這次手勢過程中發生過雙指縮放：不是真正的單擊，不開編輯頁
         } else {
-          openEdit(inst.masterId, inst.instanceDate);
+          card.classList.add('card-tapped-feedback');
+          setTimeout(function(){
+            card.classList.remove('card-tapped-feedback');
+            openEdit(inst.masterId, inst.instanceDate);
+          }, 110);
         }
       };
 
@@ -4179,12 +4390,14 @@
 
   document.getElementById('btnAddColumn').addEventListener('click', function(){
     if(selectMode) return;
-    const name = (window.prompt('新增共編使用者的名字：', '') || '').trim();
-    if(!name) return;
-    const id = 'p' + Date.now();
-    columns.push({id, name});
-    renderColumnHeader();
-    renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
+    showPromptDialog('新增共編使用者的名字：', '', function(value){
+      const name = (value || '').trim();
+      if(!name) return;
+      const id = 'p' + Date.now();
+      columns.push({id, name});
+      renderColumnHeader();
+      renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
+    });
   });
 
   datePicker.addEventListener('change', function(){
@@ -4396,6 +4609,7 @@
     const daysInPrevMonth = new Date(monthViewYear, monthViewMonth, 0).getDate();
     const today = todayStr();
     const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7; // 補滿整數週
+    monthGrid.style.gridTemplateRows = 'repeat(' + (totalCells/7) + ', 1fr)'; // 不管這個月幾週，每排永遠平分滿整個可視高度
 
     for(let i=0; i<totalCells; i++){
       const dayNum = i - startOffset + 1;
@@ -4421,7 +4635,8 @@
       const cell = document.createElement('div');
       cell.className = 'month-cell'
         + (outside ? ' outside-month' : '')
-        + (cellDate === today ? ' today' : '');
+        + (cellDate === today ? ' today' : '')
+        + (cellDate === currentDate ? ' current-day' : '');
 
       const dateEl = document.createElement('div');
       dateEl.className = 'cell-date';
@@ -4442,15 +4657,60 @@
       });
       cell.appendChild(listEl);
 
-      // 點格子（不管本月還是延伸出來的上/下個月）直接跳去那一天的時間軸。
+      // 點格子（不管本月還是延伸出來的上/下個月），先給一個短暫的按下反饋，
+      // 然後從這一格的正中心展開一個圓，圓展開的範圍裡看到的就是那一天的
+      // 時間軸頁面，圓展開滿整個畫面之後才真的算切換完成（月曆頁在這之後
+      // 才收起來）。時間軸→月曆維持原本從右側滑入的方式，不受影響。
       cell.addEventListener('click', function(){
-        currentDate = cellDate;
-        renderTimeline();
-        goBackToTimeline();
+        cell.classList.add('cell-tapped-feedback');
+        setTimeout(function(){
+          goToTimelineViaCircleReveal(cell, cellDate);
+        }, 90);
       });
 
       monthGrid.appendChild(cell);
     }
+  }
+
+  // 月曆→時間軸的專屬轉場：以點下去的那一格正中心為圓心，展開一個圓，
+  // 圓的範圍裡看到的是準備好的時間軸內容，展開到蓋滿整個畫面才算完成。
+  // 跟一般的 showPage()/goBackToTimeline() 滑動轉場是兩套獨立機制——這裡
+  // 全程手動控制 #page-timeline 的 clip-path，動畫跑完之後才收尾，把兩邊
+  // 狀態（class、history）都補回正常值，之後其他地方呼叫的 showPage()還是
+  // 完全正常運作，不會被這次的特殊轉場影響到。
+  function goToTimelineViaCircleReveal(cellEl, cellDate){
+    const phoneRect = phoneEl.getBoundingClientRect();
+    const cellRect = cellEl.getBoundingClientRect();
+    const cx = Math.round(cellRect.left + cellRect.width/2 - phoneRect.left);
+    const cy = Math.round(cellRect.top + cellRect.height/2 - phoneRect.top);
+    // 半徑取「圓心到畫面四個角落」裡最遠的那個距離，不管點在畫面哪個
+    // 位置，圓展開到這個半徑一定能蓋滿整個 #phone。
+    const radius = Math.ceil(Math.max(
+      Math.hypot(cx, cy),
+      Math.hypot(phoneRect.width - cx, cy),
+      Math.hypot(cx, phoneRect.height - cy),
+      Math.hypot(phoneRect.width - cx, phoneRect.height - cy)
+    )) + 4;
+
+    currentDate = cellDate;
+    renderTimeline(); // 先把內容準備好，等一下圓圈展開看到的就是正確的那一天
+
+    pageTimeline.classList.remove('pushed', 'pushed-by-month');
+    pageTimeline.classList.add('circle-revealing'); // 暫時把時間軸拉到月曆頁上面，圓形範圍才能「蓋在」月曆上面被看到
+    pageTimeline.style.clipPath = 'circle(0px at ' + cx + 'px ' + cy + 'px)';
+    void pageTimeline.offsetWidth; // 強制 reflow：先讓瀏覽器畫出「半徑 0」這一幀，接下來改的值才會被當成動畫終點來跑 transition
+    pageTimeline.style.clipPath = 'circle(' + radius + 'px at ' + cx + 'px ' + cy + 'px)';
+
+    setTimeout(function(){
+      // 圓已經展開滿整個畫面了，月曆頁可以收起來、時間軸清乾淨恢復正常狀態
+      pageMonth.classList.remove('active');
+      pageTimeline.classList.remove('circle-revealing');
+      pageTimeline.style.clipPath = '';
+      if(usingRealHistory){
+        try{ history.back(); } // 只是為了讓瀏覽器返回鍵/側滑手勢的堆疊維持正確，畫面本身已經手動切好了
+        catch(err){ usingRealHistory = false; }
+      }
+    }, 520);
   }
 
   function openMonthView(){
@@ -4478,11 +4738,25 @@
     if(monthViewMonth > 11){ monthViewMonth = 0; monthViewYear++; }
     renderMonthGrid();
   });
+  document.getElementById('btnMonthToday').addEventListener('click', function(){
+    const [ty, tm] = todayStr().split('-').map(Number);
+    if(monthViewYear === ty && monthViewMonth === tm-1){
+      // 已經在今天所在的月份：直接跳今天的時間軸頁面，不用再多點一次格子
+      currentDate = todayStr();
+      renderTimeline();
+      goBackToTimeline();
+    } else {
+      // 不同月份：只是把月曆切回今天所在的月份，留在月曆頁
+      monthViewYear = ty; monthViewMonth = tm-1;
+      renderMonthGrid();
+    }
+  });
 
   function showPage(name){
     pageEdit.classList.toggle('active', name === 'edit');
     pageMonth.classList.toggle('active', name === 'month');
-    pageTimeline.classList.toggle('pushed', name === 'edit' || name === 'month');
+    pageTimeline.classList.toggle('pushed', name === 'edit');
+    pageTimeline.classList.toggle('pushed-by-month', name === 'month');
     if(name !== 'edit'){
       editingMasterId = null;
       editingInstanceDate = null;
@@ -4572,24 +4846,25 @@
 
   document.getElementById('btnDelete').addEventListener('click', function(){
     if(!editingMasterId) return;
-    if(!window.confirm('確定刪除？')) return;
-    const master = events.find(e => e.id === editingMasterId);
-    if(!master) return;
-    const syncOn = fieldSyncEdit.checked;
+    showConfirmDialog('確定刪除？', function(){
+      const master = events.find(e => e.id === editingMasterId);
+      if(!master) return;
+      const syncOn = fieldSyncEdit.checked;
 
-    if(!master.recurrence){
-      events = events.filter(e => e !== master);
-    } else if(syncOn){
-      events = events.filter(e => e !== master); // 整個系列都刪除
-    } else {
-      // 只刪除這一天：加入排除清單，其餘日期的系列不受影響
-      master.excluded = master.excluded || [];
-      if(master.excluded.indexOf(editingInstanceDate) === -1) master.excluded.push(editingInstanceDate);
-      if(master.overrides) delete master.overrides[editingInstanceDate];
-    }
+      if(!master.recurrence){
+        events = events.filter(e => e !== master);
+      } else if(syncOn){
+        events = events.filter(e => e !== master); // 整個系列都刪除
+      } else {
+        // 只刪除這一天：加入排除清單，其餘日期的系列不受影響
+        master.excluded = master.excluded || [];
+        if(master.excluded.indexOf(editingInstanceDate) === -1) master.excluded.push(editingInstanceDate);
+        if(master.overrides) delete master.overrides[editingInstanceDate];
+      }
 
-    renderTimeline();
-    goBackToTimeline();
+      renderTimeline();
+      goBackToTimeline();
+    }, {danger:true});
   });
 
   /* ---------------- 初始化 ---------------- */
