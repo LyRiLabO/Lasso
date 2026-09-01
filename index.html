@@ -837,6 +837,11 @@
     border:1.5px solid var(--gold);
     border-radius:6px;
     padding:2px 7px;
+    /* 一定要設，不然手指按著不放的過程中只要有一點點自然的手震，瀏覽器
+       就可能把它判定成「使用者想捲動」而觸發原生的捲動接管，接管當下
+       會對這個元素丟出 pointercancel，把我們自己計時中的長按判斷整組
+       取消掉——長按永遠等不到 500ms，摸起來就像完全沒反應。 */
+    touch-action:none;
   }
   .col-head .col-name.col-name-editable:active{
     opacity:.6;
@@ -1326,15 +1331,15 @@
     transform:translateY(-50%);
     padding:5px 14px; /* 比 .picker-today-btn 的 6px 18px 縮小約 20% */
     border-radius:9px;
-    border:none;
-    background:var(--red);
-    color:var(--paper);
+    border:1.5px solid var(--red);
+    background:none;
+    color:var(--red);
     font-family:'Noto Sans TC', sans-serif;
     font-size:11.5px; /* 比 .picker-today-btn 的 14.5px 縮小約 20% */
     font-weight:700;
     cursor:pointer;
   }
-  .month-today-btn:active{opacity:.7;}
+  .month-today-btn:active{opacity:.6;}
   .month-title-nav{
     display:flex; align-items:center; gap:10px;
   }
@@ -4769,9 +4774,19 @@
   // 算出高度，導致清單直接撐爆格子而不是自己捲動。這裡改成量測每一格
   // 實際算出來的高度，直接用 px 明算出行程清單能用的高度並寫死成
   // max-height，不管排版引擎自己算得準不準，捲動一定會生效。
+  //
+  // 用 ResizeObserver 而不是渲染完馬上量一次：格子的「實際」大小要等
+  // CSS Grid 真的把 1fr 分配完、頁面切換動畫也跑完才會定案，用
+  // requestAnimationFrame 賭一個時間點很容易撲空（量到還沒定案的高度，
+  // 常常量到 0 或不準）。ResizeObserver 會在格子的框架大小真正確定/
+  // 改變的當下才觸發，包含月曆頁從背景切到前景、手機轉向等情況都會
+  // 自動重新量測，不用另外自己猜時機。
+  let monthCellObserver = null;
   function syncMonthCellScrollHeights(){
-    requestAnimationFrame(function(){
-      monthGrid.querySelectorAll('.month-cell').forEach(function(cell){
+    if(monthCellObserver) monthCellObserver.disconnect(); // 上一次月份的格子已經從 DOM 移除，先斷開避免觀察者名單一直累積、洩漏記憶體
+    monthCellObserver = new ResizeObserver(function(entries){
+      entries.forEach(function(entry){
+        const cell = entry.target;
         const dateEl = cell.querySelector('.cell-date');
         const listEl = cell.querySelector('.cell-events');
         if(!dateEl || !listEl) return;
@@ -4779,11 +4794,10 @@
         listEl.style.maxHeight = Math.max(0, avail) + 'px';
       });
     });
+    monthGrid.querySelectorAll('.month-cell').forEach(function(cell){
+      monthCellObserver.observe(cell); // 一 observe 就會立刻先跑一次，之後格子大小只要一變也會自動再跑
+    });
   }
-
-  window.addEventListener('resize', function(){
-    if(pageMonth.classList.contains('active')) syncMonthCellScrollHeights();
-  });
 
   // 月曆→時間軸的專屬轉場：以點下去的那一格正中心為圓心，展開一個圓，
   // 圓的範圍裡看到的是準備好的時間軸內容，展開到蓋滿整個畫面才算完成。
@@ -4859,6 +4873,62 @@
     if(monthViewMonth > 11){ monthViewMonth = 0; monthViewYear++; }
     renderMonthGrid();
   });
+
+  // 「回到今天」在不同月份時：不要直接跳過去，改成一頁一頁翻過去，
+  // 讓使用者感覺得到自己「翻了幾個月」，而不是畫面忽然變成別的月份。
+  // dir 沿用 attachSwipeNav 的方向習慣：-1＝往未來翻一頁（滑向左），
+  // 1＝往過去翻一頁（滑向右）。
+  function animateMonthGridStep(dir, applyMonthChange){
+    const w = monthGrid.clientWidth || 300;
+    monthGrid.style.transition = 'none';
+    monthGrid.style.transform = 'translateX(0)';
+    void monthGrid.offsetWidth; // 強制 reflow，確保上面「歸零」先生效
+    monthGrid.style.transition = 'transform .15s ease';
+    monthGrid.style.transform = 'translateX(' + (dir * w) + 'px)';
+    const onSlideOutDone = function(){
+      monthGrid.removeEventListener('transitionend', onSlideOutDone);
+      monthGrid.style.transition = 'none';
+      monthGrid.style.transform = 'translateX(' + (-dir * w) + 'px)';
+      applyMonthChange(); // 這裡才真的換月份＋renderMonthGrid()，換的當下格子還在畫面外
+      void monthGrid.offsetWidth;
+      monthGrid.style.transition = 'transform .15s ease';
+      monthGrid.style.transform = 'translateX(0)';
+    };
+    monthGrid.addEventListener('transitionend', onSlideOutDone);
+  }
+
+  function animateMonthGridTo(targetYear, targetMonth){
+    const MAX_ANIMATED_STEPS = 6; // 隔太多年的話一頁一頁翻會翻到讓人不耐煩，超過的部分先直接跳過去，只留最後幾步做翻頁動畫
+    const curIdx = monthViewYear*12 + monthViewMonth;
+    const targetIdx = targetYear*12 + targetMonth;
+    let diff = targetIdx - curIdx;
+    if(diff === 0) return;
+
+    const dir = diff > 0 ? -1 : 1; // 目標在未來→往左翻；目標在過去→往右翻
+    let stepsLeft = Math.abs(diff);
+
+    if(stepsLeft > MAX_ANIMATED_STEPS){
+      const skip = stepsLeft - MAX_ANIMATED_STEPS;
+      const skippedIdx = curIdx + (diff > 0 ? skip : -skip);
+      monthViewYear = Math.floor(skippedIdx/12);
+      monthViewMonth = ((skippedIdx%12)+12)%12;
+      renderMonthGrid();
+      stepsLeft = MAX_ANIMATED_STEPS;
+    }
+
+    function stepOnce(){
+      if(stepsLeft <= 0) return;
+      stepsLeft--;
+      animateMonthGridStep(dir, function(){
+        monthViewMonth += (dir === -1 ? 1 : -1);
+        if(monthViewMonth < 0){ monthViewMonth = 11; monthViewYear--; }
+        else if(monthViewMonth > 11){ monthViewMonth = 0; monthViewYear++; }
+        renderMonthGrid();
+      });
+      if(stepsLeft > 0) setTimeout(stepOnce, 150); // 跟 animateMonthGridStep 的位移動畫時長對齊，一頁翻完接著翻下一頁
+    }
+    stepOnce();
+  }
 
   /* ---------------- 左右滑動翻頁（月曆檢視 + 日期選擇器） ----------------
      兩個地方都是「一個 7 欄的月曆格子容器，上面已經有上一頁／下一頁的
@@ -4944,9 +5014,8 @@
       renderTimeline();
       goBackToTimeline();
     } else {
-      // 不同月份：只是把月曆切回今天所在的月份，留在月曆頁
-      monthViewYear = ty; monthViewMonth = tm-1;
-      renderMonthGrid();
+      // 不同月份：用翻頁動畫一頁一頁翻回今天所在的月份，而不是直接跳過去
+      animateMonthGridTo(ty, tm-1);
     }
   });
 
