@@ -2164,6 +2164,14 @@
   let calViewYear = 0, calViewMonth = 0; // 月曆目前顯示（不代表已選）的年月，0-based month
   let calSelectedDate = ''; // 'YYYY-MM-DD'
   let pickedHour = 0, pickedMinute = 0;
+  // 選擇器／對話框剛打開的那一刻，手指可能都還沒放開——像長按觸發確認
+  // 對話框：計時器在手指仍按著的時候就把背景蓋上去了，放開手指時瀏覽器
+  // 合成出來的 click 是用「放開當下手指底下是誰」來決定要點誰，這時候
+  // 底下已經變成剛蓋上來的背景，於是那根手指自己的放開動作，就把剛長按
+  // 打開的對話框當成「點背景關閉」給關掉了，看起來就像長按完全沒反應。
+  // 這裡記錄每次打開的時間點，背景的關閉判斷在剛打開的極短時間內先不算數。
+  let overlayOpenedAt = 0;
+  function markOverlayJustOpened(){ overlayOpenedAt = Date.now(); }
 
   const PICKER_CLOSE_ANIM_MS = 220; // 要跟 CSS 的 picker-sheet-out 動畫時間一致
 
@@ -2183,7 +2191,10 @@
   function closePicker(){
     hidePickerSheet(null);
   }
-  pickerBackdrop.addEventListener('click', closePicker);
+  pickerBackdrop.addEventListener('click', function(){
+    if(Date.now() - overlayOpenedAt < 400) return; // 剛打開的那個 click 很可能只是打開它的那根手指放開，不是使用者真的想點背景關掉
+    closePicker();
+  });
   pickerCancelBtn.addEventListener('click', closePicker);
 
   function renderCalGrid(){
@@ -2240,6 +2251,65 @@
     if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
     renderCalGrid();
   });
+
+  // 日期選擇器的「回到今天」跟月曆檢視那顆一樣：不同月份時一頁一頁翻
+  // 過去，而不是直接跳過去。邏輯跟 animateMonthGridStep/animateMonthGridTo
+  // 幾乎一模一樣，只是換一組容器/年月變數/渲染函式，沒有直接共用同一份
+  // 是因為兩邊繫結的變數（monthGrid vs calGrid、monthViewYear vs
+  // calViewYear...）不一樣，硬要共用反而要多包一層參數傳遞，不如各自
+  // 留一份直觀。
+  function animateCalGridStep(dir, applyMonthChange){
+    const w = calGrid.clientWidth || 300;
+    calGrid.style.transition = 'none';
+    calGrid.style.transform = 'translateX(0)';
+    void calGrid.offsetWidth;
+    calGrid.style.transition = 'transform .15s ease';
+    calGrid.style.transform = 'translateX(' + (dir * w) + 'px)';
+    const onSlideOutDone = function(){
+      calGrid.removeEventListener('transitionend', onSlideOutDone);
+      calGrid.style.transition = 'none';
+      calGrid.style.transform = 'translateX(' + (-dir * w) + 'px)';
+      applyMonthChange();
+      void calGrid.offsetWidth;
+      calGrid.style.transition = 'transform .15s ease';
+      calGrid.style.transform = 'translateX(0)';
+    };
+    calGrid.addEventListener('transitionend', onSlideOutDone);
+  }
+
+  function animateCalGridTo(targetYear, targetMonth){
+    const MAX_ANIMATED_STEPS = 6;
+    const curIdx = calViewYear*12 + calViewMonth;
+    const targetIdx = targetYear*12 + targetMonth;
+    let diff = targetIdx - curIdx;
+    if(diff === 0) return;
+
+    const dir = diff > 0 ? -1 : 1;
+    let stepsLeft = Math.abs(diff);
+
+    if(stepsLeft > MAX_ANIMATED_STEPS){
+      const skip = stepsLeft - MAX_ANIMATED_STEPS;
+      const skippedIdx = curIdx + (diff > 0 ? skip : -skip);
+      calViewYear = Math.floor(skippedIdx/12);
+      calViewMonth = ((skippedIdx%12)+12)%12;
+      renderCalGrid();
+      stepsLeft = MAX_ANIMATED_STEPS;
+    }
+
+    function stepOnce(){
+      if(stepsLeft <= 0) return;
+      stepsLeft--;
+      animateCalGridStep(dir, function(){
+        calViewMonth += (dir === -1 ? 1 : -1);
+        if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
+        else if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
+        renderCalGrid();
+      });
+      if(stepsLeft > 0) setTimeout(stepOnce, 150);
+    }
+    stepOnce();
+  }
+
   calTodayBtn.addEventListener('click', function(){
     const [y,m] = todayStr().split('-').map(Number);
     if(calViewYear === y && calViewMonth === m-1){
@@ -2253,9 +2323,8 @@
         hidePickerSheet(function(){ if(cb) cb(calSelectedDate); });
       }, 350);
     } else {
-      // 不同月份：只是把月曆切回今天所在的月份，選擇器留著開
-      calViewYear = y; calViewMonth = m-1;
-      renderCalGrid();
+      // 不同月份：用翻頁動畫一頁一頁翻回今天所在的月份，選擇器留著開
+      animateCalGridTo(y, m-1);
     }
   });
 
@@ -2275,6 +2344,7 @@
     pickerCancelBtn.hidden = false;
     renderCalGrid();
     pickerOverlay.hidden = false;
+    markOverlayJustOpened();
   }
 
   const HOURS = Array.from({length:24}, (_,i) => i);
@@ -2351,6 +2421,7 @@
     pickerConfirmView.hidden = true;
     pickerCancelBtn.hidden = false;
     pickerOverlay.hidden = false;
+    markOverlayJustOpened();
     // 要等 overlay 從 hidden 變成可見、版面量得到高度之後才能量測捲動位置，
     // 用 rAF 讓瀏覽器先跑完一次排版。
     requestAnimationFrame(function(){
@@ -2386,6 +2457,7 @@
     pickerConfirmView.hidden = false;
     pickerCancelBtn.hidden = true; // 下面自己的取消/確定鍵就夠了，不用再疊一個
     pickerOverlay.hidden = false;
+    markOverlayJustOpened();
   }
   // 取代原生 window.prompt()：多一個文字輸入框，預設值放 defaultValue，
   // 使用者按下「確定」時 onConfirm 會收到輸入框目前的文字（沒有 trim，
@@ -4790,8 +4862,14 @@
         const dateEl = cell.querySelector('.cell-date');
         const listEl = cell.querySelector('.cell-events');
         if(!dateEl || !listEl) return;
-        const avail = cell.clientHeight - dateEl.offsetHeight - 2; // 2px 對應 .cell-events 的 margin-top
-        listEl.style.maxHeight = Math.max(0, avail) + 'px';
+        const avail = Math.max(0, cell.clientHeight - dateEl.offsetHeight - 2) + 'px'; // 2px 對應 .cell-events 的 margin-top
+        // 同時寫死 height 跟 max-height（不是只寫 max-height）：.cell-events
+        // 自己是 flex:1 1 auto，flex-basis 預設 auto 的情況下，max-height
+        // 在某些瀏覽器的 flex 版面計算裡不一定會確實生效、還是可能被撐開；
+        // 兩個屬性都寫死同一個值，等於直接把它釘成固定高度，不再依賴
+        // flex 演算法自己判斷該不該套用這個上限。
+        listEl.style.height = avail;
+        listEl.style.maxHeight = avail;
       });
     });
     monthGrid.querySelectorAll('.month-cell').forEach(function(cell){
