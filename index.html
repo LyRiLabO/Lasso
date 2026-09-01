@@ -109,6 +109,7 @@
     transform:translateX(0); filter:none; /* 立刻歸位、不要滑動或變暗，只有 clip-path 這個圓在動 */
     transition:clip-path .5s ease, transform 0s, filter 0s;
   }
+  .page.no-transition{transition:none !important;}
 
   /* ---------- Timeline page ---------- */
   .planner-header{
@@ -395,6 +396,22 @@
     cursor:pointer;
     transition:transform .15s ease, box-shadow .15s ease;
     user-select:none;
+  }
+  /* 新建立的行程卡片：像捲軸攤開一樣，頂部邊緣固定不動，可見範圍從 0
+     長到完整高度。這裡故意用 clip-path 而不是真的去改 height——真正的
+     height 從卡片一出現就已經是最終值，JS 那邊量測「文字裝不裝得下」
+     （決定要不要拿掉備註、時間，甚至縮小字體）全部依賴這個最終 height，
+     動畫如果真的從 0 開始長高，量出來的高度會一路是錯的，文字排版判斷
+     會整個亂掉。clip-path 只影響「看得到多少」，不影響版面計算，卡片
+     的真實尺寸/排版全程維持最終結果，視覺上一樣是由上往下展開。
+     只在建立當下那一次渲染套用（見 JS 的 justCreatedEventId），動畫
+     結束就把這個 class 拿掉，之後任何其他重繪都不會再帶到這個過渡效果。 */
+  .event-card.card-unfurl{
+    clip-path:inset(0 0 100% 0);
+    transition:clip-path .32s cubic-bezier(.16,1,.3,1), transform .15s ease, box-shadow .15s ease;
+  }
+  .event-card.card-unfurl.card-unfurl-open{
+    clip-path:inset(0 0 0% 0);
   }
   .event-card .ecard-title{
     font-family:'Noto Sans TC', sans-serif;
@@ -858,8 +875,14 @@
   }
 
   .hint-empty{
-    position:absolute;
-    left:0; right:0; top:14px;
+    /* 改成 sticky 而不是釘死在內容座標的 top:14px——events-layer 跟時間軸
+       內容一樣高（24 小時），原本 top:14px 只在捲到最上面時看得到，往下
+       捲一點提示文字就整個滾出畫面外。sticky + top:50% + translateY(-50%)
+       這組合會讓它跟著可視範圍走，不管使用者捲到哪一段時間，提示永遠
+       浮在目前看得到的範圍正中央。 */
+    position:sticky;
+    top:50%;
+    transform:translateY(-50%);
     font-size:13px; color:var(--ink-faint);
     font-family:'JetBrains Mono', monospace;
     text-align:center;
@@ -2477,8 +2500,9 @@
   function duplicateInstance(masterId, instanceDate){
     const inst = getInstancesForDate(instanceDate).find(i => i.masterId === masterId);
     if(!inst) return;
+    const newId = 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
     events.push({
-      id: 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+      id: newId,
       title: inst.title,
       date: instanceDate,
       start: inst.start,
@@ -2488,6 +2512,7 @@
       color: inst.color,
       recurrence: null
     });
+    justCreatedEventId = newId; // 複製出來的也是一張全新的卡片，一樣套用「捲軸攤開」進場動畫
   }
 
   // 快速刪除這一次行程（長按選單用）：非重複行程直接刪掉；重複行程只排除
@@ -2690,6 +2715,10 @@
        行程」可以選取／刪除；不是自己創建、且是跟別人共同參與的行程，
        則不能選取／刪除（只有創建者本人可以）。 */
   let selectMode = false;
+  // 剛剛才被建立出來、下一次 renderEvents() 要幫它加上「捲軸攤開」進場動畫
+  // 的行程 id；用完（套用到那張卡片後）立刻清成 null，避免之後任何一次
+  // 重繪（拖曳、縮放、切換日期…）誤觸發同一張卡片再跑一次動畫。
+  let justCreatedEventId = null;
   let selectedEventKeys = new Set();   // 'masterId@instanceDate'
   let selectedColumnIds = new Set();
 
@@ -2766,22 +2795,32 @@
       // 2) 刪除被選取的使用者欄位：從所有行程的參與者名單中移除該欄位，
       //    行程若因此變成沒有任何參與者，代表整段都只掛在被刪除的人身上，一併刪除。
       if(selectedColumnIds.size){
-        columns = columns.filter(c => !selectedColumnIds.has(c.id));
-        events = events.filter(ev => {
-          ev.participants = (ev.participants||[]).filter(pid => !selectedColumnIds.has(pid));
-          if(ev.overrides){
-            Object.keys(ev.overrides).forEach(d => {
-              const ov = ev.overrides[d];
-              if(ov.participants) ov.participants = ov.participants.filter(pid => !selectedColumnIds.has(pid));
-            });
-          }
-          return ev.participants.length > 0;
-        });
+        deleteColumnsById(selectedColumnIds);
       }
 
       setSelectMode(false); // 刪除完成後自動關閉選取狀態
     }, {danger:true});
   });
+
+  // 實際刪除欄位的共用邏輯，抽出來讓「選取模式批次刪除」跟「長按姓名單獨
+  // 刪除」共用同一套規則，不要各自維護一份容易兜不起來。colIds 是一個
+  // Set，裡面放要刪除的欄位 id（可以只有一個）。
+  function deleteColumnsById(colIds){
+    columns = columns.filter(c => !colIds.has(c.id));
+    events = events.filter(ev => {
+      ev.participants = (ev.participants||[]).filter(pid => !colIds.has(pid));
+      if(ev.overrides){
+        Object.keys(ev.overrides).forEach(d => {
+          const ov = ev.overrides[d];
+          if(ov.participants) ov.participants = ov.participants.filter(pid => !colIds.has(pid));
+        });
+      }
+      return ev.participants.length > 0;
+    });
+    renderColumnHeader();
+    renderColumnDividers();
+    renderEvents();
+  }
 
   // 按下「移動」鍵會打開共用的自訂日期選擇器；選完日期後才觸發
   // moveTargetDatePicker 的 change 事件，把每個被勾選的行程搬到新日期，
@@ -2851,10 +2890,37 @@
       } else {
         // 非選取狀態下，點擊欄位上方的姓名可以直接重新命名這位編輯者
         // （包含一開始就有的「我」，以及後來透過「新增共編者」加入的人）。
+        // 長按同一個姓名則是快速刪除的捷徑，等同選取模式裡勾選這個欄位
+        // 再按刪除，省得為了刪一個人特地切進選取模式。
         const nameEl = cell.querySelector('.col-name');
         nameEl.classList.add('col-name-editable');
+
+        let longPressTimer = null;
+        let longPressFired = false;
+        let pressStart = null;
+
+        nameEl.addEventListener('pointerdown', function(e){
+          longPressFired = false;
+          pressStart = {x:e.clientX, y:e.clientY};
+          clearTimeout(longPressTimer);
+          longPressTimer = setTimeout(function(){
+            longPressFired = true;
+            if(!canSelectColumn(col)) return; // 僅剩一位使用者時不給刪
+            showConfirmDialog('確定刪除「'+col.name+'」這位編輯者？', function(){
+              deleteColumnsById(new Set([col.id]));
+            }, {danger:true});
+          }, 500);
+        });
+        nameEl.addEventListener('pointermove', function(e){
+          if(!pressStart) return;
+          const dx = e.clientX - pressStart.x, dy = e.clientY - pressStart.y;
+          if(Math.hypot(dx, dy) > 10) clearTimeout(longPressTimer); // 手指滑動視為取消長按
+        });
+        nameEl.addEventListener('pointerup', function(){ clearTimeout(longPressTimer); });
+        nameEl.addEventListener('pointercancel', function(){ clearTimeout(longPressTimer); });
         nameEl.addEventListener('click', function(e){
           e.stopPropagation();
+          if(longPressFired){ longPressFired = false; return; } // 長按已經處理過，放開手指帶出的這次 click 不要再跳去改名
           renameColumn(col);
         });
       }
@@ -2985,6 +3051,8 @@
       const title = escapeHtml(inst.title || '(未命名行程)');
       const timeStr = inst.start+' - '+inst.end;
       const notesHtml = inst.notes ? escapeHtml(inst.notes) : '';
+      // 這一場是不是剛剛才被建立出來、這次渲染要幫它跑「捲軸攤開」進場動畫。
+      const isJustCreated = !!(justCreatedEventId && inst.masterId === justCreatedEventId);
 
       runs.forEach(([runMin, runMax]) => {
         const leftPct = (runMin/n*100);
@@ -3074,7 +3142,26 @@
           card.appendChild(handle);
           attachResizeHandle(card, inst, handle, runMin, runMax, {title:title, recurMark:recurMark}, corner);
         });
+
+        if(isJustCreated){
+          // 先套用「收起」狀態，等瀏覽器先畫過這一幀之後（雙層 rAF）再切到
+          // 「展開」狀態，兩個 class 才不會在同一幀被瀏覽器合併成瞬間跳過去、
+          // 完全看不到過渡動畫。
+          card.classList.add('card-unfurl');
+          requestAnimationFrame(function(){
+            requestAnimationFrame(function(){
+              card.classList.add('card-unfurl-open');
+            });
+          });
+          card.addEventListener('transitionend', function onUnfurlDone(ev){
+            if(ev.propertyName !== 'clip-path') return;
+            card.classList.remove('card-unfurl', 'card-unfurl-open');
+            card.removeEventListener('transitionend', onUnfurlDone);
+          });
+        }
       });
+
+      if(isJustCreated) justCreatedEventId = null; // 動畫已經套用上去了，清掉旗標避免之後的重繪重跑一次
     });
 
     renderFloatLabels(floatCandidates);
@@ -4376,6 +4463,7 @@
       recurrence: null
     };
     events.push(ev);
+    justCreatedEventId = id; // 讓下一次 renderEvents() 幫這張新卡片跑「捲軸攤開」進場動畫
     renderEvents();
     return id;
   }
@@ -4670,7 +4758,32 @@
 
       monthGrid.appendChild(cell);
     }
+
+    syncMonthCellScrollHeights();
   }
+
+  // 每格「日期數字 + 行程清單」這組 flex 版面，理論上 .cell-events 的
+  // overflow-y:auto 應該會自動裁切超出的部分、變成格子內部自己可以捲動，
+  // 但這種「CSS Grid 用 1fr 分配列高 → flex 子項目再用 min-height:0 撐開
+  // 剩餘空間」的組合在部分瀏覽器（尤其手機版 Safari）不一定每次都能正確
+  // 算出高度，導致清單直接撐爆格子而不是自己捲動。這裡改成量測每一格
+  // 實際算出來的高度，直接用 px 明算出行程清單能用的高度並寫死成
+  // max-height，不管排版引擎自己算得準不準，捲動一定會生效。
+  function syncMonthCellScrollHeights(){
+    requestAnimationFrame(function(){
+      monthGrid.querySelectorAll('.month-cell').forEach(function(cell){
+        const dateEl = cell.querySelector('.cell-date');
+        const listEl = cell.querySelector('.cell-events');
+        if(!dateEl || !listEl) return;
+        const avail = cell.clientHeight - dateEl.offsetHeight - 2; // 2px 對應 .cell-events 的 margin-top
+        listEl.style.maxHeight = Math.max(0, avail) + 'px';
+      });
+    });
+  }
+
+  window.addEventListener('resize', function(){
+    if(pageMonth.classList.contains('active')) syncMonthCellScrollHeights();
+  });
 
   // 月曆→時間軸的專屬轉場：以點下去的那一格正中心為圓心，展開一個圓，
   // 圓的範圍裡看到的是準備好的時間軸內容，展開到蓋滿整個畫面才算完成。
@@ -4702,8 +4815,16 @@
     pageTimeline.style.clipPath = 'circle(' + radius + 'px at ' + cx + 'px ' + cy + 'px)';
 
     setTimeout(function(){
-      // 圓已經展開滿整個畫面了，月曆頁可以收起來、時間軸清乾淨恢復正常狀態
+      // 圓已經展開滿整個畫面了，月曆頁可以收起來、時間軸清乾淨恢復正常狀態。
+      // 月曆頁本身的 .page 基礎樣式帶了一個滑動用的 transition，這時候如果
+      // 直接拿掉 active，會被那個 transition 接手、自己再滑出去一次
+      // （這時候它還疊在時間軸上面，就會看到畫面又向右滑一下）。先關掉
+      // 它的 transition、瞬間歸位，就不會有這多餘的第二段動畫了。
+      pageMonth.classList.add('no-transition');
       pageMonth.classList.remove('active');
+      void pageMonth.offsetWidth; // 強制 reflow，確保上面「關掉 transition」先生效，才不會被瀏覽器優化掉
+      pageMonth.classList.remove('no-transition');
+
       pageTimeline.classList.remove('circle-revealing');
       pageTimeline.style.clipPath = '';
       if(usingRealHistory){
@@ -4738,6 +4859,83 @@
     if(monthViewMonth > 11){ monthViewMonth = 0; monthViewYear++; }
     renderMonthGrid();
   });
+
+  /* ---------------- 左右滑動翻頁（月曆檢視 + 日期選擇器） ----------------
+     兩個地方都是「一個 7 欄的月曆格子容器，上面已經有上一頁／下一頁的
+     箭頭按鍵」，滑動手勢其實就是幫使用者按掉那顆箭頭鍵而已，所以這裡
+     寫成一個共用的小工具：量測水平拖曳，超過門檻就讓格子容器整個滑出去、
+     呼叫對應方向的既有換頁邏輯把內容換掉、再讓新內容從另一側滑回中間。
+     沒超過門檻（或其實是想直向捲動格子內的行程清單）就彈回原位，不做
+     任何事，原本點格子進某一天、格子內清單直向捲動都不受影響。 */
+  function attachSwipeNav(containerEl, onSwipeLeft, onSwipeRight){
+    const THRESHOLD = 45; // px，拖曳距離超過這個值（或容器寬度的 1/5，取較大者）才算成功翻頁
+    let startX = null, startY = null, axisLocked = null, dragging = false;
+
+    containerEl.style.touchAction = 'pan-y'; // 直向捲動（格子內清單）交給瀏覽器原生處理，水平方向自己攔截
+
+    containerEl.addEventListener('pointerdown', function(e){
+      if(e.pointerType === 'mouse' && e.buttons !== 1) return;
+      dragging = true; axisLocked = null;
+      startX = e.clientX; startY = e.clientY;
+      containerEl.style.transition = 'none';
+    });
+
+    containerEl.addEventListener('pointermove', function(e){
+      if(!dragging || startX == null) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if(axisLocked === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)){
+        axisLocked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      }
+      if(axisLocked === 'x'){
+        e.preventDefault();
+        containerEl.style.transform = 'translateX(' + dx + 'px)';
+      }
+    });
+
+    function endDrag(e){
+      if(!dragging) return;
+      dragging = false;
+      if(axisLocked !== 'x'){
+        containerEl.style.transform = '';
+        startX = null; axisLocked = null;
+        return;
+      }
+      const dx = (e.clientX != null ? e.clientX : startX) - startX;
+      const w = containerEl.clientWidth || 300;
+      const committed = Math.abs(dx) > Math.max(THRESHOLD, w * 0.2);
+      containerEl.style.transition = 'transform .22s ease';
+
+      if(committed){
+        const dir = dx < 0 ? -1 : 1; // -1：向左滑（下一個），1：向右滑（上一個）
+        containerEl.style.transform = 'translateX(' + (dir * w) + 'px)';
+        const onSlideOutDone = function(){
+          containerEl.removeEventListener('transitionend', onSlideOutDone);
+          containerEl.style.transition = 'none';
+          containerEl.style.transform = 'translateX(' + (-dir * w) + 'px)';
+          if(dir < 0) onSwipeLeft(); else onSwipeRight(); // 這裡才真的換內容，換完時容器還在畫面外
+          void containerEl.offsetWidth; // 強制 reflow，確保上面那行 transform 先生效，接下來的滑入才有動畫
+          containerEl.style.transition = 'transform .22s ease';
+          containerEl.style.transform = 'translateX(0)';
+        };
+        containerEl.addEventListener('transitionend', onSlideOutDone);
+      } else {
+        containerEl.style.transform = 'translateX(0)';
+      }
+      startX = null; axisLocked = null;
+    }
+
+    containerEl.addEventListener('pointerup', endDrag);
+    containerEl.addEventListener('pointercancel', endDrag);
+  }
+
+  attachSwipeNav(monthGrid,
+    function(){ document.getElementById('monthNextBtn').click(); }, // 左滑 → 下個月
+    function(){ document.getElementById('monthPrevBtn').click(); }  // 右滑 → 上個月
+  );
+  attachSwipeNav(calGrid,
+    function(){ calNextBtn.click(); }, // 左滑 → 下個月
+    function(){ calPrevBtn.click(); }  // 右滑 → 上個月
+  );
   document.getElementById('btnMonthToday').addEventListener('click', function(){
     const [ty, tm] = todayStr().split('-').map(Number);
     if(monthViewYear === ty && monthViewMonth === tm-1){
