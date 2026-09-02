@@ -5112,13 +5112,24 @@
   function attachSwipeNav(containerEl, onSwipeLeft, onSwipeRight){
     const THRESHOLD = 45; // px，拖曳距離超過這個值（或容器寬度的 1/5，取較大者）才算成功翻頁
     let startX = null, startY = null, axisLocked = null, dragging = false;
+    // scrollTarget：這次手勢的起點如果落在某個 .cell-events（月曆格子裡的
+    // 行程清單）上，記住是哪一個。原本這裡是讓瀏覽器用 touch-action:pan-y
+    // 自己原生處理垂直捲動，但巢狀在 monthGrid 這種自己攔水平手勢的容器
+    // 裡面，原生捲動判定在部分手機瀏覽器上不可靠（常常要滑好幾次才會
+    // 剛好被辨識成捲動，而不是被當成一次點擊或什麼都沒發生）。改成跟
+    // 時間軸主頁 timeline-scroll 一樣的做法：垂直手勢自己用座標差手動改
+    // scrollTop，不依賴瀏覽器的手勢仲裁。
+    let scrollTarget = null;
+    let lastY = null;
 
-    containerEl.style.touchAction = 'pan-y'; // 直向捲動（格子內清單）交給瀏覽器原生處理，水平方向自己攔截
+    containerEl.style.touchAction = 'pan-y'; // 保留這個當作原生的保底行為（例如手勢起點不在任何 cell-events 上的情況），水平方向還是自己攔截
 
     containerEl.addEventListener('pointerdown', function(e){
       if(e.pointerType === 'mouse' && e.buttons !== 1) return;
       dragging = true; axisLocked = null;
       startX = e.clientX; startY = e.clientY;
+      lastY = e.clientY;
+      scrollTarget = (e.target && e.target.closest) ? e.target.closest('.cell-events') : null;
       containerEl.style.transition = 'none';
     });
 
@@ -5131,12 +5142,20 @@
       if(axisLocked === 'x'){
         e.preventDefault();
         containerEl.style.transform = 'translateX(' + dx + 'px)';
+      } else if(axisLocked === 'y' && scrollTarget){
+        // 手動捲動：不call preventDefault 讓瀏覽器原生 touch-action:pan-y
+        // 也同時生效的話，兩邊各自算一次位移，很容易互相打架讓畫面抖動
+        // 或位置跑掉——這裡明確攔下來，只讓這一段手動邏輯決定捲動位置。
+        e.preventDefault();
+        scrollTarget.scrollTop -= (e.clientY - lastY);
+        lastY = e.clientY;
       }
     });
 
     function endDrag(e){
       if(!dragging) return;
       dragging = false;
+      scrollTarget = null;
       if(axisLocked !== 'x'){
         containerEl.style.transform = '';
         startX = null; axisLocked = null;
