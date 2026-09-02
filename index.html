@@ -880,18 +880,19 @@
   }
 
   .hint-empty{
-    /* 改成 sticky 而不是釘死在內容座標的 top:14px——events-layer 跟時間軸
-       內容一樣高（24 小時），原本 top:14px 只在捲到最上面時看得到，往下
-       捲一點提示文字就整個滾出畫面外。sticky + top:50% + translateY(-50%)
-       這組合會讓它跟著可視範圍走，不管使用者捲到哪一段時間，提示永遠
-       浮在目前看得到的範圍正中央。 */
-    position:sticky;
-    top:50%;
-    transform:translateY(-50%);
+    /* top/left 由 JS 的 syncHintEmptyPos() 動態寫入 style，這裡只負責外觀
+       跟置中錨點（transform 讓 top/left 指到文字的正中心，而不是左上角）。
+       它是 #page-timeline 的直接子元素、不在 timeline-scroll 捲動範圍內，
+       所以只要 JS 算出來的座標是對的，這則提示就會像鉛筆鍵一樣浮在原地，
+       完全不受時間軸捲動影響。 */
+    position:absolute;
+    transform:translate(-50%,-50%);
     font-size:13px; color:var(--ink-faint);
     font-family:'JetBrains Mono', monospace;
     text-align:center;
+    white-space:nowrap;
     pointer-events:none;
+    z-index:3;
   }
 
   /* ---------- Edit page ---------- */
@@ -1372,6 +1373,7 @@
     overflow:hidden;
     cursor:pointer;
     min-width:0;
+    position:relative; /* 讓 .cell-fade-hint 能定位在格子底部，蓋在 cell-events 之上 */
   }
   .month-cell:active{opacity:.7;}
   .month-cell.cell-tapped-feedback{
@@ -1426,6 +1428,23 @@
     overflow:hidden;
     text-overflow:ellipsis;
   }
+  .month-cell .cell-fade-hint{
+    /* 這是 .month-cell 的兄弟元素、不是 .cell-events 內部的子元素——如果放
+       在 cell-events 裡面會跟著清單一起被捲走，就失去「提示還有更多」的
+       作用了。它要固定貼在格子底部，不隨清單內部捲動而移動，效果原理
+       跟前面時間軸的「懸浮提示」是同一件事：想讓東西固定不跟著捲動，
+       就不能是那個捲動容器的子孫。
+       只有清單內容真的比格子高（還有更多沒看到）才會顯示，捲到底之後
+       自動淡出、不佔視覺干擾。 */
+    position:absolute;
+    left:2px; right:2px; bottom:2px;
+    height:12px;
+    background:linear-gradient(to bottom, rgba(246,241,228,0), var(--paper) 78%);
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .15s ease;
+  }
+  .month-cell .cell-fade-hint.visible{opacity:1;}
 
   .delete-btn{
     margin-top:6px;
@@ -1640,6 +1659,18 @@
         </div>
       </div>
     </div>
+
+    <!-- 這個提示故意放在 timeline-scroll 外面，跟下面的鉛筆鍵、月曆鍵是同一層
+         （#page-timeline 的直接子元素），而不是塞在會捲動的內容裡。
+         只要元素還是 timeline-scroll（會捲動的那個容器）的子孫，不管用
+         sticky 還是 absolute，都逃不開該容器的捲動位移——這是瀏覽器捲動
+         模型本身的規則，跟 CSS 定位技巧用得對不對無關。唯一能保證「懸浮、
+         位置完全不受捲動影響」的做法，就是讓它徹底跳出 timeline-scroll，
+         變成外層的兄弟元素，這正是右下角鉛筆鍵能一直浮著不動的原因。
+         它實際的 top/left 由 JS 的 syncHintEmptyPos() 對齊 timeline-scroll
+         目前的畫面範圍正中央，並在畫面尺寸變動、切換選取模式時重新計算
+         （因為那些情況會改變 header 高度，連帶讓 timeline-scroll 的範圍跟著變）。 -->
+    <div class="hint-empty" id="hintEmpty" hidden>本日尚未安排行程</div>
 
     <!-- 月曆檢視入口：疊在時間軸左下角（蓋到左側時間刻度那一欄），跟右下角
          鉛筆鍵是同一顆 .fab 的鏡像版本，只是換了邊、換了圖示。 -->
@@ -3093,6 +3124,21 @@
     timelineGrid.insertBefore(line, eventsLayer);
   }
 
+  // hint-empty 已經跳出 timeline-scroll，變成 #page-timeline 的兄弟元素，
+  // 所以它不再有「自己所在容器」可以拿來對齊 timeline-scroll 的可視範圍，
+  // 得靠 JS 量測 timeline-scroll 目前實際佔的畫面位置（getBoundingClientRect），
+  // 換算成相對 #page-timeline 的座標，再把提示定位到那塊範圍正中央。
+  // header 高度可能因為切換選取模式而改變、手機也可能轉向，這些都會讓
+  // timeline-scroll 的範圍跟著變，所以在對應的時機都要重新呼叫一次。
+  function syncHintEmptyPos(){
+    if(hintEmpty.hidden) return;
+    const scrollRect = timelineScroll.getBoundingClientRect();
+    const pageRect = pageTimeline.getBoundingClientRect();
+    hintEmpty.style.left = (scrollRect.left + scrollRect.width/2 - pageRect.left) + 'px';
+    hintEmpty.style.top = (scrollRect.top + scrollRect.height/2 - pageRect.top) + 'px';
+  }
+  window.addEventListener('resize', syncHintEmptyPos);
+
   function renderEvents(){
     captureUndoCheckpoint();
     scheduleSaveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來（debounce，避免同步阻塞）
@@ -3104,11 +3150,9 @@
     const insts = getInstancesForDate(currentDate).filter(inst =>
       !(floatingDrag && floatingDrag.masterId === inst.masterId && floatingDrag.homeDate === inst.instanceDate)
     );
+    hintEmpty.hidden = insts.length !== 0;
     if(insts.length === 0){
-      const hint = document.createElement('div');
-      hint.className = 'hint-empty';
-      hint.textContent = '本日尚未安排行程';
-      eventsLayer.appendChild(hint);
+      syncHintEmptyPos();
       return;
     }
 
@@ -4236,6 +4280,7 @@
      放開手指才真正建立新行程並跳轉到編輯頁。長按尚未觸發前若上下移動
      超過 8px，視為頁面捲動，直接取消，不建立任何東西。 */
   const timelineScroll = document.getElementById('timelineScroll');
+  const hintEmpty = document.getElementById('hintEmpty');
   let selectionBox = null;
 
   /* ---------------- 手動接手捲動時的慣性動畫 ----------------
@@ -4822,6 +4867,20 @@
       });
       cell.appendChild(listEl);
 
+      // 底部淡出提示：只有清單捲動範圍還沒到底時才顯示，暗示「往下還有」。
+      // fadeEl 是 .month-cell 的子元素、跟 listEl 平行，不是塞在 listEl 裡面，
+      // 這樣清單捲動時它才不會被一起帶走，能穩穩貼在格子底部。
+      const fadeEl = document.createElement('div');
+      fadeEl.className = 'cell-fade-hint';
+      cell.appendChild(fadeEl);
+      function updateCellFadeHint(){
+        const overflowing = listEl.scrollHeight - listEl.clientHeight > 1;
+        const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
+        fadeEl.classList.toggle('visible', overflowing && !atBottom);
+      }
+      listEl.addEventListener('scroll', updateCellFadeHint, {passive:true});
+      cell._updateCellFadeHint = updateCellFadeHint; // syncMonthCellScrollHeights 量完高度後要重新判斷一次是否還有溢出
+
       // 點格子（不管本月還是延伸出來的上/下個月），先給一個短暫的按下反饋，
       // 然後從這一格的正中心展開一個圓，圓展開的範圍裡看到的就是那一天的
       // 時間軸頁面，圓展開滿整個畫面之後才真的算切換完成（月曆頁在這之後
@@ -4870,6 +4929,7 @@
         // flex 演算法自己判斷該不該套用這個上限。
         listEl.style.height = avail;
         listEl.style.maxHeight = avail;
+        if(typeof cell._updateCellFadeHint === 'function') cell._updateCellFadeHint(); // 高度重算後，是否還有溢出內容跟著變了，淡出提示要一起更新
       });
     });
     monthGrid.querySelectorAll('.month-cell').forEach(function(cell){
