@@ -1344,11 +1344,38 @@
   .month-title-nav{
     display:flex; align-items:center; gap:10px;
   }
+  /* 月曆頁的日期標頭整體壓縮：.planner-header／.picker-nav-btn／
+     .picker-cal-title 這幾個 class 名稱跟時間軸頁首、另一個日期選擇器
+     共用，直接改基礎規則會連帶影響那些地方，所以這裡都用 #page-month
+     前綴限定，只縮小月曆頁自己這一份，省下來的高度讓給下面的格子。 */
+  #page-month .planner-header{
+    padding:8px 20px 6px 20px;
+  }
+  #page-month .date-center-nav{
+    min-height:32px;
+  }
+  #page-month .month-back-btn{
+    width:26px; height:26px;
+  }
+  #page-month .picker-nav-btn{
+    width:26px; height:26px;
+    font-size:15px;
+  }
+  #page-month .picker-cal-title .picker-cal-year{
+    font-size:11.5px;
+  }
+  #page-month .picker-cal-title .picker-cal-month{
+    font-size:15px;
+  }
+  #page-month .month-today-btn{
+    padding:4px 11px;
+    font-size:10.5px;
+  }
   .month-weekdays{
     display:grid; grid-template-columns:repeat(7,1fr);
-    padding:4px 8px;
+    padding:2px 8px 3px 8px;
     font-family:'JetBrains Mono', monospace;
-    font-size:12.5px;
+    font-size:11px;
     color:var(--ink-faint);
     text-align:center;
     letter-spacing:.03em;
@@ -1357,17 +1384,23 @@
     display:grid; grid-template-columns:repeat(7,1fr);
     /* grid-template-rows 由 JS 依這個月實際幾週動態設成 repeat(N,1fr)，
        每一列平分剩餘高度，最後一列會剛好貼齊頁面底部，不會留一截空白。 */
-    gap:3px;
-    padding:0 8px 8px 8px;
+    /* 格線改用「容器背景色 = 格線色 + gap 縫隙露出背景」畫出來，不再讓
+       每一格自己畫 border——這樣相鄰格子之間只有一條共用的線，不是兩格
+       各自的邊框疊在一起（那樣線會變粗、格子可用的內距也被吃掉兩份）。
+       外框的 border 粗細特意跟 gap 一致，看起來像同一套格線系統的一部分，
+       不是額外疊加上去的外框。 */
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden; /* 四個角落沿著 border-radius 裁乾淨，格子本身維持方正 */
+    margin:0 8px 8px 8px;
     flex:1 1 auto;
     min-height:0;
-    overflow:hidden; /* 高度已經用 1fr 平分滿剩餘空間，不需要整體再捲動；每格內部的行程清單各自可以捲動 */
   }
   .month-cell{
     width:100%; height:100%;
     display:flex; flex-direction:column;
-    border-radius:8px;
-    border:1px solid var(--line);
     background:var(--paper);
     padding:3px 2px 2px 2px;
     overflow:hidden;
@@ -1412,6 +1445,7 @@
     min-height:0; /* 沒有這行 flex 子項目預設不會被壓縮，內容一多就會撐爆格子而不是自己捲動 */
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
+    touch-action:pan-y; /* 明確宣告成允許垂直捲動，不只依賴外層 monthGrid 的 touch-action 往下傳——巢狀層級一多，部分瀏覽器（尤其手機版 Safari）不一定確實把外層設定套用到深層子元素 */
     display:flex; flex-direction:column;
     gap:1.5px;
     margin-top:2px;
