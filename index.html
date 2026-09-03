@@ -105,11 +105,25 @@
   #page-timeline.pushed{transform:translateX(-18%); filter:brightness(0.9);}
   #page-timeline.pushed-by-month{transform:translateX(-18%); filter:brightness(0.9);}
   #page-timeline.circle-revealing{
-    z-index:20; /* 蓋到月曆頁（DOM 順序在後、預設疊在時間軸上面）之上，圓形範圍才看得到 */
-    transform:translateX(0); filter:none; /* 立刻歸位、不要滑動或變暗，只有 clip-path 這個圓在動 */
-    transition:clip-path .5s ease, transform 0s, filter 0s;
+    /* 「圓形遮罩」轉場專用：實際的 clip-path 半徑跟圓心座標是每次點的
+       格子位置不一樣，沒辦法寫死在 CSS 裡，一律由 JS 用 inline style
+       動態設定（inline style 的優先度本來就比這裡的 class 規則高，所以
+       這裡不用重複寫）。這個 class 只負責兩件事：蓋到月曆頁之上
+       （z-index），跟清掉可能殘留的 pushed 灰階濾鏡。 */
+    z-index:20;
+    filter:none;
   }
   .page.no-transition{transition:none !important;}
+  .zoom-inner{
+    /* 這層原本是「月曆格子放大」轉場用的，現在已經改回單純的圓形遮罩、
+       不再需要縮放，所以這一層目前沒有任何作用，純粹是保留下來的透明
+       包裝層——拿掉它要動到 HTML 結構（重新排版一大段內容），风险大於
+       好處，留著不影響任何版面：跟 .page 自己的版面完全一致（絕對定位
+       鋪滿整個容器 + flex column），視覺上跟直接是 .page 的子元素沒有
+       任何差別。 */
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+  }
 
   /* ---------- Timeline page ---------- */
   .planner-header{
@@ -1103,7 +1117,13 @@
     to{ transform:translateY(100%); opacity:0; }
   }
   .picker-cal-head{
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-content:center;
+  }
+  /* 回到今天移到年份/月份同一列的右側後，不再需要 .picker-today-btn 原本
+     置中對齊格線下方那份 margin-top，改用 .month-today-btn 的絕對定位
+     （靠右、垂直置中）疊在這一列，跟月曆檢視頁排版一致。 */
+  .picker-cal-head #calTodayBtn{
+    margin-top:0;
   }
   .picker-nav-btn{
     width:32px; height:32px;
@@ -1281,6 +1301,14 @@
     outline:none;
     box-sizing:border-box;
   }
+  .picker-confirm-input-error{
+    margin-top:6px;
+    padding:0 2px;
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:12.5px;
+    color:var(--red);
+  }
+  .picker-confirm-input-error[hidden]{display:none;}
   .picker-confirm-actions{
     display:flex;
     gap:10px;
@@ -1307,6 +1335,12 @@
   }
   .picker-confirm-ok-btn.danger{
     background:var(--red);
+  }
+  /* 名字重複驗證沒過的時候用：確定鍵變灰、不能按，跟 danger 那種紅色
+     警示區分開，這裡是「先把問題改掉才能繼續」而不是「有風險的操作」。 */
+  .picker-confirm-ok-btn:disabled{
+    background:var(--ink-faint);
+    cursor:default;
   }
   .picker-confirm-cancel-btn:active,
   .picker-confirm-ok-btn:active{opacity:.7;}
@@ -1637,6 +1671,20 @@
 
   <!-- ============ 頁面一：時間軸主頁 ============ -->
   <section id="page-timeline" class="page active">
+    <!-- 這層 .zoom-inner 是「月曆格子放大」轉場專用的容器：把原本
+         #page-timeline 底下所有的內容都包進來，讓縮放（transform:scale）
+         只套用在這一層，圓形裁切（clip-path）則留在 #page-timeline 本身
+         （沒有被 transform 縮放的那一層）。這兩個效果如果疊在同一個元素
+         上，圓形的裁切半徑會跟著元素一起被縮放——元素還小的時候，「半徑
+         看起來很大」的圓形早就已經蓋滿整個小元素了，等元素放大到全螢幕，
+         圓形也同時跟著長到全螢幕，兩個動畫幾乎同時完成，圓形展開的過程
+         會被縮放蓋過去，感覺不出來。分成兩層之後，圓形是用 #page-timeline
+         「真實、沒被縮放」的螢幕座標去長大，才會是真的看得出來的圓形
+         展開效果，跟裡面同時在放大的內容互相獨立。
+         position:absolute + inset:0 + flex 版面完全比照 .page 自己原本
+         的寫法，這樣包一層進去不會讓任何內部依賴「相對 .page 定位」的
+         絕對定位子元素（鉛筆鍵、月曆鍵、復原/重做鍵、懸浮提示）跑位。 -->
+    <div class="zoom-inner" id="zoomInner">
     <header class="planner-header">
       <div class="date-center-nav">
         <div class="select-controls" id="selectControls">
@@ -1750,6 +1798,7 @@
           <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
         </svg>
       </button>
+    </div>
     </div>
   </section>
 
@@ -1869,17 +1918,19 @@
     <div class="picker-sheet" id="pickerSheet" role="dialog" aria-modal="true">
 
       <div class="picker-date" id="pickerDateView">
-        <div class="picker-cal-head">
-          <button type="button" class="picker-nav-btn" id="calPrevBtn" aria-label="上個月">‹</button>
-          <div class="picker-cal-title">
-            <span class="picker-cal-year" id="calYearLabel">—</span>
-            <span class="picker-cal-month" id="calMonthLabel">—</span>
+        <div class="picker-cal-head date-center-nav">
+          <div class="month-title-nav">
+            <button type="button" class="picker-nav-btn" id="calPrevBtn" aria-label="上個月">‹</button>
+            <div class="picker-cal-title">
+              <span class="picker-cal-year" id="calYearLabel">—</span>
+              <span class="picker-cal-month" id="calMonthLabel">—</span>
+            </div>
+            <button type="button" class="picker-nav-btn" id="calNextBtn" aria-label="下個月">›</button>
           </div>
-          <button type="button" class="picker-nav-btn" id="calNextBtn" aria-label="下個月">›</button>
+          <button type="button" class="picker-today-btn month-today-btn" id="calTodayBtn">回到今天</button>
         </div>
         <div class="picker-cal-weekdays" id="calWeekdaysRow"></div>
         <div class="picker-cal-grid" id="calGrid"></div>
-        <button type="button" class="picker-today-btn" id="calTodayBtn">回到今天</button>
       </div>
 
       <div class="picker-time" id="pickerTimeView" hidden>
@@ -1901,6 +1952,9 @@
         <div class="picker-confirm-message" id="pickerConfirmMessage">確定刪除？</div>
         <div class="picker-confirm-input-wrap" id="pickerConfirmInputWrap" hidden>
           <input type="text" id="pickerConfirmInput" class="picker-confirm-input">
+          <!-- 目前只有「新增/修改編輯者姓名」會傳 opts.validate 進來用到這個提示；
+               純文字輸入（沒有 validate）時永遠是 hidden，不影響其他呼叫端。 -->
+          <div class="picker-confirm-input-error" id="pickerConfirmInputError" hidden></div>
         </div>
         <div class="picker-confirm-actions">
           <button type="button" class="picker-confirm-cancel-btn" id="pickerConfirmCancelBtn">取消</button>
@@ -2186,6 +2240,26 @@
     return null;
   }
 
+  // 跟 findCollision 幾乎一樣，差別是排除的對象是一整組 key（多選同步拖移
+  // 用），不是單一個 masterId+date；同一批被拖移的行程彼此之間本來就不用
+  // 檢查（相對位置整組一起平移，本來沒疊到的話平移後也不會疊到）。
+  function hasCollisionExcluding(dateStr, colMin, colMax, startMin, endMin, excludeKeys){
+    const insts = getInstancesForDate(dateStr);
+    for(let i=0; i<insts.length; i++){
+      const inst = insts[i];
+      if(excludeKeys.has(inst.masterId+'@'+inst.instanceDate)) continue;
+      const iStart = timeToMinutes(inst.start);
+      const iEnd = timeToMinutes(inst.end);
+      if(!(startMin < iEnd && iStart < endMin)) continue;
+      const runs = eventColRuns(inst);
+      for(let j=0; j<runs.length; j++){
+        const [runMin, runMax] = runs[j];
+        if(colMin <= runMax && runMin <= colMax) return true;
+      }
+    }
+    return false;
+  }
+
   const WEEKDAYS = ['週日','週一','週二','週三','週四','週五','週六'];
 
   function weekdayOf(dateStr){
@@ -2209,6 +2283,7 @@
   const pickerConfirmMessage = document.getElementById('pickerConfirmMessage');
   const pickerConfirmInputWrap = document.getElementById('pickerConfirmInputWrap');
   const pickerConfirmInput = document.getElementById('pickerConfirmInput');
+  const pickerConfirmInputError = document.getElementById('pickerConfirmInputError');
   const pickerConfirmCancelBtn = document.getElementById('pickerConfirmCancelBtn');
   const pickerConfirmOkBtn = document.getElementById('pickerConfirmOkBtn');
 
@@ -2226,6 +2301,11 @@
   const pickerTimeTitle = document.getElementById('pickerTimeTitle');
 
   let pickerOnConfirm = null; // 目前這次呼叫的 callback，關閉時清掉避免殘留
+  // 目前這次 showPromptDialog 呼叫傳進來的即時驗證函式：輸入框每次 input
+  // 都會呼叫一次，回傳非空字串就當成錯誤訊息顯示、確定鍵跟著變灰；
+  // 回傳空字串代表目前這個值沒問題。沒傳（showConfirmDialog 或純確認用途）
+  // 的話就是 null，永遠不擋。
+  let pickerValidateFn = null;
   let calViewYear = 0, calViewMonth = 0; // 月曆目前顯示（不代表已選）的年月，0-based month
   let calSelectedDate = ''; // 'YYYY-MM-DD'
   let pickedHour = 0, pickedMinute = 0;
@@ -2514,6 +2594,9 @@
     pickerSheet.classList.remove('closing');
     pickerConfirmMessage.textContent = message;
     pickerConfirmInputWrap.hidden = true;
+    pickerConfirmInputError.hidden = true;
+    pickerConfirmOkBtn.disabled = false;
+    pickerValidateFn = null; // 每次打開都先清掉，避免殘留上一次的驗證規則
     pickerConfirmOkBtn.textContent = opts.okLabel || '確定';
     pickerConfirmOkBtn.classList.toggle('danger', !!opts.danger);
     pickerOnConfirm = onConfirm;
@@ -2527,17 +2610,37 @@
   // 取代原生 window.prompt()：多一個文字輸入框，預設值放 defaultValue，
   // 使用者按下「確定」時 onConfirm 會收到輸入框目前的文字（沒有 trim，
   // 呼叫端自己處理，跟原本 window.prompt() 的回傳值習慣一致）。
+  // opts.validate(value) 是可選的即時驗證：回傳非空字串當錯誤訊息顯示在
+  // 輸入框下方、確定鍵同時變灰不能按；回傳空字串（或不傳這個 opts）就
+  // 是沒問題，維持原本行為。
   function showPromptDialog(message, defaultValue, onConfirm, opts){
     showConfirmDialog(message, onConfirm, opts);
+    pickerValidateFn = (opts && opts.validate) || null;
     pickerConfirmInputWrap.hidden = false;
     pickerConfirmInput.value = defaultValue || '';
+    runPickerInputValidation();
     requestAnimationFrame(function(){
       pickerConfirmInput.focus();
       pickerConfirmInput.select();
     });
   }
+  // 輸入框每次 input 都重跑一次驗證：有錯誤訊息就顯示、確定鍵變灰；
+  // 使用者把值改掉、不再重複之後，訊息消失、確定鍵恢復可按。
+  function runPickerInputValidation(){
+    if(!pickerValidateFn){
+      pickerConfirmInputError.hidden = true;
+      pickerConfirmOkBtn.disabled = false;
+      return;
+    }
+    const errMsg = pickerValidateFn(pickerConfirmInput.value) || '';
+    pickerConfirmInputError.textContent = errMsg;
+    pickerConfirmInputError.hidden = !errMsg;
+    pickerConfirmOkBtn.disabled = !!errMsg;
+  }
+  pickerConfirmInput.addEventListener('input', runPickerInputValidation);
   pickerConfirmCancelBtn.addEventListener('click', closePicker);
   pickerConfirmOkBtn.addEventListener('click', function(){
+    if(pickerConfirmOkBtn.disabled) return; // 保險：就算按鈕的 disabled 樣式被繞過，也不放行重複名稱
     const cb = pickerOnConfirm;
     const isPrompt = !pickerConfirmInputWrap.hidden;
     const val = isPrompt ? pickerConfirmInput.value : true;
@@ -3003,6 +3106,13 @@
       scheduleSaveToStorage();
       renderColumnHeader();
       renderEvents(); // 行程卡片上顯示的參與者名字（"· 小明、小華"）也要跟著更新
+    }, {
+      // 名字不能跟「別的」編輯者重複；改回自己原本的名字（等於沒改）不算重複。
+      validate: function(value){
+        const v = (value || '').trim();
+        if(!v || v === col.name) return '';
+        return columns.some(c => c.id !== col.id && c.name === v) ? '名稱已被使用' : '';
+      }
     });
   }
 
@@ -3182,7 +3292,8 @@
     eventsLayer.innerHTML = '';
     renderColumnDividers();
     const insts = getInstancesForDate(currentDate).filter(inst =>
-      !(floatingDrag && floatingDrag.masterId === inst.masterId && floatingDrag.homeDate === inst.instanceDate)
+      !(floatingDrag && floatingDrag.masterId === inst.masterId && floatingDrag.homeDate === inst.instanceDate) &&
+      !(batchDrag && batchDrag.items.some(it => it.masterId === inst.masterId && it.homeDate === inst.instanceDate))
     );
     hintEmpty.hidden = insts.length !== 0;
     if(insts.length === 0){
@@ -3729,6 +3840,11 @@
   let floatingDrag = null; // {masterId, homeDate, ghost, w, h, span, durationMin, lastEdgeDir}
   let edgeFlipTimer = null;
 
+  // 選取模式下，多選之後長按同步拖移：只在時間軸縱向移動（改時間），
+  // 不像單張拖曳那樣支援跨欄／跨日，欄位跟日期都維持原樣，每張卡片的
+  // 時長、跟彼此之間的相對時間差也都不變，整組用同一個位移量平移。
+  let batchDrag = null; // {startClientY, items:[{masterId, homeDate, ghost, origTop, startMin, endMin, participants, meta}]}
+
   function positionGhost(clientX, clientY){
     if(!floatingDrag) return;
     floatingDrag.ghost.style.left = (clientX - floatingDrag.grabOffsetX) + 'px';
@@ -3947,6 +4063,137 @@
     renderEvents();
   }
 
+  /* ---------------- 選取模式：多選後長按同步拖移 ----------------
+     選取模式勾選多張行程卡片後，長按其中任一張已勾選的卡片，把「目前
+     這一天」看得到、也在勾選清單裡的卡片全部一起變成浮動 ghost，手指
+     移動時整組用同一個位移量（吸附 5 分鐘）平移，放開時整組一起改時間、
+     欄位／日期都不變，卡片彼此間的時間差也不變。沒被勾選、或勾選在其他
+     日期（選取狀態可以跨天累積勾選，給上面「移動」按鈕整批搬到別的日期
+     用）的行程不受影響。 */
+
+  function startBatchDrag(anchorInst, sourceCard, grabX, grabY){
+    const items = [];
+    selectedEventKeys.forEach(key => {
+      const idx = key.lastIndexOf('@');
+      const masterId = key.slice(0, idx);
+      const homeDate = key.slice(idx+1);
+      if(homeDate !== currentDate) return; // 只同步拖移目前畫面上看得到的這一天
+      const inst = getInstancesForDate(currentDate).find(i => i.masterId === masterId);
+      if(!inst || !canSelectInstance(inst)) return;
+      const domCard = eventsLayer.querySelector(
+        '.event-card[data-master-id="'+CSS.escape(masterId)+'"][data-date="'+CSS.escape(homeDate)+'"]'
+      );
+      if(!domCard) return;
+      const r = domCard.getBoundingClientRect();
+      const ghost = domCard.cloneNode(true);
+      ghost.removeAttribute('id');
+      ghost.classList.remove('dragging', 'resizing');
+      ghost.classList.add('card-ghost');
+      ghost.style.width = r.width + 'px';
+      ghost.style.height = r.height + 'px';
+      ghost.style.left = r.left + 'px';
+      ghost.style.top = r.top + 'px';
+      document.body.appendChild(ghost);
+      items.push({
+        masterId, homeDate, ghost,
+        origTop: r.top,
+        startMin: timeToMinutes(inst.start),
+        endMin: timeToMinutes(inst.end),
+        participants: (inst.participants||[]).slice(),
+        meta: {
+          title: escapeHtml(inst.title || '(未命名行程)'),
+          recurMark: inst.isRecurring ? '<span class="ecard-recur-inline">↻</span>' : ''
+        }
+      });
+    });
+    if(items.length === 0) return false;
+
+    batchDrag = { startClientY: grabY, items };
+    if(navigator.vibrate) navigator.vibrate(15);
+    renderEvents(); // 本尊們先隱藏，畫面上只剩這一整組浮動的 ghost
+    return true;
+  }
+
+  // 把手指目前的移動量換算成整組要位移的分鐘數：先抓 5 分鐘吸附，再夾在
+  // 「不會讓組內最早的卡片超出 0 點、最晚的卡片超出 24 點」的範圍內。
+  // 用同一個位移量套用到每一張卡片，組內彼此的相對時間差才會完全不變。
+  function computeBatchDeltaMin(clientY){
+    const deltaPx = clientY - batchDrag.startClientY;
+    let snapped = Math.round(Math.round(deltaPx / hourPx * 60) / 5) * 5;
+    const minStart = Math.min.apply(null, batchDrag.items.map(it => it.startMin));
+    const maxEnd = Math.max.apply(null, batchDrag.items.map(it => it.endMin));
+    const lo = -minStart;
+    const hi = 24*60 - maxEnd;
+    if(snapped < lo) snapped = lo;
+    if(snapped > hi) snapped = hi;
+    return snapped;
+  }
+
+  function updateBatchDrag(clientX, clientY){
+    if(!batchDrag) return;
+    const deltaPxRaw = clientY - batchDrag.startClientY; // ghost 視覺位置跟著手指走，不吸附，手感比較滑順
+    const deltaMin = computeBatchDeltaMin(clientY); // 文字預覽用吸附＋夾限過的量，跟放開時實際套用的量一致
+    batchDrag.items.forEach(it => {
+      it.ghost.style.top = (it.origTop + deltaPxRaw) + 'px';
+      const previewStr = minutesToTime(it.startMin + deltaMin) + ' - ' + minutesToTime(it.endMin + deltaMin);
+      updateCardTimeDisplay(it.ghost, it.meta, previewStr);
+    });
+  }
+
+  // 只要整組裡有任何一張放開後會跟別的（沒被同時拖動的）行程重疊，整組
+  // 都不提交，全部一起彈回原位——不會只彈回其中幾張，避免彈完之後
+  // 卡片間的相對位置反而跑掉。
+  function bounceBatchGhostsBack(){
+    const bd = batchDrag;
+    bd.items.forEach(it => {
+      it.ghost.style.transition = 'top .22s cubic-bezier(.3,.6,.3,1)';
+      it.ghost.style.top = it.origTop + 'px';
+    });
+    if(navigator.vibrate) navigator.vibrate(10);
+    setTimeout(function(){
+      bd.items.forEach(it => it.ghost.remove());
+      batchDrag = null;
+      renderEvents();
+    }, 230);
+  }
+
+  function endBatchDrag(clientX, clientY){
+    if(!batchDrag) return;
+    const bd = batchDrag;
+    const deltaMin = computeBatchDeltaMin(clientY);
+
+    if(deltaMin === 0){
+      // 沒有實際移動（或整組已經被夾限在原地）：直接收掉 ghost，不用彈回動畫。
+      bd.items.forEach(it => it.ghost.remove());
+      batchDrag = null;
+      renderEvents();
+      return;
+    }
+
+    const excludeKeys = new Set(bd.items.map(it => it.masterId+'@'+it.homeDate));
+    const collided = bd.items.some(it => {
+      const newStart = it.startMin + deltaMin;
+      const newEnd = it.endMin + deltaMin;
+      const runs = eventColRuns({participants: it.participants});
+      return runs.some(([runMin, runMax]) =>
+        hasCollisionExcluding(currentDate, runMin, runMax, newStart, newEnd, excludeKeys)
+      );
+    });
+    if(collided){
+      bounceBatchGhostsBack();
+      return;
+    }
+
+    bd.items.forEach(it => {
+      const newStart = minutesToTime(it.startMin + deltaMin);
+      const newEnd = minutesToTime(it.endMin + deltaMin);
+      applyQuickPlacement(it.masterId, it.homeDate, it.homeDate, newStart, newEnd, it.participants);
+    });
+    bd.items.forEach(it => it.ghost.remove());
+    batchDrag = null;
+    renderEvents();
+  }
+
   /* ---------------- 長按拖拽（防誤觸） ---------------- */
   function attachCardInteractions(card, inst, runMin, runMax){
     let longPressTimer = null;
@@ -3963,14 +4210,58 @@
       e.stopPropagation();
 
       if(selectMode){
-        // 選取狀態下，點擊行程只用來勾選/取消勾選，不進入原本的長按選單／
-        // 拖曳搬移／開編輯頁那套互動。沒有權限的行程（別人創建的共同行程）
-        // 直接忽略點擊。
+        // 選取狀態下，點擊行程原則上只用來勾選/取消勾選，不進入原本的長按
+        // 選單／拖曳搬移／開編輯頁那套互動。沒有權限的行程（別人創建的
+        // 共同行程）直接忽略點擊。
         if(!canSelectInstance(inst)) return;
         const key = inst.masterId+'@'+inst.instanceDate;
-        if(selectedEventKeys.has(key)) selectedEventKeys.delete(key);
-        else selectedEventKeys.add(key);
-        renderEvents();
+
+        if(!selectedEventKeys.has(key)){
+          // 還沒被勾選：點一下直接勾選，維持原本手感。
+          selectedEventKeys.add(key);
+          renderEvents();
+          return;
+        }
+
+        // 已經勾選過的卡片：可能只是想「再點一下取消勾選」，也可能是想
+        // 「長按同步拖移整批已勾選的行程」，用長按計時器分辨這兩種意圖，
+        // 判斷邏輯跟一般模式的長按拖曳（下面 phase 那套）同一個手感。
+        const bStartX = e.clientX, bStartY = e.clientY;
+        let bMoved = false;
+        let bDragging = false;
+        let bLongPressTimer = setTimeout(function(){
+          if(bMoved) return;
+          bDragging = startBatchDrag(inst, card, bStartX, bStartY);
+        }, 400);
+
+        const onBatchMove = function(ev2){
+          if(bDragging){
+            ev2.preventDefault();
+            updateBatchDrag(ev2.clientX, ev2.clientY);
+            return;
+          }
+          if(!bMoved && Math.hypot(ev2.clientX - bStartX, ev2.clientY - bStartY) > 10){
+            bMoved = true;
+            clearTimeout(bLongPressTimer);
+          }
+        };
+        const onBatchUp = function(ev2){
+          clearTimeout(bLongPressTimer);
+          document.removeEventListener('pointermove', onBatchMove);
+          document.removeEventListener('pointerup', onBatchUp);
+          document.removeEventListener('pointercancel', onBatchUp);
+
+          if(bDragging){
+            endBatchDrag(ev2.clientX, ev2.clientY);
+          } else if(!bMoved){
+            // 沒有觸發長按拖曳、手指也沒有明顯移動過：當成一般點擊，取消勾選。
+            selectedEventKeys.delete(key);
+            renderEvents();
+          }
+        };
+        document.addEventListener('pointermove', onBatchMove);
+        document.addEventListener('pointerup', onBatchUp);
+        document.addEventListener('pointercancel', onBatchUp);
         return;
       }
 
@@ -4641,6 +4932,12 @@
       columns.push({id, name});
       renderColumnHeader();
       renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
+    }, {
+      validate: function(value){
+        const v = (value || '').trim();
+        if(!v) return '';
+        return columns.some(c => c.name === v) ? '名稱已被使用' : '';
+      }
     });
   });
 
@@ -4658,6 +4955,7 @@
 
   /* ---------------- 編輯頁：欄位連動 ---------------- */
   const pageTimeline = document.getElementById('page-timeline');
+  const zoomInner = document.getElementById('zoomInner');
   const pageEdit = document.getElementById('page-edit');
   const pageMonth = document.getElementById('page-month');
   const fieldTitle = document.getElementById('fieldTitle');
@@ -4975,8 +5273,8 @@
   // 圓的範圍裡看到的是準備好的時間軸內容，展開到蓋滿整個畫面才算完成。
   // 跟一般的 showPage()/goBackToTimeline() 滑動轉場是兩套獨立機制——這裡
   // 全程手動控制 #page-timeline 的 clip-path，動畫跑完之後才收尾，把兩邊
-  // 狀態（class、history）都補回正常值，之後其他地方呼叫的 showPage()還是
-  // 完全正常運作，不會被這次的特殊轉場影響到。
+  // 狀態（class、history）都補回正常值，之後其他地方呼叫的 showPage()
+  // 還是完全正常運作，不會被這次的特殊轉場影響到。
   function goToTimelineViaCircleReveal(cellEl, cellDate){
     const phoneRect = phoneEl.getBoundingClientRect();
     const cellRect = cellEl.getBoundingClientRect();
@@ -4996,9 +5294,24 @@
 
     pageTimeline.classList.remove('pushed', 'pushed-by-month');
     pageTimeline.classList.add('circle-revealing'); // 暫時把時間軸拉到月曆頁上面，圓形範圍才能「蓋在」月曆上面被看到
+    pageTimeline.style.transition = 'none';
     pageTimeline.style.clipPath = 'circle(0px at ' + cx + 'px ' + cy + 'px)';
-    void pageTimeline.offsetWidth; // 強制 reflow：先讓瀏覽器畫出「半徑 0」這一幀，接下來改的值才會被當成動畫終點來跑 transition
-    pageTimeline.style.clipPath = 'circle(' + radius + 'px at ' + cx + 'px ' + cy + 'px)';
+    // 「先歸零、再展開到終點」這兩次樣式變更中間要確保瀏覽器真的畫出了
+    // 「半徑 0」那一幀，下一次改的值才會被當成動畫終點來跑 transition，
+    // 不然兩次變更會被瀏覽器合併成一次，動畫整個被跳過、直接看到最終
+    // 結果（手機版 Safari 對這件事的處理沒有 Chrome 穩定，光靠一次
+    // void el.offsetWidth 強制 reflow 不一定每次都保證下一次 requestAnimationFrame
+    // 之前就已經真的完成繪製）。改用雙重 requestAnimationFrame：第一個
+    // rAF 保證瀏覽器已經排進下一次繪圖，第二個 rAF 才代表上一輪真的畫完、
+    // 進到下一輪繪圖週期，這時候再打開 transition、設定目標值，才能確保
+    // 動畫百分之百會被觸發。
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        pageTimeline.style.transition = 'clip-path .42s cubic-bezier(.32,.02,.16,1)';
+        pageTimeline.style.clipPath = 'circle(' + radius + 'px at ' + cx + 'px ' + cy + 'px)';
+      });
+    });
+
 
     setTimeout(function(){
       // 圓已經展開滿整個畫面了，月曆頁可以收起來、時間軸清乾淨恢復正常狀態。
@@ -5012,6 +5325,7 @@
       pageMonth.classList.remove('no-transition');
 
       pageTimeline.classList.remove('circle-revealing');
+      pageTimeline.style.transition = '';
       pageTimeline.style.clipPath = '';
       if(usingRealHistory){
         try{ history.back(); } // 只是為了讓瀏覽器返回鍵/側滑手勢的堆疊維持正確，畫面本身已經手動切好了
@@ -5392,13 +5706,11 @@
 
     timelineScroll.addEventListener('pointerup', function(e){
       activePointers.delete(e.pointerId);
-      downPositions.delete(e.pointerId);
       if(activePointers.size < 2){ pinchActive = false; flushPinchZoom(); }
     }, true);
 
     timelineScroll.addEventListener('pointercancel', function(e){
       activePointers.delete(e.pointerId);
-      downPositions.delete(e.pointerId);
       if(activePointers.size < 2){ pinchActive = false; flushPinchZoom(); }
     }, true);
   })();
