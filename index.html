@@ -98,11 +98,15 @@
     transition:transform .32s cubic-bezier(.4,0,.2,1), opacity .32s ease;
   }
   .page.hidden{visibility:hidden; pointer-events:none;}
-  #page-edit{transform:translateX(100%);}
-  #page-edit.active{transform:translateX(0);}
+  #page-edit{transform:translateY(100%);}
+  #page-edit.active{transform:translateY(0);}
   #page-month{transform:translateX(100%);}
   #page-month.active{transform:translateX(0);}
-  #page-timeline.pushed{transform:translateX(-18%); filter:brightness(0.9);}
+  /* 進編輯頁時，時間軸頁只需要微微變暗當背景，不用再跟著往旁邊推——
+     編輯頁本身已經改成從下面蓋上來，橫向位移的視差效果跟直向的蓋層
+     手感對不上，拿掉比較乾淨。月曆頁還是原本左右滑入，維持它自己的
+     pushed-by-month 橫向推移效果不變。 */
+  #page-timeline.pushed{filter:brightness(0.9);}
   #page-timeline.pushed-by-month{transform:translateX(-18%); filter:brightness(0.9);}
   #page-timeline.circle-revealing{
     /* 「圓形遮罩」轉場專用：實際的 clip-path 半徑跟圓心座標是每次點的
@@ -426,6 +430,18 @@
   }
   .event-card.card-unfurl.card-unfurl-open{
     clip-path:inset(0 0 0% 0);
+  }
+  /* 刪除行程卡片時的退場動畫：縮小＋淡出，看起來像被揉成一團。中心點
+     縮放（transform-origin:center），不影響版面量測（真正的資料刪除/
+     重繪要等動畫播完才做，見 JS 的 animateCardsExit）。 */
+  .event-card.card-exit{
+    transform-origin:center center;
+    transition:transform .24s cubic-bezier(.4,0,.2,1), opacity .24s ease;
+    pointer-events:none;
+  }
+  .event-card.card-exit.card-exit-out{
+    transform:scale(0.3);
+    opacity:0;
   }
   .event-card .ecard-title{
     font-family:'Noto Sans TC', sans-serif;
@@ -2774,6 +2790,45 @@
     if(master.overrides) delete master.overrides[instanceDate];
   }
 
+  // 卡片被刪除之前，先讓它縮小＋淡出（像被揉掉），才真正動資料、觸發
+  // 重繪。cb 是真正執行刪除 + renderEvents() 的地方，等動畫播完才呼叫；
+  // 可以一次傳多張卡片（選取模式批次刪除），全部動畫播完才呼叫一次 cb，
+  // 讓單張刪除／批次刪除套用同一套動畫、同一套收尾邏輯。
+  function animateCardsExit(cards, cb){
+    const list = Array.from(cards || []).filter(c => c && c.isConnected);
+    if(list.length === 0){ cb(); return; }
+
+    let finished = false;
+    function finishOnce(){
+      if(finished) return;
+      finished = true;
+      cb();
+    }
+
+    list.forEach(card => card.classList.add('card-exit'));
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        list.forEach(card => card.classList.add('card-exit-out'));
+      });
+    });
+
+    let doneCount = 0;
+    list.forEach(card => {
+      card.addEventListener('transitionend', function onExitDone(ev){
+        if(ev.propertyName !== 'transform') return;
+        card.removeEventListener('transitionend', onExitDone);
+        doneCount++;
+        if(doneCount >= list.length) finishOnce();
+      });
+    });
+    // 保險：萬一某張卡片中途從畫面上消失（例如又被重繪蓋掉），
+    // transitionend 沒觸發也不能讓刪除卡住，設一個上限時間強制繼續。
+    setTimeout(finishOnce, 300);
+  }
+  function animateCardExit(card, cb){
+    animateCardsExit(card ? [card] : [], cb);
+  }
+
   /* ---------------- 長按卡片（不拖動）跳出的「複製／刪除」快捷選單 ---------------- */
   let cardMenuEl = null;
 
@@ -2816,8 +2871,10 @@
       ev.stopPropagation();
       closeCardMenu();
       showConfirmDialog('確定刪除？', function(){
-        deleteInstanceQuick(masterId, instanceDate);
-        renderEvents();
+        animateCardExit(card, function(){
+          deleteInstanceQuick(masterId, instanceDate);
+          renderEvents();
+        });
       }, {danger:true});
     });
 
@@ -3020,6 +3077,8 @@
   deleteSelectedBtn.addEventListener('click', function(){
     if(selectedEventKeys.size === 0 && selectedColumnIds.size === 0) return;
     showConfirmDialog('確定刪除？', function(){
+      const cardsToExit = Array.from(eventsLayer.querySelectorAll('.event-card.select-picked'));
+      animateCardsExit(cardsToExit, function(){
       // 1) 刪除被選取的行程：只刪除「目前這一天」看到的這一場，
       //    重複行程的其他日期不受影響（跟單一編輯頁「不同步」刪除的規則一致）。
       selectedEventKeys.forEach(key => {
@@ -3044,6 +3103,7 @@
       }
 
       setSelectMode(false); // 刪除完成後自動關閉選取狀態
+      });
     }, {danger:true});
   });
 
@@ -3283,6 +3343,21 @@
   }
   window.addEventListener('resize', syncHintEmptyPos);
 
+  // 只重新計算/套用 hintEmpty 的顯示狀態，不動任何卡片 DOM——跟 renderEvents()
+  // 內部那份計算邏輯是同一套規則，抽出來給「滑動換日手勢取消、彈回原本
+  // 那一天」這種只需要恢復提示文字、不需要整個重繪的場合用。
+  function refreshHintEmptyOnly(){
+    const insts = getInstancesForDate(currentDate).filter(inst =>
+      !(floatingDrag && floatingDrag.masterId === inst.masterId && floatingDrag.homeDate === inst.instanceDate) &&
+      !(batchDrag && batchDrag.items.some(it => it.masterId === inst.masterId && it.homeDate === inst.instanceDate))
+    );
+    const isDraggingAwayOnlyEventOfToday =
+      (floatingDrag && floatingDrag.homeDate === currentDate) ||
+      (batchDrag && batchDrag.items.some(it => it.homeDate === currentDate));
+    hintEmpty.hidden = insts.length !== 0 || isDraggingAwayOnlyEventOfToday;
+    if(!hintEmpty.hidden) syncHintEmptyPos();
+  }
+
   function renderEvents(){
     captureUndoCheckpoint();
     scheduleSaveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來（debounce，避免同步阻塞）
@@ -3295,7 +3370,15 @@
       !(floatingDrag && floatingDrag.masterId === inst.masterId && floatingDrag.homeDate === inst.instanceDate) &&
       !(batchDrag && batchDrag.items.some(it => it.masterId === inst.masterId && it.homeDate === inst.instanceDate))
     );
-    hintEmpty.hidden = insts.length !== 0;
+    // 長按拖曳中的行程（跟同步拖移那一批）雖然暫時從 insts 濾掉了，但它們
+    // 其實還「屬於」這一天，只是暫時變成浮動 ghost 而已——如果這天原本只有
+    // 這一場（或這幾場）行程，濾掉之後 insts 會變空，但這天並不是真的空的，
+    // 不該讓「本日尚未安排行程」在拖曳過程中跳出來，等放開手指、卡片
+    // 真正落定之後再重繪，那時候就不在拖曳狀態了，會照正常規則判斷。
+    const isDraggingAwayOnlyEventOfToday =
+      (floatingDrag && floatingDrag.homeDate === currentDate) ||
+      (batchDrag && batchDrag.items.some(it => it.homeDate === currentDate));
+    hintEmpty.hidden = insts.length !== 0 || isDraggingAwayOnlyEventOfToday;
     if(insts.length === 0){
       syncHintEmptyPos();
       return;
@@ -3652,6 +3735,20 @@
     }
     panel.appendChild(dividers);
 
+    // 如果預覽的這一天剛好是「今天」，直接把紅色的目前時間格線也畫進這個
+    // 唯讀預覽面板——不然滑動轉場的過程中會看不到這條線，要等轉場動畫
+    // 播完、真正的 renderTimeline() 跑過一次之後才突然冒出來，看起來像
+    // 「先消失一下才出現」。跟真正的 renderNowLine() 用同一套換算方式，
+    // 純視覺呈現，不會被當成互動用的真實時間軸。
+    if(dateStr === todayStr()){
+      const now = new Date();
+      const min = now.getHours()*60 + now.getMinutes();
+      const nowLine = document.createElement('div');
+      nowLine.className = 'now-line';
+      nowLine.style.top = (min/60*hourPx)+'px';
+      panel.appendChild(nowLine);
+    }
+
     const layer = document.createElement('div');
     layer.className = 'events-layer';
     getInstancesForDate(dateStr).forEach(inst => {
@@ -3699,6 +3796,11 @@
 
   // 手勢進行中：即時跟著手指位移量(dx，往左滑為負值)平移兩塊面板
   function updateDaySlide(dx){
+    // 「本日尚未安排行程」是跟 timeline-scroll 對齊置中的固定提示，不會
+    // 跟著 daySlider 一起被橫向平移，如果等放開手指才藏起來，手指還按著
+    // 慢慢滑的時候它會像貼紙一樣浮在畫面中間動也不動，看起來很奇怪。
+    // 一開始滑動就先藏起來，真正切到哪一天由放開後 renderTimeline() 決定。
+    hintEmpty.hidden = true;
     const w = daySlider.clientWidth || 1;
     const direction = dx < 0 ? 'next' : 'prev';
     ensurePreviewPanel(direction);
@@ -3719,6 +3821,7 @@
 
     if(commit){
       const delta = dx < 0 ? 1 : -1;
+      hintEmpty.hidden = true; // 別等 300ms 動畫跑完、新的一天真的渲染出來才消失，滑動一確定要換日就先藏起來
       timelineGrid.style.transform = 'translateX(' + (dx < 0 ? -w : w) + 'px)';
       previewPanel.style.transform = 'translateX(0px)';
       setTimeout(function(){
@@ -3738,6 +3841,7 @@
         daySlider.classList.remove('animating');
         if(previewPanel){ previewPanel.remove(); previewPanel = null; }
         timelineGrid.style.transform = '';
+        refreshHintEmptyOnly(); // 沒有真的換日，彈回原位後把提示文字的顯示狀態補回來
       }, 300);
     }
   }
@@ -3807,6 +3911,7 @@
   // 立即觸發完成一次日期切換的滑動動畫（給「拖曳行程到畫面邊緣」用，
   // 不是使用者手動滑出來的位移，是碰到邊緣就自動觸發一次完整轉場）。
   function animateCommitDaySlide(direction, onDone){
+    hintEmpty.hidden = true; // 跟手動滑動一樣，轉場一開始就先藏起來，不要等 300ms 動畫跑完才消失
     const w = daySlider.clientWidth || 1;
     ensurePreviewPanel(direction);
     const dateScreenPreview = ensureDateScreenPreview(direction);
@@ -3942,6 +4047,8 @@
       lastClientY: curY
     };
     positionGhost(curX, curY);
+    hintEmpty.hidden = true; // 拖曳的行程本來就屬於「這一天」，不管它是不是這天唯一的行程，
+                              // 拖曳過程中這一天都不算真的空——直接鎖住，不靠重繪那份計算跑一輪。
     renderEvents(); // 立刻重繪一次：本尊卡片先隱藏，畫面上只剩浮動的 ghost
   }
 
@@ -4110,6 +4217,7 @@
 
     batchDrag = { startClientY: grabY, items };
     if(navigator.vibrate) navigator.vibrate(15);
+    hintEmpty.hidden = true; // 這一批同步拖移的行程本來就屬於這一天，拖曳中不算空
     renderEvents(); // 本尊們先隱藏，畫面上只剩這一整組浮動的 ghost
     return true;
   }
