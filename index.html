@@ -16,6 +16,7 @@
     --ink:#20263A;
     --ink-soft:#5B6178;
     --ink-faint:#96876F; /* 低飽和度咖啡色，取代原本偏藍灰的淡字色 */
+    --btn-coffee:var(--ink); /* 按鍵底色：改成跟主要文字同一種深藍黑色 */
     --red:#B23A2F;
     --red-deep:#8E2C24;
     --card:#FFFDF8;
@@ -33,7 +34,7 @@
      有了漸變，即使放開得快，退回原本樣子的過程也會被看見，反饋自然更
      明顯、有停留感。 */
   .add-col-btn, .select-toggle-btn, .select-delete-btn, .select-move-btn,
-  .date-display, .fab, .month-fab, .undo-redo-btn, .date-value-btn,
+  .date-display, .fab, .month-header-btn, .undo-redo-btn, .date-value-btn,
   .time-value-btn, .picker-nav-btn, .picker-cal-cell, .picker-today-btn,
   .picker-confirm-btn, .picker-cancel-btn, .picker-confirm-ok-btn,
   .picker-confirm-cancel-btn, .month-back-btn, .month-today-btn, .month-cell{
@@ -100,14 +101,13 @@
   .page.hidden{visibility:hidden; pointer-events:none;}
   #page-edit{transform:translateY(100%);}
   #page-edit.active{transform:translateY(0);}
-  #page-month{transform:translateX(100%);}
-  #page-month.active{transform:translateX(0);}
-  /* 進編輯頁時，時間軸頁只需要微微變暗當背景，不用再跟著往旁邊推——
-     編輯頁本身已經改成從下面蓋上來，橫向位移的視差效果跟直向的蓋層
-     手感對不上，拿掉比較乾淨。月曆頁還是原本左右滑入，維持它自己的
-     pushed-by-month 橫向推移效果不變。 */
+  #page-month{transform:translateY(-100%);}
+  #page-month.active{transform:translateY(0);}
+  /* 進編輯頁跟進月曆頁時，時間軸頁都只需要微微變暗當背景，不用再跟著
+     橫向推移——編輯頁從下面蓋上來、月曆頁從上面掉下來，兩個都是直向
+     的蓋層手感，橫向位移的視差效果對不上，拿掉比較乾淨。 */
   #page-timeline.pushed{filter:brightness(0.9);}
-  #page-timeline.pushed-by-month{transform:translateX(-18%); filter:brightness(0.9);}
+  #page-timeline.pushed-by-month{filter:brightness(0.9);}
   #page-timeline.circle-revealing{
     /* 「圓形遮罩」轉場專用：實際的 clip-path 半徑跟圓心座標是每次點的
        格子位置不一樣，沒辦法寫死在 CSS 裡，一律由 JS 用 inline style
@@ -143,14 +143,39 @@
     display:flex; align-items:center; justify-content:center;
     min-height:44px;
   }
+  /* 左上角：月曆檢視入口，跟右上角「新增使用者欄位」左右對稱（left:0 對
+     right:0，同樣 top:50% + translateY(-50%) 垂直置中），造型也比照
+     同一款黑色圓角長方形，維持頭部列視覺一致。 */
+  .header-left-group{
+    position:absolute;
+    left:0; top:50%;
+    transform:translateY(-50%);
+    display:flex;
+    align-items:center;
+    flex:0 0 auto;
+  }
+  .month-header-btn{
+    padding:7px 10px;
+    border-radius:10px;
+    border:1.5px solid var(--btn-coffee);
+    background:var(--btn-coffee);
+    color:var(--paper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .month-header-btn svg{flex:0 0 auto;}
+  .month-header-btn:active{opacity:.6;}
   .add-col-btn{
     position:absolute;
     right:0; top:50%;
     transform:translateY(-50%);
     padding:7px 10px;
     border-radius:10px;
-    border:1.5px solid var(--ink);
-    background:var(--ink);
+    border:1.5px solid var(--btn-coffee);
+    background:var(--btn-coffee);
     color:var(--paper);
     display:flex;
     align-items:center;
@@ -160,25 +185,18 @@
   }
   .add-col-btn svg{flex:0 0 auto;}
   .add-col-btn:active{opacity:.6;}
-  /* 「選取」控制項：跟右側新增共編者按鍵左右對稱（left:0 對 right:0，
-     同樣的 top:50% + translateY(-50%) 垂直置中），viewport 邊界間距一致。
-     內含「選取／×」切換鍵本身，以及只有在選取狀態下才出現的垃圾桶鍵。
-     造型先跟新增共編者按鍵同款（黑色圓角長方形），之後再依需求微調。 */
-  .select-controls{
-    position:absolute;
-    left:0; top:50%;
-    transform:translateY(-50%);
-    display:flex;
-    align-items:center;
-    gap:8px;
-    flex:0 0 auto;
-  }
+  /* .add-col-btn 本身有明確的 display:flex，瀏覽器預設的 [hidden]{display:none}
+     優先權不夠高蓋不過去，要自己補一條規則，[hidden] 才會真的讓按鍵消失
+     （這裡踩到跟 .select-delete-btn/.select-move-btn 一樣的坑，做法一致）。 */
+  .add-col-btn[hidden]{display:none;}
+  /* 「選取」鍵本身已經搬到畫面最下面那一橫排懸浮鍵去了（見
+     .bottom-action-bar），這裡不再需要頭部列版本的容器定位。 */
   .select-toggle-btn{
     height:30px;
     padding:0 14px;
     border-radius:10px;
-    border:1.5px solid var(--ink);
-    background:var(--ink);
+    border:1.5px solid var(--btn-coffee);
+    background:var(--btn-coffee);
     color:var(--paper);
     font-family:'Noto Sans TC', sans-serif;
     font-size:12.5px;
@@ -190,6 +208,9 @@
     justify-content:center;
     cursor:pointer;
     flex:0 0 auto;
+    /* 現在懸浮在時間軸格線上方（不是坐在頭部列不透明的紙面底色上），
+       補一點陰影避免跟底下捲動中的內容黏在一起分不清楚。 */
+    box-shadow:0 3px 10px rgba(32,38,58,0.3);
   }
   .select-toggle-btn:active{opacity:.6;}
   .select-toggle-btn.active{
@@ -197,45 +218,49 @@
     border-color:var(--red);
   }
   .select-right-controls{
-    position:absolute;
-    right:0; top:50%;
-    transform:translateY(-50%);
-    display:flex;
-    align-items:center;
-    gap:8px;
-    flex:0 0 auto;
+    display:none; /* 已停用：移動/刪除鍵搬到底部懸浮橫排了，這個舊的頭部
+                     列右側容器不再使用，保留規則只是避免萬一有殘留標記
+                     時整團擠在一起，之後可以直接整段刪掉。 */
   }
   .select-delete-btn{
     height:30px;
     padding:0 10px;
     border-radius:10px;
-    border:1.5px solid var(--ink);
-    background:var(--ink);
+    border:1.5px solid var(--btn-coffee);
+    background:var(--btn-coffee);
     color:var(--paper);
     display:flex;
     align-items:center;
     justify-content:center;
     cursor:pointer;
     flex:0 0 auto;
+    /* 跟「選取」鍵一樣，現在懸浮在時間軸格線上方，補一點陰影。 */
+    box-shadow:0 3px 10px rgba(32,38,58,0.3);
   }
   .select-delete-btn svg{flex:0 0 auto;}
   .select-delete-btn:active{opacity:.6;}
   .select-delete-btn[hidden]{display:none;}
-  #phone.select-mode-active .fab,
-  #phone.select-mode-active .add-col-btn,
-  #phone.select-mode-active .undo-redo-stack{
+  /* 選取模式時，最下面懸浮橫排最後一格從「新增行程」鉛筆換成「刪除」，
+     兩顆疊在同一格用 hidden 互斥顯示（見 JS 的 setSelectMode）；上一步／
+     下一步在選取模式下沒有意義（復原/重做的是整包行程/欄位資料，跟
+     選取批次操作放在一起容易誤觸/誤解），直接隱藏、不能用。頭部列的
+     月曆／新增使用者欄位則是選取模式時單純整組收起來，沒有替代按鍵
+     頂替那個位置。 */
+  #phone.select-mode-active .bottom-action-bar .fab,
+  #phone.select-mode-active .bottom-action-bar .undo-redo-btn,
+  #phone.select-mode-active .header-left-group,
+  #phone.select-mode-active .add-col-btn{
     display:none;
   }
-  /* 「移動」鍵：跟「選取」鍵放在同一個 .select-controls 群組裡（左側），
-     大小/字體比照左側「選取」鍵（.select-toggle-btn），維持整排按鍵
-     視覺一致。預設用 [hidden] 隱藏，只有選取模式中且至少勾選一個
-     行程時才由 JS 拿掉 hidden。 */
+  /* 「移動」鍵：固定卡在底部懸浮橫排的上一步／下一步中間，大小/字體
+     比照「選取」鍵，維持整排按鍵視覺一致。預設用 [hidden] 隱藏，只有
+     選取模式中且至少勾選一個行程時才由 JS 拿掉 hidden。 */
   .select-move-btn{
     height:30px;
     padding:0 8px;
     border-radius:10px;
-    border:1.5px solid var(--ink);
-    background:var(--ink);
+    border:1.5px solid var(--btn-coffee);
+    background:var(--btn-coffee);
     color:var(--paper);
     font-family:'Noto Sans TC', sans-serif;
     font-size:12.5px;
@@ -247,6 +272,7 @@
     justify-content:center;
     cursor:pointer;
     flex:0 0 auto;
+    box-shadow:0 3px 10px rgba(32,38,58,0.3);
   }
   .select-move-btn:active{opacity:.6;}
   .select-move-btn[hidden]{display:none;}
@@ -576,7 +602,7 @@
   /* 只有標題被縮小過字體的行程，長按時才會多這一行，直接顯示完整
      名稱，不用再多點一次按鈕。 */
   .card-menu-title-row{
-    background:var(--ink);
+    background:var(--btn-coffee);
     color:var(--paper);
     border-radius:11px;
     padding:10px 16px;
@@ -590,7 +616,7 @@
   }
   .card-menu-actions{
     display:flex;
-    background:var(--ink);
+    background:var(--btn-coffee);
     border-radius:11px;
     box-shadow:0 10px 24px rgba(32,38,58,0.4);
     overflow:hidden;
@@ -619,7 +645,7 @@
     transform:translateX(-50%);
     border-width:6px 6px 0 6px;
     border-style:solid;
-    border-color:var(--ink) transparent transparent transparent;
+    border-color:var(--btn-coffee) transparent transparent transparent;
   }
   .card-menu.arrow-down::after{ bottom:-6px; }
   .card-menu.arrow-up::after{ top:-6px; transform:translateX(-50%) rotate(180deg); }
@@ -637,7 +663,7 @@
     position:fixed;
     display:flex;
     flex-direction:column;
-    background:var(--ink);
+    background:var(--btn-coffee);
     border-radius:11px;
     box-shadow:0 10px 24px rgba(32,38,58,0.4);
     overflow:hidden;
@@ -754,9 +780,10 @@
   .event-card.float-above .ecard-solo{ bottom:calc(100% + 4px); }
   .event-card.float-below .ecard-solo{ top:calc(100% + 4px); }
 
+  /* 底部懸浮橫排（.bottom-action-bar）裡的「新增行程」鍵：外觀維持原本
+     鉛筆圖示 + drop-shadow 的懸浮質感，但位置改交給父層 flex 排版決定，
+     不再自己用 position:absolute 卡死在畫面右下角。 */
   .fab{
-    position:absolute;
-    right:16px; bottom:22px;
     width:auto; height:auto;
     padding:10px;
     border-radius:12px;
@@ -767,29 +794,27 @@
     filter:drop-shadow(0 3px 6px rgba(32,38,58,0.28));
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
-    z-index:5;
   }
   .fab:active{opacity:.6;}
-  .month-fab{
-    left:16px; right:auto; /* 跟右下角鉛筆鍵鏡像，蓋在時間軸左側的時間刻度欄上面 */
-    width:46px; height:46px;
-    padding:0;
-    border-radius:50%;
-    background:var(--paper); /* 跟整個行事曆的紙面背景同色 */
-    filter:none; /* 改用下面的 box-shadow 做陰影，不用 .fab 原本那種只描邊圖示的 drop-shadow */
-    box-shadow:0 4px 12px rgba(32,38,58,0.32);
-  }
-  .month-fab:active{opacity:.7;}
 
-  .undo-redo-stack{
+  /* 底部懸浮橫排：選取、上一步、下一步、新增行程(鉛筆) 由左到右排成一列，
+     整排貼齊畫面下緣，橫向置中對齊「右側格線區域」的正中央——用
+     left:52px／right:16px 卡出跟時間軸格線本身完全一樣的可視範圍（扣掉
+     最左邊時間刻度欄、右邊留白），裡面再用 justify-content:center 置中，
+     不用自己算螢幕寬度、也不會佔到時間刻度欄的位置。 */
+  .bottom-action-bar{
     position:absolute;
-    right:16px; bottom:84px; /* 鉛筆鍵(bottom:22px + 約52px高) 再加一點間距 */
-    display:flex; flex-direction:column;
-    gap:10px;
+    left:52px; right:16px; bottom:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
     z-index:5;
   }
+  /* 上一步／下一步：懸浮在時間軸格線上方，用跟鉛筆鍵同一套 drop-shadow
+     圖示風格，尺寸統一大一點，觸控範圍比較舒服。 */
   .undo-redo-btn{
-    width:40px; height:40px;
+    width:38px; height:38px;
     padding:0;
     border-radius:12px;
     border:none;
@@ -1270,7 +1295,7 @@
     padding:12px;
     border-radius:10px;
     border:none;
-    background:var(--ink);
+    background:var(--btn-coffee);
     color:var(--paper);
     font-family:'Noto Sans TC', sans-serif;
     font-size:14px;
@@ -1346,7 +1371,7 @@
   }
   .picker-confirm-ok-btn{
     border:none;
-    background:var(--ink);
+    background:var(--btn-coffee);
     color:var(--paper);
   }
   .picker-confirm-ok-btn.danger{
@@ -1567,8 +1592,8 @@
     background:var(--ink-faint);
   }
   .participant-chip.selected{
-    border-color:var(--ink);
-    background:var(--ink);
+    border-color:var(--btn-coffee);
+    background:var(--btn-coffee);
     color:var(--paper);
   }
   .participant-chip.selected .chip-dot{background:var(--paper);}
@@ -1699,13 +1724,21 @@
          展開效果，跟裡面同時在放大的內容互相獨立。
          position:absolute + inset:0 + flex 版面完全比照 .page 自己原本
          的寫法，這樣包一層進去不會讓任何內部依賴「相對 .page 定位」的
-         絕對定位子元素（鉛筆鍵、月曆鍵、復原/重做鍵、懸浮提示）跑位。 -->
+         絕對定位子元素（鉛筆鍵、月曆鍵、懸浮提示）跑位。 -->
     <div class="zoom-inner" id="zoomInner">
     <header class="planner-header">
       <div class="date-center-nav">
-        <div class="select-controls" id="selectControls">
-          <button id="btnSelectToggle" class="select-toggle-btn" aria-label="選取">
-            <span id="selectToggleIcon">選取</span>
+        <!-- 左上角：月曆檢視入口，原本是「選取」鍵的位置——選取／復原／
+             重做／新增行程都搬到畫面最下面那一橫排懸浮鍵了，這裡讓給
+             月曆鍵。 -->
+        <div class="header-left-group" id="headerLeftGroup">
+          <button id="btnOpenMonth" class="month-header-btn" aria-label="月曆檢視">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="3"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
           </button>
         </div>
         <div class="date-display" id="dateDisplayBtn">
@@ -1716,7 +1749,7 @@
           <input type="date" id="datePicker" hidden>
         </div>
         <button id="btnAddColumn" class="add-col-btn" aria-label="新增使用者欄位">
-          <svg width="23" height="18" viewBox="0 0 30 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg width="23" height="18" viewBox="1 0 30 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <g transform="scale(-1,1) translate(-30,0)">
               <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="8.5" cy="7" r="4"/>
@@ -1725,24 +1758,6 @@
             </g>
           </svg>
         </button>
-        <!-- 選取模式下、有勾選任何行程時才出現的「移動」+「刪除」鍵，兩個
-             綁在同一個右側群組裡（移動在左、刪除在右），群組整體貼右邊，
-             跟左邊日期顯示屏、右邊螢幕邊緣都留出間距，不會頂到。 -->
-        <div class="select-right-controls" id="selectRightControls">
-          <div id="btnMoveSelected" class="select-move-btn" aria-label="移動選取的行程" hidden>
-            <span>移動</span>
-            <input type="date" id="moveTargetDatePicker" hidden>
-          </div>
-          <button id="btnDeleteSelected" class="select-delete-btn" aria-label="刪除已選取的項目" hidden>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-              <path d="M10 11v6"></path>
-              <path d="M14 11v6"></path>
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
-            </svg>
-          </button>
-        </div>
       </div>
     </header>
 
@@ -1770,51 +1785,71 @@
          （因為那些情況會改變 header 高度，連帶讓 timeline-scroll 的範圍跟著變）。 -->
     <div class="hint-empty" id="hintEmpty" hidden>本日尚未安排行程</div>
 
-    <!-- 月曆檢視入口：疊在時間軸左下角（蓋到左側時間刻度那一欄），跟右下角
-         鉛筆鍵是同一顆 .fab 的鏡像版本，只是換了邊、換了圖示。 -->
-    <button class="fab month-fab" id="btnOpenMonth" aria-label="月曆檢視">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="18" rx="3"></rect>
-        <line x1="16" y1="2" x2="16" y2="6"></line>
-        <line x1="8" y1="2" x2="8" y2="6"></line>
-        <line x1="3" y1="10" x2="21" y2="10"></line>
-      </svg>
-    </button>
-
-    <button class="fab" id="fabAdd" aria-label="新增行程">
-      <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true">
-        <g transform="rotate(45 50 50)" fill="currentColor">
-          <!-- 橡皮擦 -->
-          <rect x="40" y="8" width="20" height="14" rx="4"/>
-          <!-- 金屬箍(上下用留白間隙跟橡皮擦、筆身分開) -->
-          <rect x="40" y="25" width="20" height="6"/>
-          <!-- 筆身 -->
-          <rect x="40" y="34" width="20" height="40"/>
-          <!-- 筆尖(用留白間隙跟筆身分開) -->
-          <path d="M40 77 L60 77 L50 95 Z"/>
-        </g>
-      </svg>
-    </button>
-
-    <!-- 回上一步／下一步：整個資料狀態（columns + events）的復原/重做，
-         垂直排列在鉛筆鍵正上方。實作方式見 JS 段落的「復原／重做」區塊：
-         用整包資料的快照比對，不是針對每種操作分別寫復原邏輯，這樣不管
-         是改行程內容、時間、日期、參與者、還是新增/改名/刪除共編者欄位，
-         全部都自動可以復原，不用每加一種新操作就要記得補一段復原邏輯。 -->
-    <div class="undo-redo-stack">
+    <!-- 底部懸浮橫排：平常是「選取、上一步、下一步、新增行程(鉛筆)」由左到右
+         排成一列；選取模式時原地切換成「×、移動、刪除」——選取變 ×、
+         鉛筆變刪除是同一個位置換圖示/按鈕（兩顆疊在同一格，用 hidden
+         互斥顯示），上一步/下一步在選取模式下直接隱藏、不能用（復原/
+         重做的是整包資料，跟批次選取操作放在一起容易誤觸），「移動」鍵
+         固定卡在原本上一步/下一步中間那個位置出現。整排貼齊畫面下緣、
+         橫向置中對齊「右側格線區域」的正中央（扣掉最左邊 52px 時間刻度欄、
+         右邊 16px 留白之後的那塊區域），不會佔到時間刻度欄的位置。月曆鍵
+         已經搬到左上角（見上面的 header-left-group），不在這一排裡。 -->
+    <div class="bottom-action-bar" id="bottomActionBar">
+      <button id="btnSelectToggle" class="select-toggle-btn" aria-label="選取">
+        <span id="selectToggleIcon">選取</span>
+      </button>
+      <!-- 回上一步／下一步：整個資料狀態（columns + events）的復原/重做，
+           實作方式見 JS 段落的「復原／重做」區塊：用整包資料的快照比對，
+           不是針對每種操作分別寫復原邏輯，這樣不管是改行程內容、時間、
+           日期、參與者、還是新增/改名/刪除共編者欄位，全部都自動可以
+           復原，不用每加一種新操作就要記得補一段復原邏輯。選取模式下
+           會隱藏、不能用（見 CSS 的 select-mode-active 規則）。 -->
       <button type="button" id="btnUndo" class="undo-redo-btn" aria-label="回上一步" disabled>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="9 14 4 9 9 4"></polyline>
           <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
         </svg>
       </button>
+      <!-- 「移動」鍵：只有選取模式中且至少勾選一個行程時才由 JS 拿掉
+           hidden，位置固定卡在上一步/下一步中間，不會讓兩側的鍵跟著跳動。 -->
+      <div id="btnMoveSelected" class="select-move-btn" aria-label="移動選取的行程" hidden>
+        <span>移動</span>
+        <input type="date" id="moveTargetDatePicker" hidden>
+      </div>
       <button type="button" id="btnRedo" class="undo-redo-btn" aria-label="下一步" disabled>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="15 14 20 9 15 4"></polyline>
           <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
         </svg>
       </button>
+      <button class="fab" id="fabAdd" aria-label="新增行程">
+        <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true">
+          <g transform="rotate(45 50 50)" fill="currentColor">
+            <!-- 橡皮擦 -->
+            <rect x="40" y="8" width="20" height="14" rx="4"/>
+            <!-- 金屬箍(上下用留白間隙跟橡皮擦、筆身分開) -->
+            <rect x="40" y="25" width="20" height="6"/>
+            <!-- 筆身 -->
+            <rect x="40" y="34" width="20" height="40"/>
+            <!-- 筆尖(用留白間隙跟筆身分開) -->
+            <path d="M40 77 L60 77 L50 95 Z"/>
+          </g>
+        </svg>
+      </button>
+      <!-- 「刪除」鍵：跟上面的鉛筆鍵疊在同一個位置（bottom-action-bar 的
+           最後一格），平常 hidden，選取模式一開就跟鉛筆互換 hidden 狀態，
+           視覺上就像同一顆鍵原地換了圖示。 -->
+      <button id="btnDeleteSelected" class="select-delete-btn" aria-label="刪除已選取的項目" hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+          <path d="M10 11v6"></path>
+          <path d="M14 11v6"></path>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+        </svg>
+      </button>
     </div>
+
     </div>
   </section>
 
@@ -3239,6 +3274,11 @@
 
       columnHeaderRow.appendChild(cell);
     });
+    // 達到 4 人上限時，「新增使用者欄位」按鍵直接整個隱藏，不留提示、
+    // 不跳說明——這個共編行事曆本來就是設計給小圈子（2-4人）用的並排
+    // 欄位排版，超過就沒有再加人的入口；欄位刪到低於 4 人時按鍵自動
+    // 恢復顯示。
+    document.getElementById('btnAddColumn').hidden = columns.length >= 4;
   }
 
   function renderColumnDividers(){
@@ -4320,56 +4360,94 @@
       if(selectMode){
         // 選取狀態下，點擊行程原則上只用來勾選/取消勾選，不進入原本的長按
         // 選單／拖曳搬移／開編輯頁那套互動。沒有權限的行程（別人創建的
-        // 共同行程）直接忽略點擊。
-        if(!canSelectInstance(inst)) return;
+        // 共同行程）不能被勾選/長按同步拖移，但仍然必須能從它上面開始
+        // 滑動捲動時間軸——不然畫面上只要有一張別人建立的行程卡片擋著，
+        // 那個位置就會變成完全滑不動的死角（之前的 bug 就是卡在這裡：
+        // 沒有權限直接 return，連捲動用的 pointermove/up 監聽器都沒掛上）。
+        const canSelect = canSelectInstance(inst);
         const key = inst.masterId+'@'+inst.instanceDate;
+        const wasSelected = canSelect && selectedEventKeys.has(key);
 
-        if(!selectedEventKeys.has(key)){
-          // 還沒被勾選：點一下直接勾選，維持原本手感。
-          selectedEventKeys.add(key);
-          renderEvents();
-          return;
-        }
+        // 卡片本身 touch-action:none，瀏覽器不會幫忙捲動，所以這裡要跟一般
+        // 模式的長按拖曳共用同一套「先觀察手指是不是在滑動」的判斷，不然
+        // 手指從卡片上開始的上下滑動會被卡片整個吃掉，時間軸完全捲不動。
+        stopMomentumScroll();
+        startX = e.clientX;
+        startY = e.clientY;
+        lastY = e.clientY;
+        lastMoveTime = performance.now();
+        scrollVelocity = 0;
+        cancelledByScroll = false;
 
-        // 已經勾選過的卡片：可能只是想「再點一下取消勾選」，也可能是想
-        // 「長按同步拖移整批已勾選的行程」，用長按計時器分辨這兩種意圖，
-        // 判斷邏輯跟一般模式的長按拖曳（下面 phase 那套）同一個手感。
-        const bStartX = e.clientX, bStartY = e.clientY;
         let bMoved = false;
         let bDragging = false;
-        let bLongPressTimer = setTimeout(function(){
-          if(bMoved) return;
-          bDragging = startBatchDrag(inst, card, bStartX, bStartY);
-        }, 400);
+        let bLongPressTimer = null;
+        if(wasSelected){
+          // 只有「已經勾選過」的卡片，長按才會觸發同步拖移整批已選取的
+          // 行程；還沒勾選（或沒有權限勾選）的卡片維持單純點擊勾選，
+          // 不需要長按判斷。
+          bLongPressTimer = setTimeout(function(){
+            if(bMoved || cancelledByScroll) return;
+            bDragging = startBatchDrag(inst, card, startX, startY);
+          }, 400);
+        }
 
-        const onBatchMove = function(ev2){
+        const onSelectMove = function(ev2){
           if(bDragging){
             ev2.preventDefault();
             updateBatchDrag(ev2.clientX, ev2.clientY);
             return;
           }
-          if(!bMoved && Math.hypot(ev2.clientX - bStartX, ev2.clientY - bStartY) > 10){
-            bMoved = true;
-            clearTimeout(bLongPressTimer);
+          if(cancelledByScroll){
+            const now = performance.now();
+            const dt = now - lastMoveTime || 16;
+            const deltaY = ev2.clientY - lastY;
+            scheduleTimelineScroll(deltaY);
+            scrollVelocity = -deltaY / dt;
+            lastMoveTime = now;
+            lastY = ev2.clientY;
+            return;
           }
+          if(!bMoved && Math.hypot(ev2.clientX - startX, ev2.clientY - startY) > 10){
+            bMoved = true;
+            if(bLongPressTimer) clearTimeout(bLongPressTimer);
+          }
+          // 垂直位移超過門檻（跟一般模式同一套 16px 判斷）就當成使用者其實是
+          // 想捲動時間軸，不是要點擊/長按這張卡片，改手動接手捲動。
+          if(Math.abs(ev2.clientY - startY) > 16){
+            cancelledByScroll = true;
+            if(bLongPressTimer) clearTimeout(bLongPressTimer);
+            const now = performance.now();
+            const dt = now - lastMoveTime || 16;
+            const deltaY = ev2.clientY - lastY;
+            scheduleTimelineScroll(deltaY);
+            scrollVelocity = -deltaY / dt;
+            lastMoveTime = now;
+          }
+          lastY = ev2.clientY;
         };
-        const onBatchUp = function(ev2){
-          clearTimeout(bLongPressTimer);
-          document.removeEventListener('pointermove', onBatchMove);
-          document.removeEventListener('pointerup', onBatchUp);
-          document.removeEventListener('pointercancel', onBatchUp);
+        const onSelectUp = function(ev2){
+          if(bLongPressTimer) clearTimeout(bLongPressTimer);
+          document.removeEventListener('pointermove', onSelectMove);
+          document.removeEventListener('pointerup', onSelectUp);
+          document.removeEventListener('pointercancel', onSelectUp);
 
           if(bDragging){
             endBatchDrag(ev2.clientX, ev2.clientY);
-          } else if(!bMoved){
-            // 沒有觸發長按拖曳、手指也沒有明顯移動過：當成一般點擊，取消勾選。
-            selectedEventKeys.delete(key);
+          } else if(cancelledByScroll){
+            flushTimelineScrollNow();
+            startMomentumScroll(scrollVelocity);
+          } else if(!bMoved && canSelect){
+            // 乾淨的一次點擊（不是捲動、也沒觸發長按拖曳）：切換勾選狀態。
+            // 沒有權限的行程點了也不會有任何反應。
+            if(wasSelected) selectedEventKeys.delete(key);
+            else selectedEventKeys.add(key);
             renderEvents();
           }
         };
-        document.addEventListener('pointermove', onBatchMove);
-        document.addEventListener('pointerup', onBatchUp);
-        document.addEventListener('pointercancel', onBatchUp);
+        document.addEventListener('pointermove', onSelectMove);
+        document.addEventListener('pointerup', onSelectUp);
+        document.addEventListener('pointercancel', onSelectUp);
         return;
       }
 
@@ -4966,7 +5044,6 @@
     }
 
     timelineGrid.addEventListener('pointerdown', function(e){
-      if(selectMode) return; // 選取狀態下，空白處長按不建立新行程，避免手勢衝突
       if(pinchActive) return; // 雙指縮放進行中，單指手勢一律不啟動
       // 只處理空白區域（行程卡自己的 pointerdown 會 stopPropagation）
       stopMomentumScroll(); // 再次觸碰畫面就先停掉還在滑的慣性捲動
@@ -4983,16 +5060,24 @@
       anchorPx = e.clientY - rect.top;
       anchorColIdx = colIdxFromX(e.clientX);
 
-      longPressTimer = setTimeout(function(){
-        if(cancelled) return;
-        if(pinchActive) return; // 計時器觸發當下才是真正該檢查雙指縮放的時機，避免縮放時誤建新行程
-        selecting = true;
-        if(navigator.vibrate) navigator.vibrate(15);
-        let top = Math.max(0, snapToFiveMin(anchorPx));
-        let bottom = Math.min(hourPx*24, top + hourPx); // 預設長按不拖曳＝1小時
-        const clamped = clampSelectionAgainstCollisions(top, bottom, anchorColIdx, anchorColIdx, true, true);
-        paintSelectionBox(clamped.top, clamped.bottom, clamped.colMin, clamped.colMax);
-      }, 400);
+      // 選取狀態下，空白處長按不建立新行程（避免跟「勾選/拖移」那組手勢
+      // 衝突）——但上下捲動、左右滑動切日都是靠 onMove 自己接手處理，
+      // 跟這個長按計時器無關，所以只跳過「布長按計時器」這一步就好，不能
+      // 整個 pointerdown 都直接 return，不然連捲動/切日一起被擋掉。
+      if(selectMode){
+        longPressTimer = null;
+      } else {
+        longPressTimer = setTimeout(function(){
+          if(cancelled) return;
+          if(pinchActive) return; // 計時器觸發當下才是真正該檢查雙指縮放的時機，避免縮放時誤建新行程
+          selecting = true;
+          if(navigator.vibrate) navigator.vibrate(15);
+          let top = Math.max(0, snapToFiveMin(anchorPx));
+          let bottom = Math.min(hourPx*24, top + hourPx); // 預設長按不拖曳＝1小時
+          const clamped = clampSelectionAgainstCollisions(top, bottom, anchorColIdx, anchorColIdx, true, true);
+          paintSelectionBox(clamped.top, clamped.bottom, clamped.colMin, clamped.colMax);
+        }, 400);
+      }
 
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onUp);
@@ -5033,6 +5118,7 @@
 
   document.getElementById('btnAddColumn').addEventListener('click', function(){
     if(selectMode) return;
+    if(columns.length >= 4) return; // 保險：按鍵這時候本來就該是隱藏的，理論上按不到
     showPromptDialog('新增共編使用者的名字：', '', function(value){
       const name = (value || '').trim();
       if(!name) return;
