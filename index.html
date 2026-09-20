@@ -91,6 +91,59 @@
     #phone{min-height:860px; border-radius:28px; box-shadow:0 30px 70px rgba(20,20,30,0.45);}
   }
 
+  /* 「你是哪一位」裝置身分選擇畫面：蓋在最上層，選好之前整個 App 都碰
+     不到（overlay 蓋滿全螢幕），跟 #phone 用同一種紙感配色，看起來像
+     App 的一部分而不是另外彈出的系統對話框。 */
+  .device-user-overlay{
+    position:fixed;
+    inset:0;
+    z-index:999;
+    background:var(--paper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .device-user-overlay[hidden]{display:none;}
+  .device-user-card{
+    width:100%;
+    max-width:340px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .device-user-title{
+    font-family:'Noto Serif TC', serif;
+    font-weight:700;
+    font-size:20px;
+    color:var(--ink);
+    text-align:center;
+  }
+  .device-user-hint{
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13px;
+    color:var(--ink-faint);
+    text-align:center;
+    margin-bottom:14px;
+  }
+  .device-user-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .device-user-btn{
+    padding:16px;
+    border-radius:14px;
+    border:1.5px solid var(--btn-coffee);
+    background:var(--card);
+    color:var(--ink);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .device-user-btn:active{background:var(--btn-coffee); color:var(--paper);}
+
   .page{
     position:absolute; inset:0;
     display:flex; flex-direction:column;
@@ -152,6 +205,7 @@
     transform:translateY(-50%);
     display:flex;
     align-items:center;
+    gap:8px;
     flex:0 0 auto;
   }
   .month-header-btn{
@@ -168,6 +222,16 @@
   }
   .month-header-btn svg{flex:0 0 auto;}
   .month-header-btn:active{opacity:.6;}
+  .notif-btn{position:relative;}
+  .notif-dot{
+    position:absolute;
+    top:5px; right:5px;
+    width:8px; height:8px;
+    border-radius:50%;
+    background:var(--red);
+    border:1.5px solid var(--paper);
+  }
+  .notif-dot[hidden]{display:none;}
   .add-col-btn{
     position:absolute;
     right:0; top:50%;
@@ -678,6 +742,56 @@
     font-weight:700;
     padding:10px 14px 4px;
   }
+  /* 通知面板：跟 .cluster-menu 同一套「浮動咖啡色卡片」外觀，固定定位、
+     動態建立/拆掉（見 JS 的 openNotificationPanel），不用核可、點開來
+     就直接標成已讀，純粹是「讓你知道發生過什麼事」的列表。 */
+  .notif-panel{
+    position:fixed;
+    display:flex;
+    flex-direction:column;
+    background:var(--btn-coffee);
+    border-radius:11px;
+    box-shadow:0 10px 24px rgba(32,38,58,0.4);
+    overflow:hidden;
+    z-index:1000;
+    width:min(280px, 84vw);
+    max-height:60vh;
+  }
+  .notif-panel-title{
+    color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13px;
+    font-weight:700;
+    padding:12px 14px 8px;
+    flex:0 0 auto;
+  }
+  .notif-panel-list{
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+  }
+  .notif-panel-item{
+    padding:10px 14px;
+    border-top:1px solid rgba(246,241,228,0.14);
+    font-family:'Noto Sans TC', sans-serif;
+    color:var(--paper);
+  }
+  .notif-panel-item .notif-msg{
+    font-size:13px;
+    line-height:1.5;
+  }
+  .notif-panel-item .notif-time{
+    display:block;
+    margin-top:3px;
+    font-size:11px;
+    color:rgba(246,241,228,0.6);
+  }
+  .notif-panel-empty{
+    padding:16px 14px 18px;
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13px;
+    color:rgba(246,241,228,0.7);
+  }
   .cluster-menu button{
     border:none;
     background:var(--item-bg, var(--ink));
@@ -989,6 +1103,27 @@
     gap:22px;
   }
   .field{display:flex; flex-direction:column; gap:6px;}
+  .edit-lockable-fields{
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  /* 不是這個行程參與者時：整層欄位鎖住唯讀，只留參與者那一塊還能互動
+     （見 HTML 裡 .edit-lockable-fields 之後的 #participantsBox）。 */
+  .edit-lockable-fields.locked{
+    opacity:.5;
+  }
+  .edit-lockable-fields.locked *{
+    pointer-events:none !important;
+  }
+  .field-lock-hint{
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:12.5px;
+    color:var(--ink-faint);
+    line-height:1.5;
+    margin-top:-10px; /* 跟上面的 .edit-body gap:22px 疊在一起會太空，拉近一點 */
+  }
+  .field-lock-hint[hidden]{display:none;}
   .field-label{
     font-family:'JetBrains Mono', monospace;
     font-size:12px;
@@ -1586,6 +1721,13 @@
     cursor:pointer;
     user-select:none;
   }
+  /* 不是這個行程的參與者、也不是創建者時：參與者這一整塊還是要能互動
+     （才能把自己加進去），但只有「自己」那顆是真的能點，別人的參與狀態
+     不該被一個還沒加入的人片面更動。 */
+  .participant-chip.chip-locked{
+    opacity:.5;
+    cursor:default;
+  }
   .participant-chip .chip-dot{
     width:8px; height:8px;
     border-radius:50%;
@@ -1706,8 +1848,23 @@
     .event-card{transition:none;}
   }
 </style>
+<!-- Supabase 官方 CDN 版 JS client，載入後會掛在 window.supabase 上
+     （createClient 方法）。跟後面主要的 JS 區塊分開放，純粹是因為這是
+     外部函式庫，不是這個 App 自己寫的程式碼。 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+<!-- 「你是哪一位」裝置身分選擇：只在這支裝置從來沒選過的時候才會蓋出來，
+     選好之後存在這支裝置自己的 localStorage（不是雲端資料，每支手機/
+     瀏覽器要各自選一次）。清單內容是從 Supabase 抓回來的共編者名單，
+     見 JS 的 showDeviceUserPicker()。 -->
+<div id="deviceUserPickerOverlay" class="device-user-overlay" hidden>
+  <div class="device-user-card">
+    <div class="device-user-title">這支裝置是哪一位在用？</div>
+    <div class="device-user-hint">選一次就好，之後這支手機/瀏覽器都會記得。</div>
+    <div class="device-user-list" id="deviceUserList"></div>
+  </div>
+</div>
 <div id="phone">
 
   <!-- ============ 頁面一：時間軸主頁 ============ -->
@@ -1739,6 +1896,16 @@
               <line x1="8" y1="2" x2="8" y2="6"></line>
               <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
+          </button>
+          <!-- 站內通知鈴鐺：有未讀就冒出右上角的小紅點，點開來是簡單的清單，
+               不用核可，純粹「讓你知道發生了什麼」。見 JS 的 renderNotificationBadge
+               / openNotificationPanel。 -->
+          <button id="btnNotifications" class="month-header-btn notif-btn" aria-label="通知">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span class="notif-dot" id="notifDot" hidden></span>
           </button>
         </div>
         <div class="date-display" id="dateDisplayBtn">
@@ -1798,12 +1965,14 @@
       <button id="btnSelectToggle" class="select-toggle-btn" aria-label="選取">
         <span id="selectToggleIcon">選取</span>
       </button>
-      <!-- 回上一步／下一步：整個資料狀態（columns + events）的復原/重做，
-           實作方式見 JS 段落的「復原／重做」區塊：用整包資料的快照比對，
+      <!-- 回上一步／下一步：columns/events 每個項目各自的復原/重做，
+           實作方式見 JS 段落的「復原／重做」區塊：只比對哪些項目真的變了，
            不是針對每種操作分別寫復原邏輯，這樣不管是改行程內容、時間、
            日期、參與者、還是新增/改名/刪除共編者欄位，全部都自動可以
-           復原，不用每加一種新操作就要記得補一段復原邏輯。選取模式下
-           會隱藏、不能用（見 CSS 的 select-mode-active 規則）。 -->
+           復原，不用每加一種新操作就要記得補一段復原邏輯；也因為只精準
+           復原「有變動的那幾筆」，不會連對方剛好同步進來的其他改動一起
+           蓋掉。選取模式下會隱藏、不能用（見 CSS 的 select-mode-active
+           規則）。 -->
       <button type="button" id="btnUndo" class="undo-redo-btn" aria-label="回上一步" disabled>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="9 14 4 9 9 4"></polyline>
@@ -1862,6 +2031,12 @@
     </header>
 
     <div class="edit-body">
+      <!-- 除了「參與者」之外的所有欄位，包在同一層裡：如果目前這個人不是
+           這個行程的參與者（別人欄位上、你還沒加入的行程），這一整層會被
+           鎖住唯讀（灰階 + pointer-events:none），只留最後面的「參與者」
+           還能互動——這樣才能讓還沒加入的人點參與者的勾選把自己加進去。
+           見 JS 的 applyEditPermission()。 -->
+      <div class="edit-lockable-fields" id="editLockableFields">
       <div class="field">
         <span class="field-label">行程名稱</span>
         <input id="fieldTitle" type="text">
@@ -1913,6 +2088,11 @@
           <span>同步編輯</span>
         </label>
       </div>
+      </div>
+
+      <!-- 目前這個人還不是參與者時提醒用的一行小字，平常隱藏，見
+           applyEditPermission()。 -->
+      <div class="field-lock-hint" id="fieldLockHint" hidden>你還不是這個行程的參與者，只能查看內容；把自己加進「參與者」就能編輯。</div>
 
       <div class="field">
         <span class="field-label">參與者</span>
@@ -2041,19 +2221,173 @@
     {id:'p1', name:'我'}
   ];
 
-  // 目前這台裝置的操作者是誰：整個 App 現在還沒有登入／切換使用者的機制，
-  // 一律視為 columns[0]（id 'p1'，也就是「我」）本人在操作這台裝置。
-  // 「選取」功能的權限判斷（自己的欄位／自己欄位上的行程可以選取刪除，
-  // 共同行程只有創建者可以選取刪除）都是以這個常數為準。未來如果加上
-  // 真正的多裝置登入機制，只要讓這個值改成「目前登入者的 column id」即可，
-  // 其餘判斷邏輯不需要更動。
-  const CURRENT_USER_ID = 'p1';
+  // 目前這台裝置的操作者是誰：現在真的接了雲端資料庫，「你是哪一位」
+  // 選過一次之後存在這支裝置自己的 localStorage（跟共用的雲端資料是
+  // 分開的兩件事——同一份雲端資料，兩支手機各自記得自己是誰）。沒選過
+  // 就先用 'p1' 當預設值撐著畫面，等 showDeviceUserPicker() 跑完會真的
+  // 定案。編輯/選取權限的判斷（創建者、或已經是參與者之一，才能編輯/
+  // 選取/同步拖移共同行程；不是創建者的參與者只能「退出」不能整場刪除；
+  // 純粹路過看看、還沒加入的人只能看、只能動參與者按鍵——見
+  // canEditInstance）都是以這個變數為準。
+  const DEVICE_USER_KEY = 'shared-planner-device-user';
+  function getDeviceUserId(){
+    try{ return localStorage.getItem(DEVICE_USER_KEY); }catch(err){ return null; }
+  }
+  function setDeviceUserId(id){
+    try{ localStorage.setItem(DEVICE_USER_KEY, id); }catch(err){}
+  }
+  let CURRENT_USER_ID = getDeviceUserId() || 'p1';
 
   let events = [
     {id:'e1', title:'晨間會議', date:T0, start:'09:00', end:'10:30', notes:'記得帶筆電與投影線材。', participants:['p1'], creatorId:'p1', color:'morandi-blue'},
     {id:'e2', title:'研究冰淇淋機', date:T0, start:'14:00', end:'15:00', notes:'客廳桌上製作，不准上床。', participants:['p1'], creatorId:'p1', color:'macaron-peach'},
     {id:'e3', title:'健身房', date:T0, start:'19:00', end:'20:00', notes:'', participants:['p1'], creatorId:'p1', color:'morandi-sage'}
   ];
+
+  // 站內通知：本機一份、雲端一份（見下面的 Supabase 同步區塊），欄位
+  // 名稱刻意跟資料表對齊。每一筆：{id, recipientId, message, createdAt, read}
+  let notifications = [];
+
+  /* ---------------- Supabase 雲端同步 ----------------
+     這一區塊負責把 columns/events/notifications 接到 Supabase，取代原本
+     純本機的 localStorage。策略刻意選簡單版本，不做完整即時同步：
+     - 開啟 App／切回這個分頁時重新整包抓一次雲端資料（見下面
+       initSupabaseSync 跟 visibilitychange 監聽）
+     - 自己這邊改了什麼，靠既有的「復原/重做」系統本來就會做的
+       diffById 比對（見 captureUndoCheckpoint／applyUndoEntry），順便
+       把「變了哪些 id」精準推上雲端，不用整包重傳
+     - 沒有處理真正的即時（realtime）推播，也沒有處理很細緻的多人同時
+       改同一筆的合併——目前的規則就是「後寫的蓋掉先寫的」，對 2-4 人
+       的行事曆來說夠用；要更即時可以之後再加 Supabase Realtime 訂閱。
+     - 完全離線/連不上網路時，安靜地退回本機 localStorage 快取，不會讓
+       App 整個壞掉，只是看不到對方最新的更動。 */
+  const SUPABASE_URL = 'https://jzmmvhoougfnpkympjbp.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6bW12aG9vdWdmbnBreW1wamJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NzY4MzUsImV4cCI6MjEwMTU1MjgzNX0.x-iEGNzR5G-NUXNB0UB3yEO0mKOHgzq6XLmLuSbNkDs';
+  let sb = null;
+  try{
+    if(window.supabase && window.supabase.createClient){
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+  }catch(err){
+    console.error('Supabase client 初始化失敗，退回純本機模式：', err);
+  }
+
+  // App 的 JS 物件（camelCase）跟 Supabase 資料表的欄位（snake_case）
+  // 互相轉換，只在同步這一層做轉換，其餘程式碼完全不用管資料庫欄位長怎樣。
+  function columnToRow(col){ return { id: col.id, name: col.name }; }
+  function rowToColumn(row){ return { id: row.id, name: row.name }; }
+  function eventToRow(ev){
+    return {
+      id: ev.id, title: ev.title || '', date: ev.date, start: ev.start, end: ev.end,
+      notes: ev.notes || '', participants: ev.participants || [], creator_id: ev.creatorId,
+      color: ev.color || '', recurrence: ev.recurrence || null,
+      excluded: ev.excluded || null, overrides: ev.overrides || null
+    };
+  }
+  function rowToEvent(row){
+    return {
+      id: row.id, title: row.title || '', date: row.date, start: row.start, end: row.end,
+      notes: row.notes || '', participants: row.participants || [], creatorId: row.creator_id,
+      color: row.color || '', recurrence: row.recurrence || null,
+      excluded: row.excluded || null, overrides: row.overrides || null
+    };
+  }
+  function notificationToRow(n){
+    return { id: n.id, recipient_id: n.recipientId, message: n.message, created_at: n.createdAt, read: n.read };
+  }
+  function rowToNotification(row){
+    return { id: row.id, recipientId: row.recipient_id, message: row.message, createdAt: row.created_at, read: row.read };
+  }
+
+  // 把一批 {id, before, after} 的變動（跟復原/重做用的是同一份 diff）
+  // 推上 Supabase：pickValue(change) 回傳「現在應該長怎樣」，null 代表
+  // 這筆已經被刪除了。upsert 用 id 當衝突判斷欄位，刪除用 in(id列表)。
+  async function syncChangesToSupabase(table, changes, pickValue){
+    if(!sb || !changes || changes.length === 0) return;
+    const toRow = table === 'columns' ? columnToRow : eventToRow;
+    const upsertRows = [];
+    const deleteIds = [];
+    changes.forEach(ch => {
+      const val = pickValue(ch);
+      if(val === null) deleteIds.push(ch.id);
+      else upsertRows.push(toRow(val));
+    });
+    try{
+      if(upsertRows.length){
+        const { error } = await sb.from(table).upsert(upsertRows);
+        if(error) console.error('Supabase upsert 失敗（'+table+'）：', error);
+      }
+      if(deleteIds.length){
+        const { error } = await sb.from(table).delete().in('id', deleteIds);
+        if(error) console.error('Supabase 刪除失敗（'+table+'）：', error);
+      }
+    }catch(err){
+      console.error('Supabase 同步發生錯誤（'+table+'）：', err);
+    }
+  }
+
+  async function pushNotificationToSupabase(n){
+    if(!sb) return;
+    try{
+      const { error } = await sb.from('notifications').insert(notificationToRow(n));
+      if(error) console.error('Supabase 通知寫入失敗：', error);
+    }catch(err){
+      console.error('Supabase 通知寫入發生錯誤：', err);
+    }
+  }
+
+  async function markNotificationsReadOnSupabase(ids){
+    if(!sb || !ids || ids.length === 0) return;
+    try{
+      const { error } = await sb.from('notifications').update({read:true}).in('id', ids);
+      if(error) console.error('Supabase 通知已讀更新失敗：', error);
+    }catch(err){
+      console.error('Supabase 通知已讀更新發生錯誤：', err);
+    }
+  }
+
+  // 整包從 Supabase 抓一次目前的 columns/events/notifications；抓失敗
+  // （離線、key 錯、專案不存在等等）回傳 null，呼叫端要自己接住、退回
+  // 本機資料，不能讓整個 App 因此壞掉。
+  async function fetchAllFromSupabase(){
+    if(!sb) return null;
+    try{
+      const [colsRes, evsRes, notifsRes] = await Promise.all([
+        sb.from('columns').select('*'),
+        sb.from('events').select('*'),
+        sb.from('notifications').select('*')
+      ]);
+      if(colsRes.error){ console.error('Supabase 讀取 columns 失敗：', colsRes.error); return null; }
+      if(evsRes.error){ console.error('Supabase 讀取 events 失敗：', evsRes.error); return null; }
+      if(notifsRes.error){ console.error('Supabase 讀取 notifications 失敗：', notifsRes.error); return null; }
+      return {
+        columns: (colsRes.data || []).map(rowToColumn),
+        events: (evsRes.data || []).map(rowToEvent),
+        notifications: (notifsRes.data || []).map(rowToNotification)
+      };
+    }catch(err){
+      console.error('Supabase 讀取發生錯誤：', err);
+      return null;
+    }
+  }
+
+  function queueNotification(recipientId, message){
+    if(!recipientId || recipientId === CURRENT_USER_ID) return; // 不用通知自己
+    const n = {
+      id: 'n' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+      recipientId, message,
+      createdAt: new Date().toISOString(),
+      read: false
+    };
+    notifications.push(n);
+    scheduleSaveToStorage();
+    renderNotificationBadge();
+    pushNotificationToSupabase(n);
+  }
+  function columnName(id){
+    const col = columns.find(c => c.id === id);
+    return col ? col.name : '(某人)';
+  }
 
   /* ---------------- 本機儲存（重新整理、關掉分頁再打開，資料還在） ----------------
      用瀏覽器的 localStorage，只存在「這一台裝置的這個瀏覽器」裡，不會跨裝置
@@ -2068,7 +2402,7 @@
   function saveToStorage(){
     if(!storageAvailable) return;
     try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({columns, events}));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({columns, events, notifications}));
     }catch(err){
       storageAvailable = false;
     }
@@ -2112,72 +2446,129 @@
   if(savedData){
     columns = savedData.columns;
     events = savedData.events;
+    if(Array.isArray(savedData.notifications)) notifications = savedData.notifications;
   }
 
   /* ---------------- 復原／重做 ----------------
-     不是針對「刪除」「編輯」「拖曳」……每一種操作分別寫一段復原邏輯，而是
-     整包資料（columns + events —— 這剛好就是 saveToStorage() 存的東西，
-     行程內容/時間/日期/參與者、共編者欄位的新增/改名/刪除，全部都在裡面）
-     拍快照、比對前後差異。掛在跟 saveToStorage 完全同一組「資料可能剛
-     被動過」的偵測點上（renderColumnHeader/renderEvents），所以不用擔心
-     以後新加一種操作忘記補復原邏輯——只要那個操作會讓畫面重繪，就自動
-     被記錄進來。
+     跟 saveToStorage 一樣，掛在「資料可能剛被動過」的偵測點上
+     （renderColumnHeader/renderEvents 開頭），不用擔心以後新加一種操作
+     忘記補復原邏輯——只要那個操作會讓畫面重繪，就自動被記錄進來。
 
-     每筆快照除了資料本身，也記錄「拍下這筆快照當下，畫面顯示的是哪一
-     天」（lastCommittedDate）。單純換日瀏覽不會被記成新的一步（資料沒變，
-     下面比對就直接跳過），但會順便更新 lastCommittedDate，這樣如果之後
-     做了個會換日的操作（例如把行程搬到別天、選取後用「移動」搬過去），
-     復原時才能連著畫面顯示的日期一起退回去，而不是只有資料復原、畫面
-     卻還留在搬移後的那一天。 */
+     跟舊版最大的差異：舊版是整包 {columns, events} 拍快照，復原就整包
+     蓋回去；資料改成雲端共用之後，這樣做會連對方剛好在同一段時間做的
+     修改都一起蓋掉。現在改成「只比對哪些 column／event 真的變了」，
+     每一步只記錄「哪幾個 id、改動前後長什麼樣子」，復原/重做也只精準
+     覆蓋那幾個 id，其餘沒被這一步動到的 column/event（包括對方剛好
+     同步進來的東西）完全不受影響——復原永遠只復原「自己做過的這一步」。
+
+     每筆記錄除了資料本身，也記錄「做這一步之前／之後，畫面顯示的是哪
+     一天」，復原/重做時畫面顯示的日期會跟著資料一起切換（例如把行程搬
+     到別天、選取後用「移動」搬過去，復原時要連日期一起退回去）。 */
   let undoStack = [];
   let redoStack = [];
-  let lastCommittedDataJSON = JSON.stringify({columns, events});
+  let lastCommittedColumns = JSON.parse(JSON.stringify(columns));
+  let lastCommittedEvents = JSON.parse(JSON.stringify(events));
   let lastCommittedDate = T0; // currentDate 這時候還沒宣告，用它的初始值 T0 代替
   let isRestoringSnapshot = false; // 復原/重做本身在改資料時，不要又把這次改動記成新的一步
   const UNDO_STACK_LIMIT = 50;
 
+  // 比對同一種集合（columns 或 events）前後兩份陣列，只回傳「id 對得起來、
+  // 內容真的有差」或「整筆新增/整筆刪除」的項目，格式統一成
+  // {id, before, after}：before/after 是 null 代表這筆是新增/被刪除。
+  function diffById(prevList, curList){
+    const prevMap = new Map((prevList||[]).map(it => [it.id, it]));
+    const curMap = new Map((curList||[]).map(it => [it.id, it]));
+    const allIds = new Set([...prevMap.keys(), ...curMap.keys()]);
+    const changes = [];
+    allIds.forEach(id => {
+      const before = prevMap.has(id) ? prevMap.get(id) : null;
+      const after = curMap.has(id) ? curMap.get(id) : null;
+      if(JSON.stringify(before) !== JSON.stringify(after)){
+        changes.push({
+          id,
+          before: before ? JSON.parse(JSON.stringify(before)) : null,
+          after: after ? JSON.parse(JSON.stringify(after)) : null
+        });
+      }
+    });
+    return changes;
+  }
+
+  // 把一組 {id, before, after} 的變動套用回某個集合（columns 或 events），
+  // useBefore=true 是復原（改回 before，before 是 null 就整筆刪掉）；
+  // useBefore=false 是重做（改回 after，after 是 null 就整筆刪掉）。
+  // 用 Map 逐一覆蓋，沒被這筆記錄提到的項目原封不動地保留在原本的陣列裡。
+  function applyChangesToCollection(list, changes, useBefore){
+    const map = new Map((list||[]).map(it => [it.id, it]));
+    (changes||[]).forEach(ch => {
+      const val = useBefore ? ch.before : ch.after;
+      if(val === null){
+        map.delete(ch.id);
+      } else {
+        map.set(ch.id, val);
+      }
+    });
+    return Array.from(map.values());
+  }
+
   function captureUndoCheckpoint(){
     if(isRestoringSnapshot) return;
-    const snap = JSON.stringify({columns, events});
-    if(snap === lastCommittedDataJSON){
+    const columnChanges = diffById(lastCommittedColumns, columns);
+    const eventChanges = diffById(lastCommittedEvents, events);
+    if(columnChanges.length === 0 && eventChanges.length === 0){
       lastCommittedDate = currentDate; // 資料沒變，只是換了顯示的日期，記住就好
       return;
     }
-    undoStack.push({data: lastCommittedDataJSON, date: lastCommittedDate});
+    undoStack.push({
+      columnChanges, eventChanges,
+      dateBefore: lastCommittedDate, dateAfter: currentDate
+    });
     if(undoStack.length > UNDO_STACK_LIMIT) undoStack.shift();
     redoStack.length = 0; // 有新的動作了，原本能重做的「未來」就作廢
-    lastCommittedDataJSON = snap;
+    lastCommittedColumns = JSON.parse(JSON.stringify(columns));
+    lastCommittedEvents = JSON.parse(JSON.stringify(events));
     lastCommittedDate = currentDate;
     updateUndoRedoButtons();
+    // 這一步真的改了什麼，順便把同一份 diff 推上 Supabase：after 就是
+    // 剛剛變成的最新內容，null 代表這筆被刪除了。
+    syncChangesToSupabase('columns', columnChanges, ch => ch.after);
+    syncChangesToSupabase('events', eventChanges, ch => ch.after);
   }
 
-  function applySnapshot(entry){
-    const data = JSON.parse(entry.data);
+  function applyUndoEntry(entry, useBefore){
     isRestoringSnapshot = true;
-    columns = data.columns;
-    events = data.events;
-    currentDate = entry.date;
+    columns = applyChangesToCollection(columns, entry.columnChanges, useBefore);
+    events = applyChangesToCollection(events, entry.eventChanges, useBefore);
+    currentDate = useBefore ? entry.dateBefore : entry.dateAfter;
     selectedEventKeys.clear();
     selectedColumnIds.clear();
     renderTimeline(); // 資料 + 畫面顯示的日期一起換回去（日期標籤、星期、今天樣式也一併更新）
     isRestoringSnapshot = false;
-    lastCommittedDataJSON = entry.data;
-    lastCommittedDate = entry.date;
+    lastCommittedColumns = JSON.parse(JSON.stringify(columns));
+    lastCommittedEvents = JSON.parse(JSON.stringify(events));
+    lastCommittedDate = currentDate;
     scheduleSaveToStorage();
     updateUndoRedoButtons();
+    // 復原/重做本身也是「自己做的一步」，一樣要同步到 Supabase，
+    // 才不會復原了半天，對方那邊還是看得到你剛剛想收回的版本。
+    const pick = ch => (useBefore ? ch.before : ch.after);
+    syncChangesToSupabase('columns', entry.columnChanges, pick);
+    syncChangesToSupabase('events', entry.eventChanges, pick);
   }
 
   function undo(){
     if(undoStack.length === 0) return;
-    redoStack.push({data: lastCommittedDataJSON, date: lastCommittedDate});
-    const prev = undoStack.pop();
-    applySnapshot(prev);
+    const entry = undoStack.pop();
+    applyUndoEntry(entry, true);
+    redoStack.push(entry);
+    updateUndoRedoButtons(); // applyUndoEntry 裡那次是在 redoStack.push 之前跑的，這裡要再更新一次
   }
   function redo(){
     if(redoStack.length === 0) return;
-    undoStack.push({data: lastCommittedDataJSON, date: lastCommittedDate});
-    const next = redoStack.pop();
-    applySnapshot(next);
+    const entry = redoStack.pop();
+    applyUndoEntry(entry, false);
+    undoStack.push(entry);
+    updateUndoRedoButtons(); // 同上，undoStack.push 之後要再同步一次按鍵狀態
   }
   function updateUndoRedoButtons(){
     btnUndo.disabled = undoStack.length === 0;
@@ -2816,13 +3207,51 @@
   function deleteInstanceQuick(masterId, instanceDate){
     const master = events.find(e => e.id === masterId);
     if(!master) return;
+    const title = master.title || '(未命名行程)';
+    const notifyOthers = () => {
+      (master.participants||[]).filter(id => id !== CURRENT_USER_ID)
+        .forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 刪除了「'+title+'」'));
+    };
     if(!master.recurrence){
+      notifyOthers();
       events = events.filter(e => e !== master);
       return;
     }
+    notifyOthers();
     master.excluded = master.excluded || [];
     if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
     if(master.overrides) delete master.overrides[instanceDate];
+  }
+
+  // 「退出」共同行程：只有創建者才能真的整場刪掉（見 deleteInstanceQuick），
+  // 其他參與者只能把自己從參與者名單移除，行程本身留給創建者跟其他人。
+  // 重複行程只退出這一天，用 override 蓋掉這一天的參與者名單，不影響
+  // 系列其他日期；如果退出後這一天已經沒有任何人，等同刪除這一天的實例。
+  function leaveInstance(masterId, instanceDate){
+    const master = events.find(e => e.id === masterId);
+    if(!master) return;
+    const title = master.title || '(未命名行程)';
+    if(!master.recurrence){
+      const remaining = (master.participants||[]).filter(id => id !== CURRENT_USER_ID);
+      master.participants = remaining;
+      remaining.forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 退出了「'+title+'」'));
+      if(master.participants.length === 0){
+        events = events.filter(e => e !== master);
+      }
+      return;
+    }
+    master.overrides = master.overrides || {};
+    const base = master.overrides[instanceDate] || {};
+    const baseParticipants = base.participants || master.participants || [];
+    const newParticipants = baseParticipants.filter(id => id !== CURRENT_USER_ID);
+    newParticipants.forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 退出了「'+title+'」'));
+    if(newParticipants.length === 0){
+      master.excluded = master.excluded || [];
+      if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
+      delete master.overrides[instanceDate];
+    } else {
+      master.overrides[instanceDate] = Object.assign({}, base, {participants: newParticipants});
+    }
   }
 
   // 卡片被刪除之前，先讓它縮小＋淡出（像被揉掉），才真正動資料、觸發
@@ -2871,9 +3300,18 @@
     if(cardMenuEl){ cardMenuEl.remove(); cardMenuEl = null; }
   }
 
-  function openCardMenu(card, masterId, instanceDate, shrunkTitle){
+  function openCardMenu(card, inst, shrunkTitle){
     closeCardMenu();
     const rect = card.getBoundingClientRect();
+    const masterId = inst.masterId, instanceDate = inst.instanceDate;
+    const creatorId = inst.creatorId || CURRENT_USER_ID;
+    const isCreator = creatorId === CURRENT_USER_ID;
+    const isParticipant = !!(inst.participants && inst.participants.includes(CURRENT_USER_ID));
+    // 創建者可以整場刪掉；只是參與者（不是創建者）只能退出（把自己從
+    // 參與者名單移除）；純粹路過看看、還沒加入的人這裡完全不出現刪除/
+    // 退出這個按鍵，因為根本沒有東西可以讓他刪或退。
+    const dangerAction = isCreator ? 'del' : (isParticipant ? 'leave' : null);
+    const dangerLabel = isCreator ? '刪除' : '退出';
 
     const menu = document.createElement('div');
     menu.className = 'card-menu';
@@ -2881,7 +3319,7 @@
       (shrunkTitle ? '<div class="card-menu-title-row"></div>' : '') +
       '<div class="card-menu-actions">' +
         '<button type="button" data-action="dup">複製</button>' +
-        '<button type="button" data-action="del" class="danger">刪除</button>' +
+        (dangerAction ? '<button type="button" data-action="'+dangerAction+'" class="danger">'+dangerLabel+'</button>' : '') +
       '</div>';
     if(shrunkTitle) menu.querySelector('.card-menu-title-row').textContent = shrunkTitle;
     document.body.appendChild(menu);
@@ -2902,16 +3340,29 @@
       closeCardMenu();
       renderEvents();
     });
-    menu.querySelector('[data-action="del"]').addEventListener('click', function(ev){
-      ev.stopPropagation();
-      closeCardMenu();
-      showConfirmDialog('確定刪除？', function(){
-        animateCardExit(card, function(){
-          deleteInstanceQuick(masterId, instanceDate);
-          renderEvents();
-        });
-      }, {danger:true});
-    });
+    if(dangerAction === 'del'){
+      menu.querySelector('[data-action="del"]').addEventListener('click', function(ev){
+        ev.stopPropagation();
+        closeCardMenu();
+        showConfirmDialog('確定刪除？', function(){
+          animateCardExit(card, function(){
+            deleteInstanceQuick(masterId, instanceDate);
+            renderEvents();
+          });
+        }, {danger:true});
+      });
+    } else if(dangerAction === 'leave'){
+      menu.querySelector('[data-action="leave"]').addEventListener('click', function(ev){
+        ev.stopPropagation();
+        closeCardMenu();
+        showConfirmDialog('確定要退出這個行程嗎？', function(){
+          animateCardExit(card, function(){
+            leaveInstance(masterId, instanceDate);
+            renderEvents();
+          });
+        }, {danger:true});
+      });
+    }
 
     cardMenuEl = menu;
   }
@@ -3016,6 +3467,96 @@
     e.preventDefault();
   }, true);
 
+  /* ---------------- 站內通知面板 ---------------- */
+  const btnNotifications = document.getElementById('btnNotifications');
+  const notifDot = document.getElementById('notifDot');
+  let notifPanelEl = null;
+
+  function renderNotificationBadge(){
+    const hasUnread = notifications.some(n => n.recipientId === CURRENT_USER_ID && !n.read);
+    notifDot.hidden = !hasUnread;
+  }
+
+  function closeNotificationPanel(){
+    if(notifPanelEl){ notifPanelEl.remove(); notifPanelEl = null; }
+  }
+
+  // 「多久之前」的粗略中文說法，跟通知這種不用精準到分秒的場合比較搭。
+  function formatRelativeTime(iso){
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(diffMs/60000);
+    if(min < 1) return '剛剛';
+    if(min < 60) return min+' 分鐘前';
+    const hr = Math.floor(min/60);
+    if(hr < 24) return hr+' 小時前';
+    return Math.floor(hr/24)+' 天前';
+  }
+
+  function openNotificationPanel(){
+    closeNotificationPanel();
+    closeCardMenu();
+    closeClusterMenu();
+    const mine = notifications
+      .filter(n => n.recipientId === CURRENT_USER_ID)
+      .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const panel = document.createElement('div');
+    panel.className = 'notif-panel';
+    panel.innerHTML = '<div class="notif-panel-title">通知</div>';
+    const list = document.createElement('div');
+    list.className = 'notif-panel-list';
+    if(mine.length === 0){
+      list.innerHTML = '<div class="notif-panel-empty">目前沒有通知</div>';
+    } else {
+      mine.forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'notif-panel-item';
+        item.innerHTML = '<span class="notif-msg"></span><span class="notif-time"></span>';
+        item.querySelector('.notif-msg').textContent = n.message;
+        item.querySelector('.notif-time').textContent = formatRelativeTime(n.createdAt);
+        list.appendChild(item);
+      });
+    }
+    panel.appendChild(list);
+    document.body.appendChild(panel);
+
+    const rect = btnNotifications.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    let left = rect.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - panelRect.width - 8));
+    panel.style.left = left + 'px';
+    panel.style.top = (rect.bottom + 8) + 'px';
+
+    notifPanelEl = panel;
+
+    // 點開來看就直接標成已讀——這些通知本來就不需要核可，純粹讓你知道
+    // 發生過什麼事，看過了紅點就該消失。
+    let changed = false;
+    const justReadIds = [];
+    notifications.forEach(n => {
+      if(n.recipientId === CURRENT_USER_ID && !n.read){ n.read = true; changed = true; justReadIds.push(n.id); }
+    });
+    if(changed){
+      scheduleSaveToStorage();
+      renderNotificationBadge();
+      markNotificationsReadOnSupabase(justReadIds);
+    }
+  }
+
+  btnNotifications.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(notifPanelEl){ closeNotificationPanel(); return; }
+    openNotificationPanel();
+  });
+
+  document.addEventListener('pointerdown', function(e){
+    if(!notifPanelEl) return;
+    if(notifPanelEl.contains(e.target) || btnNotifications.contains(e.target)) return;
+    closeNotificationPanel();
+  }, true);
+
+  renderNotificationBadge();
+
   /* ---------------- 時間軸主頁 ---------------- */
   const timelineGrid = document.getElementById('timelineGrid');
   const eventsLayer = document.getElementById('eventsLayer');
@@ -3068,10 +3609,7 @@
   }
 
   function canSelectInstance(inst){
-    const creatorId = inst.creatorId || CURRENT_USER_ID;
-    if(creatorId === CURRENT_USER_ID) return true; // 自己創建的，一定可以
-    // 不是自己創建：只有「單獨掛在自己欄位上」的行程才可以選取
-    return !!(inst.participants && inst.participants.length === 1 && inst.participants[0] === CURRENT_USER_ID);
+    return canEditInstance(inst);
   }
 
   const phoneEl = document.getElementById('phone');
@@ -3114,20 +3652,21 @@
     showConfirmDialog('確定刪除？', function(){
       const cardsToExit = Array.from(eventsLayer.querySelectorAll('.event-card.select-picked'));
       animateCardsExit(cardsToExit, function(){
-      // 1) 刪除被選取的行程：只刪除「目前這一天」看到的這一場，
-      //    重複行程的其他日期不受影響（跟單一編輯頁「不同步」刪除的規則一致）。
+      // 1) 處理被選取的行程：自己是創建者的整場刪掉；只是參與者（不是
+      //    創建者）的話退出就好——把自己從參與者名單移除，行程留給創建者
+      //    跟其他參與者，不會因為自己選了「刪除」就把別人的行程整個刪掉。
+      //    只刪除/退出「目前這一天」看到的這一場，重複行程的其他日期不受影響。
       selectedEventKeys.forEach(key => {
         const at = key.lastIndexOf('@');
         const masterId = key.slice(0, at);
         const instanceDate = key.slice(at+1);
         const master = events.find(e => e.id === masterId);
         if(!master) return;
-        if(!master.recurrence){
-          events = events.filter(e => e !== master);
+        const isCreator = (master.creatorId || CURRENT_USER_ID) === CURRENT_USER_ID;
+        if(isCreator){
+          deleteInstanceQuick(masterId, instanceDate);
         } else {
-          master.excluded = master.excluded || [];
-          if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
-          if(master.overrides) delete master.overrides[instanceDate];
+          leaveInstance(masterId, instanceDate);
         }
       });
 
@@ -4468,7 +5007,7 @@
         phase = 'menu';
         if(navigator.vibrate) navigator.vibrate(15);
         const shrunkTitle = card.dataset.shrunk === '1' ? (inst.title || '(未命名行程)') : null;
-        openCardMenu(card, inst.masterId, inst.instanceDate, shrunkTitle);
+        openCardMenu(card, inst, shrunkTitle);
       }, 400);
 
       const onMove = function(ev2){
@@ -5103,6 +5642,9 @@
       recurrence: null
     };
     events.push(ev);
+    // 建立當下如果就跨到了別人的欄位，等於直接把對方加進參與者，
+    // 要通知對方（跟事後才把別人加進來的規則一致）。
+    participantIds.forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 把你加進了「'+ev.title+'」'));
     justCreatedEventId = id; // 讓下一次 renderEvents() 幫這張新卡片跑「捲軸攤開」進場動畫
     renderEvents();
     return id;
@@ -5203,6 +5745,48 @@
   let selectedParticipants = new Set();
   let selectedWeekdays = new Set();
   let selectedColor = DEFAULT_EVENT_COLOR;
+  const editLockableFields = document.getElementById('editLockableFields');
+  const fieldLockHint = document.getElementById('fieldLockHint');
+  const btnDelete = document.getElementById('btnDelete');
+  // 這次編輯頁打開的行程，目前這個人是不是可以編輯內容欄位（標題/備註/
+  // 日期/時間/顏色/重複）：創建者、或已經是參與者之一，才算數；純粹路過
+  // 看看、還沒加入的人只能動參與者那一塊（把自己加進去）。
+  let editCanEditFields = true;
+  let editIsCreator = true; // 是不是這個行程的創建者：只有創建者能整場刪除，其餘參與者只能退出
+  let editOriginalParticipants = []; // 打開編輯頁當下的參與者名單，存起來跟儲存時的新名單比對，才知道誰是「新加入的」
+
+  // 判斷「這個人對這個行程有沒有編輯權」的共用規則：canSelectInstance
+  // （選取模式用）、applyEditPermission（編輯頁用）都呼叫這個，維持同一套
+  // 標準——創建者永遠可以編輯自己建立的東西（就算後來忘記把自己列進
+  // 參與者），其餘人只有本來就是參與者才行。
+  function canEditInstance(inst){
+    if(!inst) return false;
+    const creatorId = inst.creatorId || CURRENT_USER_ID;
+    if(creatorId === CURRENT_USER_ID) return true;
+    return !!(inst.participants && inst.participants.includes(CURRENT_USER_ID));
+  }
+
+  function applyEditPermission(inst){
+    editCanEditFields = canEditInstance(inst);
+    editLockableFields.classList.toggle('locked', !editCanEditFields);
+    fieldLockHint.hidden = editCanEditFields;
+
+    const creatorId = (inst && inst.creatorId) || CURRENT_USER_ID;
+    editIsCreator = creatorId === CURRENT_USER_ID;
+    const isParticipant = !!(inst && inst.participants && inst.participants.includes(CURRENT_USER_ID));
+    // 創建者可以整場刪除；只是參與者（不是創建者）改成「退出」（把自己
+    // 從參與者名單移除）；純粹路過看看、還沒加入的人這顆鍵直接隱藏，
+    // 沒有東西可以讓他刪或退。
+    if(editIsCreator){
+      btnDelete.hidden = false;
+      btnDelete.textContent = '刪除此行程';
+    } else if(isParticipant){
+      btnDelete.hidden = false;
+      btnDelete.textContent = '退出此行程';
+    } else {
+      btnDelete.hidden = true;
+    }
+  }
 
   function renderColorSwatches(colorId){
     selectedColor = colorId || DEFAULT_EVENT_COLOR;
@@ -5226,19 +5810,38 @@
     participantsBox.innerHTML = '';
     columns.forEach(col => {
       const chip = document.createElement('div');
-      chip.className = 'participant-chip' + (selectedParticipants.has(col.id) ? ' selected' : '');
+      const canToggleThisChip = editCanEditFields || col.id === CURRENT_USER_ID;
+      chip.className = 'participant-chip'
+        + (selectedParticipants.has(col.id) ? ' selected' : '')
+        + (canToggleThisChip ? '' : ' chip-locked');
       chip.dataset.id = col.id;
       chip.innerHTML = '<span class="chip-dot"></span><span></span>';
       chip.querySelector('span:last-child').textContent = col.name;
-      chip.addEventListener('click', function(){
-        if(selectedParticipants.has(col.id)){
-          // 至少保留一位參與者，避免行程變成沒人參加
-          if(selectedParticipants.size > 1) selectedParticipants.delete(col.id);
-        } else {
-          selectedParticipants.add(col.id);
-        }
-        chip.classList.toggle('selected', selectedParticipants.has(col.id));
-      });
+      if(canToggleThisChip){
+        chip.addEventListener('click', function(){
+          const wasSelected = selectedParticipants.has(col.id);
+          if(wasSelected){
+            // 至少保留一位參與者，避免行程變成沒人參加
+            if(selectedParticipants.size > 1) selectedParticipants.delete(col.id);
+          } else {
+            selectedParticipants.add(col.id);
+          }
+          chip.classList.toggle('selected', selectedParticipants.has(col.id));
+          // 参與狀態一變，編輯權就要跟著即時重新判斷（創建者不受影響，
+          // 一直都能編輯；非創建者則是「現在還在不在參與者名單裡」決定）：
+          // 剛加入自己 -> 解鎖；把自己剛移除掉 -> 鎖回去，不讓人退出了
+          // 又繼續改內容還存得進去。
+          if(!editIsCreator && col.id === CURRENT_USER_ID){
+            const stillIn = selectedParticipants.has(CURRENT_USER_ID);
+            editCanEditFields = stillIn;
+            editLockableFields.classList.toggle('locked', !stillIn);
+            fieldLockHint.hidden = stillIn;
+            btnDelete.hidden = !stillIn;
+            if(stillIn) btnDelete.textContent = '退出此行程';
+            renderParticipantChips(Array.from(selectedParticipants));
+          }
+        });
+      }
       participantsBox.appendChild(chip);
     });
   }
@@ -5301,6 +5904,8 @@
       notes: master.notes, participants: master.participants, color: master.color
     };
 
+    applyEditPermission({creatorId: master.creatorId, participants: data.participants});
+    editOriginalParticipants = (data.participants || []).slice();
     fillEditForm(data, instanceDate, !!master.recurrence);
     renderWeekdayChips(master.recurrence ? master.recurrence.weekdays : []);
     syncField.style.display = master.recurrence ? 'flex' : 'none';
@@ -5806,26 +6411,77 @@
     }
 
     currentDate = master.recurrence ? editingInstanceDate : master.date;
+
+    // 通知：把「其他人」加進來 -> 通知那些人；把「自己」加進一個本來
+    // 別人建立/共同的行程 -> 通知原本就在的人「我加入了」；移除了誰 ->
+    // 通知被移除的人；其餘本來就有其他參與者、這次維持不變、也還沒被
+    // 上面任何一種訊息涵蓋到的人 -> 通知「更新了」。都不需要核可，純粹
+    // 讓大家知道發生過什麼事。
+    const addedParticipants = newParticipants.filter(id => !editOriginalParticipants.includes(id));
+    const removedParticipants = editOriginalParticipants.filter(id => id !== CURRENT_USER_ID && !newParticipants.includes(id));
+    const selfJustJoined = addedParticipants.includes(CURRENT_USER_ID);
+    const addedOthers = addedParticipants.filter(id => id !== CURRENT_USER_ID);
+
+    addedOthers.forEach(pid => {
+      queueNotification(pid, columnName(CURRENT_USER_ID)+' 把你加進了「'+newTitle+'」');
+    });
+    if(selfJustJoined){
+      editOriginalParticipants.filter(id => id !== CURRENT_USER_ID)
+        .forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 加入了「'+newTitle+'」'));
+    }
+    removedParticipants.forEach(pid => {
+      queueNotification(pid, columnName(CURRENT_USER_ID)+' 把你從「'+newTitle+'」移除了');
+    });
+    if(!selfJustJoined && editOriginalParticipants.length > 1){
+      editOriginalParticipants
+        .filter(id => id !== CURRENT_USER_ID && newParticipants.includes(id) && !addedOthers.includes(id))
+        .forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 更新了「'+newTitle+'」'));
+    }
+
     renderTimeline();
     goBackToTimeline();
   });
 
   document.getElementById('btnDelete').addEventListener('click', function(){
     if(!editingMasterId) return;
-    showConfirmDialog('確定刪除？', function(){
+    const isLeaving = !editIsCreator;
+    showConfirmDialog(isLeaving ? '確定要退出這個行程嗎？' : '確定刪除？', function(){
       const master = events.find(e => e.id === editingMasterId);
       if(!master) return;
       const syncOn = fieldSyncEdit.checked;
 
-      if(!master.recurrence){
-        events = events.filter(e => e !== master);
-      } else if(syncOn){
-        events = events.filter(e => e !== master); // 整個系列都刪除
+      if(!isLeaving){
+        // 創建者：原本的整場/單日刪除邏輯不變，順便通知其他參與者
+        const title = master.title || '(未命名行程)';
+        (master.participants||[]).filter(id => id !== CURRENT_USER_ID)
+          .forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 刪除了「'+title+'」'));
+        if(!master.recurrence){
+          events = events.filter(e => e !== master);
+        } else if(syncOn){
+          events = events.filter(e => e !== master); // 整個系列都刪除
+        } else {
+          // 只刪除這一天：加入排除清單，其餘日期的系列不受影響
+          master.excluded = master.excluded || [];
+          if(master.excluded.indexOf(editingInstanceDate) === -1) master.excluded.push(editingInstanceDate);
+          if(master.overrides) delete master.overrides[editingInstanceDate];
+        }
+      } else if(!master.recurrence || syncOn){
+        // 退出整個行程／整個系列：把自己從參與者名單移除，留給其他參與者；
+        // 如果因此變成沒有任何參與者，代表整段都只剩自己，等同刪除。
+        const title = master.title || '(未命名行程)';
+        const remaining = (master.participants||[]).filter(id => id !== CURRENT_USER_ID);
+        master.participants = remaining;
+        remaining.forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 退出了「'+title+'」'));
+        if(master.overrides){
+          Object.keys(master.overrides).forEach(d => {
+            const ov = master.overrides[d];
+            if(ov.participants) ov.participants = ov.participants.filter(id => id !== CURRENT_USER_ID);
+          });
+        }
+        if(master.participants.length === 0) events = events.filter(e => e !== master);
       } else {
-        // 只刪除這一天：加入排除清單，其餘日期的系列不受影響
-        master.excluded = master.excluded || [];
-        if(master.excluded.indexOf(editingInstanceDate) === -1) master.excluded.push(editingInstanceDate);
-        if(master.overrides) delete master.overrides[editingInstanceDate];
+        // 沒開同步編輯：只退出這一天，其餘日期／其他參與者不受影響
+        leaveInstance(editingMasterId, editingInstanceDate);
       }
 
       renderTimeline();
@@ -5834,13 +6490,82 @@
   });
 
   /* ---------------- 初始化 ---------------- */
+  const deviceUserPickerOverlay = document.getElementById('deviceUserPickerOverlay');
+  const deviceUserList = document.getElementById('deviceUserList');
+
+  // 「你是哪一位」：用目前的共編者名單問一次，選好之後把 id 記在這支
+  // 裝置的 localStorage，回傳一個 Promise，選完才 resolve。
+  function showDeviceUserPicker(cols){
+    return new Promise(resolve => {
+      if(!cols || cols.length === 0){ resolve(); return; } // 沒有任何共編者可選，先跳過，維持預設值
+      deviceUserList.innerHTML = '';
+      cols.forEach(col => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'device-user-btn';
+        btn.textContent = col.name;
+        btn.addEventListener('click', function(){
+          setDeviceUserId(col.id);
+          CURRENT_USER_ID = col.id;
+          deviceUserPickerOverlay.hidden = true;
+          resolve();
+        });
+        deviceUserList.appendChild(btn);
+      });
+      deviceUserPickerOverlay.hidden = false;
+    });
+  }
+
   try{
     history.replaceState({page:'timeline'}, '', '#timeline');
   }catch(err){
     usingRealHistory = false;
   }
   buildHourRows();
-  renderTimeline();
+  renderTimeline(); // 先用本機/預設資料立刻畫出畫面，不用等雲端資料回來才有東西可看
+
+  // 開啟 App 的當下去 Supabase 抓一次目前雲端上的完整資料，抓到就取代
+  // 本機資料重新畫一次；抓不到（離線、key 錯、專案還沒建好表）就安靜地
+  // 繼續用本機資料，不會讓 App 壞掉，只是看不到對方的最新更動。
+  (async function initSupabaseSync(){
+    const remote = await fetchAllFromSupabase();
+    if(remote && remote.columns.length){
+      columns = remote.columns;
+      events = remote.events;
+      notifications = remote.notifications;
+    } else if(remote && sb){
+      // 雲端資料庫是空的（剛接上、還沒有任何資料）：把本機現有內容當成
+      // 起點推上去，這樣兩支手機才有共同的起始資料，不用手動在
+      // Supabase 後台自己建。
+      syncChangesToSupabase('columns', columns.map(c => ({id:c.id, after:c})), ch => ch.after);
+      syncChangesToSupabase('events', events.map(e => ({id:e.id, after:e})), ch => ch.after);
+    }
+    if(!getDeviceUserId()){
+      await showDeviceUserPicker(columns);
+    }
+    lastCommittedColumns = JSON.parse(JSON.stringify(columns));
+    lastCommittedEvents = JSON.parse(JSON.stringify(events));
+    renderTimeline();
+    renderNotificationBadge();
+    scheduleSaveToStorage();
+  })();
+
+  // 切回這個分頁／從背景回來時，重新整包抓一次雲端資料——這是目前選擇
+  // 的同步策略（開啟/切回時抓一次，不是即時 Realtime 推播），足夠讓
+  // 兩支手機看到彼此在自己沒開著 App 的時候做的更動。
+  document.addEventListener('visibilitychange', async function(){
+    if(document.visibilityState !== 'visible') return;
+    const remote = await fetchAllFromSupabase();
+    if(!remote) return;
+    columns = remote.columns;
+    events = remote.events;
+    notifications = remote.notifications;
+    lastCommittedColumns = JSON.parse(JSON.stringify(columns));
+    lastCommittedEvents = JSON.parse(JSON.stringify(events));
+    renderTimeline();
+    renderNotificationBadge();
+    scheduleSaveToStorage();
+  });
 
   /* ---------------- 垂直縮放手勢：雙指 pinch ＋ 雙擊快速切換 ----------------
      用 capture 階段監聽 pointerdown/pointermove/pointerup，這樣不管是點在
