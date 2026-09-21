@@ -17,6 +17,7 @@
     --ink-soft:#5B6178;
     --ink-faint:#96876F; /* 低飽和度咖啡色，取代原本偏藍灰的淡字色 */
     --btn-coffee:var(--ink); /* 按鍵底色：改成跟主要文字同一種深藍黑色 */
+    --btn-brown:#4A3728; /* 深咖啡色：頂端那排圖示按鍵的外框與圖示顏色 */
     --red:#B23A2F;
     --red-deep:#8E2C24;
     --card:#FFFDF8;
@@ -280,7 +281,8 @@
     min-height:44px;
   }
   /* 左上角：通知鈴鐺、月曆檢視入口（由左至右），同樣 top:50% + translateY(-50%)
-     垂直置中，造型比照右上角的按鍵——黑色圓角長方形，維持頭部列視覺一致。 */
+     垂直置中，造型比照右上角的按鍵——底色跟手帳背景同色、深咖啡色外框與圖示的
+     圓角長方形，維持頭部列視覺一致。 */
   .header-left-group{
     position:absolute;
     left:0; top:50%;
@@ -293,9 +295,9 @@
   .month-header-btn{
     padding:7px 10px;
     border-radius:10px;
-    border:1.5px solid var(--btn-coffee);
-    background:var(--btn-coffee);
-    color:var(--paper);
+    border:1.5px solid var(--btn-brown);
+    background:var(--paper);
+    color:var(--btn-brown);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -329,9 +331,9 @@
     transform:translateY(-50%);
     padding:7px 10px;
     border-radius:10px;
-    border:1.5px solid var(--btn-coffee);
-    background:var(--btn-coffee);
-    color:var(--paper);
+    border:1.5px solid var(--btn-brown);
+    background:var(--paper);
+    color:var(--btn-brown);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -2344,13 +2346,13 @@
 
       <!-- 取代原生 window.confirm()／window.prompt()，樣式跟日期/時間選擇器
            共用同一張紙感卡片。confirmInputWrap 平常隱藏，只有 showPromptDialog
-           （目前是「修改編輯者姓名」在用）才會顯示成一個輸入框；純確認用的
+           （目前是「修改欄位名稱」在用）才會顯示成一個輸入框；純確認用的
            showConfirmDialog（「確定刪除？」）不需要輸入框。 -->
       <div class="picker-confirm" id="pickerConfirmView" hidden>
         <div class="picker-confirm-message" id="pickerConfirmMessage">確定刪除？</div>
         <div class="picker-confirm-input-wrap" id="pickerConfirmInputWrap" hidden>
           <input type="text" id="pickerConfirmInput" class="picker-confirm-input">
-          <!-- 目前只有「新增/修改編輯者姓名」會傳 opts.validate 進來用到這個提示；
+          <!-- 目前只有「新增欄位／修改欄位名稱」會傳 opts.validate 進來用到這個提示；
                純文字輸入（沒有 validate）時永遠是 hidden，不影響其他呼叫端。 -->
           <div class="picker-confirm-input-error" id="pickerConfirmInputError" hidden></div>
         </div>
@@ -4037,7 +4039,7 @@
       return;
     }
     if(col.ownerId !== DEVICE_ID) return; // 別人的欄位，只有主人能改名
-    showPromptDialog('修改編輯者姓名：', col.name, function(value){
+    showPromptDialog('修改欄位名稱：', col.name, function(value){
       const newName = (value || '').trim();
       if(!newName || newName === col.name) return;
       col.name = newName;
@@ -4045,7 +4047,7 @@
       renderColumnHeader();
       renderEvents(); // 行程卡片上顯示的參與者名字（"· 小明、小華"）也要跟著更新
     }, {
-      // 名字不能跟「別的」編輯者重複；改回自己原本的名字（等於沒改）不算重複。
+      // 名稱不能跟「別的」欄位重複；改回自己原本的名字（等於沒改）不算重複。
       validate: function(value){
         const v = (value || '').trim();
         if(!v || v === col.name) return '';
@@ -4190,7 +4192,7 @@
           cell.classList.add('select-locked');
         }
       } else {
-        // 非選取狀態下，點擊欄位上方的姓名可以直接重新命名這位編輯者
+        // 非選取狀態下，點擊欄位上方的姓名可以直接修改欄位名稱
         // （包含一開始就有的「我」，以及後來透過「新增共編者」加入的人）。
         // 長按同一個姓名則是快速刪除的捷徑，等同選取模式裡勾選這個欄位
         // 再按刪除，省得為了刪一個人特地切進選取模式。
@@ -4208,7 +4210,7 @@
           longPressTimer = setTimeout(function(){
             longPressFired = true;
             if(!canSelectColumn(col)) return; // 僅剩一位使用者時不給刪
-            showConfirmDialog('確定刪除「'+col.name+'」這位編輯者？', function(){
+            showConfirmDialog('確定刪除此欄位？', function(){
               deleteColumnsById(new Set([col.id]));
             }, {danger:true});
           }, 500);
