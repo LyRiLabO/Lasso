@@ -192,6 +192,8 @@
     text-transform:uppercase;
   }
   .nb-error{
+    white-space:pre-line;
+    word-break:break-word;
     min-height:18px;
     font-family:'Noto Sans TC', sans-serif;
     font-size:13px;
@@ -7016,6 +7018,13 @@
     if(input) setTimeout(function(){ input.focus(); }, 50);
   }
   function setNbError(id, msg){ document.getElementById(id).textContent = msg || ''; }
+  // 把 Supabase 回傳的錯誤代碼／訊息附在提示後面，手機上打不開開發者工具，
+  // 看得到真正的原因才知道是資料表沒建、權限規則、還是網路問題。
+  function describeError(err){
+    if(!err) return '';
+    const text = ((err.code ? err.code + ' ' : '') + (err.message || String(err))).trim();
+    return text.length > 140 ? text.slice(0, 140) + '…' : text;
+  }
 
   // 選好（或抓好）一本手帳之後的共同入口：記住這本手帳、把剛新增的欄位
   // 推上雲端、關掉開始畫面、載入內容。
@@ -7086,7 +7095,7 @@
       await enterNotebook(nb, {columns:[col], events:[], notifications:[]}, col);
     }catch(err){
       console.error('建立手帳失敗：', err);
-      setNbError('nbCreateError', '建立失敗，請確認網路連線（以及 Supabase 資料表已更新）後再試一次。');
+      setNbError('nbCreateError', '建立失敗，請確認網路連線（以及 Supabase 資料表已更新）後再試一次。\n原因：' + describeError(err));
     }finally{
       nbCreateSubmit.disabled = false;
     }
@@ -7118,7 +7127,7 @@
       showNbStep('joinName');
     }catch(err){
       console.error('加入手帳失敗：', err);
-      setNbError('nbJoinError', '加入失敗，請確認網路連線後再試一次。');
+      setNbError('nbJoinError', '加入失敗，請確認網路連線（以及 Supabase 資料表已更新）後再試一次。\n原因：' + describeError(err));
     }finally{
       nbJoinSubmit.disabled = false;
     }
@@ -7139,7 +7148,7 @@
       await enterNotebook(nb, remote, col);
     }catch(err){
       console.error('加入手帳失敗：', err);
-      setNbError('nbJoinNameError', '加入失敗，請再試一次。');
+      setNbError('nbJoinNameError', '加入失敗，請再試一次。\n原因：' + describeError(err));
     }finally{
       nbJoinNameSubmit.disabled = false;
     }
