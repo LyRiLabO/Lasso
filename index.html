@@ -18,6 +18,13 @@
     --ink-faint:#96876F; /* 低飽和度咖啡色，取代原本偏藍灰的淡字色 */
     --btn-coffee:var(--ink); /* 按鍵底色：改成跟主要文字同一種深藍黑色 */
     --btn-brown:#4A3728; /* 深咖啡色：頂端那排圖示按鍵的外框與圖示顏色 */
+    /* 頂端那排按鍵的「紙片浮凸」質感：底色就是手帳背景色（單色，沒有漸層、
+       沒有高光），靠底部一圈咖啡色薄邊（像紙片的厚度）＋柔和的暖色投影浮起來；
+       按下去時整顆下沉 2px、薄邊與投影收起來、內側出現一點凹陷的陰影。 */
+    --btn-face:var(--paper);
+    --btn-relief:0 2px 0 rgba(74,55,40,.55), 0 4px 8px rgba(74,55,40,.20);
+    --btn-face-pressed:var(--paper-deep);
+    --btn-relief-pressed:inset 0 1px 3px rgba(74,55,40,.28), 0 0 0 rgba(74,55,40,0);
     --red:#B23A2F;
     --red-deep:#8E2C24;
     --card:#FFFDF8;
@@ -42,8 +49,9 @@
     transition:opacity .16s ease, background-color .16s ease, filter .16s ease;
   }
   /* 整個介面預設不能被框選文字，這是像手機 App 一樣操作的關鍵：
-     手指誤觸不會選到文字。雙擊/雙指縮放已經靠 viewport 的
-     user-scalable=no 擋掉了，這裡刻意不再疊加 touch-action:manipulation——
+     手指誤觸不會選到文字。整個網頁的雙擊/雙指縮放由 viewport 的
+     user-scalable=no 擋掉，再加上 JS 裡擋 iOS 的 gesture 事件與電腦版的
+     Ctrl+滾輪（見「禁止整個網頁本身縮放」那一段）；這裡刻意不再疊加 touch-action:manipulation——
      那樣會讓瀏覽器提早搶走垂直滑動的判斷權，害長按拖曳（移動行程、
      空白處拉框建立行程）的 400ms 判斷來不及生效，整個被當成頁面捲動。
      真正需要輸入文字的欄位（文字框、日期、時間、數字、多行備註）
@@ -319,10 +327,12 @@
     flex:0 0 auto;
   }
   .month-header-btn{
-    padding:7px 10px;
+    height:36px; /* 頂端四顆按鍵統一高度（跟「新增欄位」鍵共用同一個數字） */
+    padding:0 10px;
     border-radius:10px;
     border:1.5px solid var(--btn-brown);
-    background:var(--paper);
+    background:var(--btn-face);
+    box-shadow:var(--btn-relief);
     color:var(--btn-brown);
     display:flex;
     align-items:center;
@@ -330,8 +340,15 @@
     cursor:pointer;
     flex:0 0 auto;
   }
+  .month-header-btn, .add-col-btn{
+    transition:transform .08s ease, box-shadow .08s ease, background .08s ease;
+  }
   .month-header-btn svg{flex:0 0 auto;}
-  .month-header-btn:active{opacity:.6;}
+  .month-header-btn:active{
+    transform:translateY(2px);
+    background:var(--btn-face-pressed);
+    box-shadow:var(--btn-relief-pressed);
+  }
   .notif-btn{position:relative;}
   /* 分享手帳密碼鍵（鑰匙）：靠在最右邊；「新增欄位」鍵放在它的左邊
      （右邊這組沿著日期左右各留一段，左邊那組已經被日期擠滿了）。
@@ -340,8 +357,9 @@
     position:absolute;
     right:0; top:50%;
     transform:translateY(-50%);
-    padding:7px 7px;
+    padding:0 7px;
   }
+  .notebook-btn:active{transform:translateY(calc(-50% + 2px));}
   .notif-dot{
     position:absolute;
     top:5px; right:5px;
@@ -355,10 +373,12 @@
     position:absolute;
     right:43px; top:50%;
     transform:translateY(-50%);
-    padding:7px 10px;
+    height:36px; /* 跟 .month-header-btn 同高 */
+    padding:0 10px;
     border-radius:10px;
     border:1.5px solid var(--btn-brown);
-    background:var(--paper);
+    background:var(--btn-face);
+    box-shadow:var(--btn-relief);
     color:var(--btn-brown);
     display:flex;
     align-items:center;
@@ -367,7 +387,11 @@
     flex:0 0 auto;
   }
   .add-col-btn svg{flex:0 0 auto;}
-  .add-col-btn:active{opacity:.6;}
+  .add-col-btn:active{
+    transform:translateY(calc(-50% + 2px));
+    background:var(--btn-face-pressed);
+    box-shadow:var(--btn-relief-pressed);
+  }
   /* .add-col-btn 本身有明確的 display:flex，瀏覽器預設的 [hidden]{display:none}
      優先權不夠高蓋不過去，要自己補一條規則，[hidden] 才會真的讓按鍵消失
      （這裡踩到跟 .select-delete-btn/.select-move-btn 一樣的坑，做法一致）。 */
@@ -7360,6 +7384,24 @@
     renderNotificationBadge();
     scheduleSaveToStorage();
   });
+
+  /* ---------------- 禁止整個網頁本身縮放（時間軸自己的縮放不受影響） ----------------
+     viewport 已經寫了 maximum-scale=1, user-scalable=no，Android 的 Chrome
+     會遵守，但 iOS Safari 為了無障礙會無視這個設定，雙指誤觸還是能把整個
+     網頁放大——所以另外攔：
+     - iOS Safari：整頁的雙指縮放走的是 gesturestart／gesturechange／
+       gestureend 這組 Safari 專屬事件，在這裡 preventDefault 就能擋掉。
+     - 電腦版：觸控板雙指縮放、Ctrl＋滾輪在 Chrome/Firefox/Edge 會變成帶
+       ctrlKey 的 wheel 事件，一樣 preventDefault。
+       （鍵盤的 Ctrl＋加減號是瀏覽器自己的功能，網頁擋不住。）
+     時間軸的縮放（雙指 pinch／雙擊）走的是 pointer 事件，跟這幾種事件互不
+     相干，所以不受影響，見下一段。 */
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function(type){
+    document.addEventListener(type, function(e){ e.preventDefault(); }, {passive:false});
+  });
+  document.addEventListener('wheel', function(e){
+    if(e.ctrlKey) e.preventDefault();
+  }, {passive:false});
 
   /* ---------------- 垂直縮放手勢：雙指 pinch ＋ 雙擊快速切換 ----------------
      用 capture 階段監聽 pointerdown/pointermove/pointerup，這樣不管是點在
