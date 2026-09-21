@@ -1583,6 +1583,15 @@
     line-height:1.5;
     white-space:pre-line; /* 訊息裡的 \n 會真的換行（例如新增欄位的兩行標題） */
   }
+  .picker-confirm-hint{
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13px;
+    color:var(--ink-faint);
+    text-align:center;
+    line-height:1.4;
+    margin-top:-6px;
+  }
+  .picker-confirm-hint[hidden]{display:none;}
   .picker-confirm-input-wrap{
     padding:0 4px;
   }
@@ -2369,6 +2378,8 @@
            showConfirmDialog（「確定刪除？」）不需要輸入框。 -->
       <div class="picker-confirm" id="pickerConfirmView" hidden>
         <div class="picker-confirm-message" id="pickerConfirmMessage">確定刪除？</div>
+        <!-- 標題下方顏色較淺的小字補充說明；只有呼叫端傳 opts.hint 才會顯示 -->
+        <div class="picker-confirm-hint" id="pickerConfirmHint" hidden></div>
         <div class="picker-confirm-input-wrap" id="pickerConfirmInputWrap" hidden>
           <input type="text" id="pickerConfirmInput" class="picker-confirm-input">
           <!-- 目前只有「新增欄位／修改欄位名稱」會傳 opts.validate 進來用到這個提示；
@@ -3026,6 +3037,7 @@
 
   const pickerConfirmView = document.getElementById('pickerConfirmView');
   const pickerConfirmMessage = document.getElementById('pickerConfirmMessage');
+  const pickerConfirmHint = document.getElementById('pickerConfirmHint');
   const pickerConfirmInputWrap = document.getElementById('pickerConfirmInputWrap');
   const pickerConfirmInput = document.getElementById('pickerConfirmInput');
   const pickerConfirmInputError = document.getElementById('pickerConfirmInputError');
@@ -3338,6 +3350,8 @@
     opts = opts || {};
     pickerSheet.classList.remove('closing');
     pickerConfirmMessage.textContent = message;
+    pickerConfirmHint.textContent = opts.hint || '';
+    pickerConfirmHint.hidden = !opts.hint;
     pickerConfirmInputWrap.hidden = true;
     pickerConfirmInputError.hidden = true;
     pickerConfirmOkBtn.disabled = false;
@@ -6068,7 +6082,7 @@
     const creatorId = pickMyColumnId(participantIds);
     if(!creatorId){ promptNeedOwnColumn(); return null; } // 名下沒有任何欄位，沒有身分可以當創建者
     if(!participantIds || participantIds.length===0) participantIds = [creatorId];
-    const id = 'e' + Date.now();
+    const id = 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6); // 加一段亂數，同一毫秒建兩個行程也不會撞 id
     const ev = {
       id: id,
       title: '新行程',
@@ -6090,12 +6104,38 @@
     return id;
   }
 
+  // 從 fromMin 開始（每 30 分鐘一格）往後、再回頭找前面，找第一個「這個欄位
+  // 整段 durMin 分鐘都沒有行程」的起點；一整天都排滿了就回傳 null。
+  function findFreeSlotStart(dateStr, colId, fromMin, durMin){
+    const colIdx = columns.findIndex(c => c.id === colId);
+    if(colIdx < 0) return fromMin;
+    const STEP = 30, DAY = 24*60;
+    for(let k = 0; k < DAY/STEP; k++){
+      const start = (fromMin + k*STEP) % DAY;
+      if(start + durMin > DAY) continue;
+      if(!findCollision(dateStr, colIdx, colIdx, start, start + durMin, null, null)) return start;
+    }
+    return null;
+  }
+
+  // 「新增行程」鍵（筆圖示）：預設從現在這個整點（不是今天就從 9:00）開一個
+  // 一小時的行程。如果那個時段這個欄位已經有行程，就往後挑第一個空檔，
+  // 不會直接疊在既有行程上（跟長按／拖曳新增行程「不能疊到別人」的規則一致）。
   document.getElementById('fabAdd').addEventListener('click', function(){
     if(selectMode) return;
     const now = new Date();
     const startHour = currentDate === todayStr() ? now.getHours() : 9;
     const mine = myColumnIds();
-    const newId = createNewEvent(startHour*60, startHour*60 + 60, mine.length ? [mine[0]] : []);
+    let startMin = startHour*60;
+    if(mine.length){
+      const free = findFreeSlotStart(currentDate, mine[0], startMin, 60);
+      if(free === null){
+        showConfirmDialog('這一天已經沒有可以新增行程的空檔', function(){}, {okLabel:'知道了', hideCancel:true});
+        return;
+      }
+      startMin = free;
+    }
+    const newId = createNewEvent(startMin, startMin + 60, mine.length ? [mine[0]] : []);
     if(!newId) return;
     openEdit(newId, currentDate);
   });
@@ -6103,7 +6143,7 @@
   document.getElementById('btnAddColumn').addEventListener('click', function(){
     if(selectMode) return;
     if(columns.length >= 4) return; // 保險：按鍵這時候本來就該是隱藏的，理論上按不到
-    showPromptDialog('新增欄位\n請輸入欄位名稱', '', function(value){
+    showPromptDialog('新增欄位', '', function(value){
       const name = (value || '').trim();
       if(!name) return;
       const id = newColumnId();
@@ -6113,6 +6153,7 @@
         renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
       });
     }, {
+      hint: '請輸入欄位名稱',
       validate: function(value){
         const v = (value || '').trim();
         if(!v) return '';
@@ -6197,6 +6238,7 @@
   // 看看、還沒加入的人只能動參與者那一塊（把自己加進去）。
   let editCanEditFields = true;
   let editIsCreator = true; // 是不是這個行程的創建者：只有創建者能整場刪除，其餘參與者只能退出
+  let editOriginalSlot = {date:'', start:'', end:''}; // 打開編輯頁當下的日期／時段，儲存時比對有沒有被改過
   let editOriginalParticipants = []; // 打開編輯頁當下的參與者名單，存起來跟儲存時的新名單比對，才知道誰是「新加入的」
 
   // 判斷「這個人對這個行程有沒有編輯權」的共用規則：canSelectInstance
@@ -6369,6 +6411,7 @@
 
     applyEditPermission({creatorId: master.creatorId, participants: data.participants});
     editOriginalParticipants = (data.participants || []).slice();
+    editOriginalSlot = {date: instanceDate, start: data.start, end: data.end};
     fillEditForm(data, instanceDate, !!master.recurrence);
     renderWeekdayChips(master.recurrence ? master.recurrence.weekdays : []);
     syncField.style.display = master.recurrence ? 'flex' : 'none';
@@ -6835,12 +6878,21 @@
       newEnd = minutesToTime(Math.min(24*60, timeToMinutes(newStart) + 5));
     }
 
-    // 擋住的規則在儲存時也要再確認一次：先加了人、之後才改日期／時間，
-    // 也可能讓「新加入的人」落在他已經有行程的時段，這種情況一樣不能存。
+    // 擋住的規則在儲存時也要再確認一次：
+    // - 日期／時間有被改過：所有參與者（包含原本就在的）在新時段都不能已經有
+    //   其他行程；不然從編輯頁把時間改到疊上別的行程，就繞過了拖曳／長按新增
+    //   那邊「不能疊到別人」的規則。
+    // - 日期／時間沒改：只檢查新加入的人（先加了人、之後才改時間的情況上面
+    //   已經涵蓋）。沒改時間就不檢查原本的人，這樣「剛複製出來、本來就會
+    //   疊在原行程上」的行程改標題或備註時不會被擋。
+    const checkDate = fieldDate.value || master.date;
+    const slotChanged = checkDate !== editOriginalSlot.date ||
+                        newStart !== editOriginalSlot.start ||
+                        newEnd !== editOriginalSlot.end;
     const conflictCol = newParticipants
-      .filter(id => !editOriginalParticipants.includes(id))
+      .filter(id => slotChanged || !editOriginalParticipants.includes(id))
       .map(id => columns.find(c => c.id === id))
-      .find(col => col && findConflictingInstance(col.id, fieldDate.value || master.date, newStart, newEnd));
+      .find(col => col && findConflictingInstance(col.id, checkDate, newStart, newEnd));
     if(conflictCol){
       showConfirmDialog(conflictCol.name + '該時段已有行程', function(){}, {okLabel:'知道了', hideCancel:true});
       return;
