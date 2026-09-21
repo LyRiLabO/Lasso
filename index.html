@@ -252,7 +252,7 @@
   .nav-overlay.open{opacity:1; visibility:visible; transition:opacity .25s ease;}
   .nav-drawer{
     position:absolute; top:0; right:0; bottom:0; z-index:66;
-    width:40%; min-width:158px;
+    width:40%; min-width:164px; /* 至少 164px：「匯入舊手帳資料」7 個字要能一行放下，不會掉一個字到下一行 */
     background:var(--paper);
     box-shadow:-6px 0 22px rgba(32,38,58,0.28);
     padding:calc(env(safe-area-inset-top, 0px) + 14px) 0 16px;
@@ -264,8 +264,8 @@
   .nav-item{border-bottom:1px solid var(--line);}
   .nav-head{
     width:100%;
-    display:flex; align-items:center; gap:8px;
-    padding:14px 12px;
+    display:flex; align-items:center; gap:7px;
+    padding:14px 10px;
     background:none; border:none;
     color:var(--ink);
     font-family:'Noto Sans TC', sans-serif; font-size:13px; font-weight:700;
@@ -278,7 +278,7 @@
   .nav-item.open .nav-chevron{transform:rotate(180deg);}
   .nav-body{
     display:flex; flex-direction:column; align-items:stretch; gap:10px;
-    padding:2px 12px 14px;
+    padding:2px 10px 14px;
     font-family:'Noto Sans TC', sans-serif; color:var(--ink);
   }
   .nav-body[hidden]{display:none;}
@@ -405,7 +405,7 @@
     box-shadow:var(--btn-relief-pressed);
   }
   .notif-btn{position:relative;}
-  /* 分享手帳密碼鍵（鑰匙）：靠在最右邊；「新增欄位」鍵放在它的左邊
+  /* 選單鍵（三條橫線，原本是分享密碼的鑰匙鍵）：靠在最右邊；「新增欄位」鍵放在它的左邊
      （右邊這組沿著日期左右各留一段，左邊那組已經被日期擠滿了）。
      鑰匙鍵寬約 37px，加 6px 間距，所以新增欄位鍵要往左退 43px。 */
   .notebook-btn{
