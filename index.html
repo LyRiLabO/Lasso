@@ -143,6 +143,87 @@
     cursor:pointer;
   }
   .device-user-btn:active{background:var(--btn-coffee); color:var(--paper);}
+  .device-user-btn.selected{background:var(--btn-coffee); color:var(--paper);}
+  .device-user-actions{
+    display:flex;
+    gap:10px;
+    margin-top:18px;
+  }
+  .device-user-action{
+    flex:1;
+    padding:14px;
+    border-radius:14px;
+    border:1.5px solid var(--btn-coffee);
+    background:transparent;
+    color:var(--ink);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .device-user-action.primary{background:var(--btn-coffee); color:var(--paper);}
+  .device-user-action:disabled{opacity:.4; cursor:default;}
+
+  /* 開啟時的「創建／加入手帳」畫面、以及手帳密碼面板共用的樣式 */
+  .nb-step{display:flex; flex-direction:column; gap:8px;}
+  .nb-step[hidden]{display:none;}
+  .nb-field-label{
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13px;
+    color:var(--ink-faint);
+    margin:6px 2px 0;
+  }
+  .nb-input{
+    width:100%;
+    box-sizing:border-box;
+    font-family:'Noto Serif TC', serif;
+    font-size:18px;
+    color:var(--ink);
+    border:1.5px solid var(--btn-coffee);
+    border-radius:14px;
+    background:var(--card);
+    padding:14px 16px;
+    outline:none;
+  }
+  .nb-input.code{
+    text-align:center;
+    font-weight:700;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  .nb-error{
+    min-height:18px;
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13px;
+    color:var(--red);
+    text-align:center;
+  }
+  .nb-code-display{
+    font-family:ui-monospace, Menlo, Consolas, monospace;
+    font-size:30px;
+    font-weight:700;
+    letter-spacing:.14em;
+    color:var(--ink);
+    text-align:center;
+    padding:18px 8px;
+    border:1.5px dashed var(--btn-coffee);
+    border-radius:14px;
+    background:var(--card);
+    user-select:all;
+    -webkit-user-select:all;
+  }
+  .nb-leave{
+    margin-top:26px;
+    align-self:center;
+    background:none;
+    border:none;
+    color:var(--red);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:14px;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:8px;
+  }
 
   .page{
     position:absolute; inset:0;
@@ -223,6 +304,13 @@
   .month-header-btn svg{flex:0 0 auto;}
   .month-header-btn:active{opacity:.6;}
   .notif-btn{position:relative;}
+  /* 手帳密碼鍵：放在右上角「新增使用者欄位」鍵的左邊（左邊那組已經被日期擠滿了） */
+  .notebook-btn{
+    position:absolute;
+    right:51px; top:50%;
+    transform:translateY(-50%);
+    padding:7px 7px;
+  }
   .notif-dot{
     position:absolute;
     top:5px; right:5px;
@@ -313,6 +401,7 @@
   #phone.select-mode-active .bottom-action-bar .fab,
   #phone.select-mode-active .bottom-action-bar .undo-redo-btn,
   #phone.select-mode-active .header-left-group,
+  #phone.select-mode-active .notebook-btn,
   #phone.select-mode-active .add-col-btn{
     display:none;
   }
@@ -1520,6 +1609,7 @@
   }
   .picker-confirm-cancel-btn:active,
   .picker-confirm-ok-btn:active{opacity:.7;}
+  .picker-confirm-cancel-btn[hidden]{display:none;}
 
   /* ---------------- 月曆檢視頁面（#page-month） ---------------- */
   .month-back-btn{
@@ -1854,15 +1944,83 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<!-- 「你是哪一位」裝置身分選擇：只在這支裝置從來沒選過的時候才會蓋出來，
-     選好之後存在這支裝置自己的 localStorage（不是雲端資料，每支手機/
-     瀏覽器要各自選一次）。清單內容是從 Supabase 抓回來的共編者名單，
-     見 JS 的 showDeviceUserPicker()。 -->
+<!-- 「認領欄位」：只在這支裝置名下還沒有任何欄位、而雲端上又有沒主人的
+     欄位時才會蓋出來（例如舊版資料升級上來）。可以多選，因為同一位使用者
+     可能有好幾個欄位。見 JS 的 showClaimPicker()。 -->
 <div id="deviceUserPickerOverlay" class="device-user-overlay" hidden>
   <div class="device-user-card">
-    <div class="device-user-title">這支裝置是哪一位在用？</div>
-    <div class="device-user-hint">選一次就好，之後這支手機/瀏覽器都會記得。</div>
+    <div class="device-user-title">哪些欄位是你的？</div>
+    <div class="device-user-hint">可以選好幾個。只有欄位的主人能編輯那個欄位的行程；都不是的話按「略過」，之後自己新增欄位就好。</div>
     <div class="device-user-list" id="deviceUserList"></div>
+    <div class="device-user-actions">
+      <button type="button" class="device-user-action" id="deviceUserSkip">略過</button>
+      <button type="button" class="device-user-action primary" id="deviceUserConfirm" disabled>確認</button>
+    </div>
+  </div>
+</div>
+<!-- 開啟網頁的第一步：這支裝置還沒有手帳時才會出現。
+     創建新的手帳（輸入自己的使用者名稱，會得到一組分享密碼），或用別人
+     給的密碼加入他的手帳。見 JS 的「開啟網頁：創建新手帳／加入別人的手帳」。 -->
+<div id="notebookStartOverlay" class="device-user-overlay" hidden>
+  <div class="device-user-card">
+    <div class="nb-step" data-step="choice">
+      <div class="device-user-title">手帳曆</div>
+      <div class="device-user-hint">選一個開始的方式</div>
+      <div class="device-user-list">
+        <button type="button" class="device-user-btn" id="nbBtnCreate">創建新的手帳</button>
+        <button type="button" class="device-user-btn" id="nbBtnJoin">加入其他人的手帳</button>
+      </div>
+    </div>
+
+    <div class="nb-step" data-step="create" hidden>
+      <div class="device-user-title">創建新的手帳</div>
+      <div class="device-user-hint">建好後會得到一組密碼，可以分享給朋友一起編輯。</div>
+      <div class="nb-field-label">你的使用者名稱</div>
+      <input type="text" id="nbCreateName" class="nb-input" autocomplete="off">
+      <div class="nb-error" id="nbCreateError"></div>
+      <div class="device-user-actions">
+        <button type="button" class="device-user-action" data-nb-back>返回</button>
+        <button type="button" class="device-user-action primary" id="nbCreateSubmit">開始</button>
+      </div>
+    </div>
+
+    <div class="nb-step" data-step="join" hidden>
+      <div class="device-user-title">加入其他人的手帳</div>
+      <div class="device-user-hint">輸入對方提供給你的密碼。</div>
+      <div class="nb-field-label">手帳密碼</div>
+      <input type="text" id="nbJoinCode" class="nb-input code" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="XXXX-XXXX">
+      <div class="nb-error" id="nbJoinError"></div>
+      <div class="device-user-actions">
+        <button type="button" class="device-user-action" data-nb-back>返回</button>
+        <button type="button" class="device-user-action primary" id="nbJoinSubmit">下一步</button>
+      </div>
+    </div>
+
+    <div class="nb-step" data-step="joinName" hidden>
+      <div class="device-user-title">你要用什麼名字？</div>
+      <div class="device-user-hint">這會是你在這本手帳裡的欄位名稱。</div>
+      <div class="nb-field-label">你的使用者名稱</div>
+      <input type="text" id="nbJoinName" class="nb-input" autocomplete="off">
+      <div class="nb-error" id="nbJoinNameError"></div>
+      <div class="device-user-actions">
+        <button type="button" class="device-user-action" data-nb-back>返回</button>
+        <button type="button" class="device-user-action primary" id="nbJoinNameSubmit">加入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 手帳密碼面板：顯示分享密碼、一鍵複製、離開這本手帳。 -->
+<div id="notebookMenuOverlay" class="device-user-overlay" hidden>
+  <div class="device-user-card">
+    <div class="device-user-title">這本手帳的密碼</div>
+    <div class="device-user-hint">把密碼傳給朋友，他們打開網頁選「加入其他人的手帳」輸入就能一起編輯。</div>
+    <div class="nb-code-display" id="nbMenuCode"></div>
+    <div class="device-user-actions">
+      <button type="button" class="device-user-action" id="nbMenuCopy">複製密碼</button>
+      <button type="button" class="device-user-action primary" id="nbMenuClose">關閉</button>
+    </div>
+    <button type="button" class="nb-leave" id="nbMenuLeave">離開這本手帳</button>
   </div>
 </div>
 <div id="phone">
@@ -1923,6 +2081,13 @@
               <line x1="23" y1="7" x2="23" y2="17"/>
               <line x1="18" y1="12" x2="28" y2="12"/>
             </g>
+          </svg>
+        </button>
+        <!-- 手帳密碼：查看／複製分享密碼、離開這本手帳。 -->
+        <button id="btnNotebook" class="month-header-btn notebook-btn" aria-label="手帳密碼與分享">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
           </svg>
         </button>
       </div>
@@ -2216,33 +2381,111 @@
     return dt.getFullYear()+'-'+pad2(dt.getMonth()+1)+'-'+pad2(dt.getDate());
   };
 
+  /* ---------------- 欄位主人（誰創建的欄位，誰才能編輯） ----------------
+     權限不再綁「這支裝置選了哪一位」，而是綁「這個欄位是誰創建的」：
+     - 每支裝置第一次開啟時產生一個 DEVICE_ID，存在這支裝置自己的
+       localStorage（跟共用的雲端資料是分開的兩件事）。
+     - 每個欄位有 ownerId：建立欄位的那一刻寫入創建者的 DEVICE_ID，同步到
+       Supabase 的 columns.owner_id。
+     - 同一支裝置可以擁有好幾個欄位（總欄位數上限仍是 4）。「我的欄位」就是
+       所有 ownerId === DEVICE_ID 的欄位；編輯、選取、刪除行程與欄位的權限，
+       都是拿這一組欄位去比對，不再有「同一時間只能是其中一位」的限制。
+     - 行程的 creatorId 仍然是「創建時用的那個欄位 id」，判斷創建者時看的是
+       那個欄位是不是我的（isMine）。 */
+  const DEVICE_ID_KEY = 'shared-planner-device-id';
+  const LEGACY_DEVICE_USER_KEY = 'shared-planner-device-user'; // 舊版「這支裝置是哪一位」，只用來一次性升級
+  const CLAIM_DISMISSED_KEY = 'shared-planner-claim-dismissed';
+  function getOrCreateDeviceId(){
+    try{
+      let id = localStorage.getItem(DEVICE_ID_KEY);
+      if(!id){
+        id = 'd' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,10);
+        localStorage.setItem(DEVICE_ID_KEY, id);
+      }
+      return id;
+    }catch(err){
+      // localStorage 被擋（例如沙盒預覽）：只在這一次執行期間有效
+      return 'd-volatile-' + Math.random().toString(36).slice(2,10);
+    }
+  }
+  const DEVICE_ID = getOrCreateDeviceId();
+
+  /* ---------------- 手帳（notebook）：一本手帳 = 一組共編者 + 一組分享密碼 ----------------
+     - 創建手帳：產生 8 碼密碼，寫進 Supabase 的 notebooks 表，自己成為第一位共編者。
+     - 加入手帳：輸入別人給的密碼，找到對應的手帳，再輸入自己的使用者名稱。
+     - columns / events / notifications 都帶 notebook_id，每支裝置只讀寫自己
+       這本手帳的資料。這支裝置目前在哪一本，存在自己的 localStorage。 */
+  const NOTEBOOK_KEY = 'shared-planner-notebook';
+  function getStoredNotebook(){
+    try{
+      const raw = localStorage.getItem(NOTEBOOK_KEY);
+      if(!raw) return null;
+      const nb = JSON.parse(raw);
+      return (nb && nb.id && nb.code) ? nb : null;
+    }catch(err){ return null; }
+  }
+  function setStoredNotebook(nb){
+    try{ localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(nb)); }catch(err){}
+  }
+  function clearStoredNotebook(){
+    try{ localStorage.removeItem(NOTEBOOK_KEY); }catch(err){}
+  }
+  let NOTEBOOK = getStoredNotebook(); // {id, code}；null＝這支裝置還沒選過「創建／加入」
+
+  // 密碼字元刻意去掉容易看錯的 0/O/1/I/L
+  const JOIN_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  function generateJoinCode(){
+    const buf = new Uint8Array(8);
+    if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(buf);
+    else for(let i=0;i<8;i++) buf[i] = Math.floor(Math.random()*256);
+    let out = '';
+    for(let i=0;i<8;i++) out += JOIN_CODE_ALPHABET[buf[i] % JOIN_CODE_ALPHABET.length];
+    return out;
+  }
+  function normalizeJoinCode(text){
+    return String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+  function formatJoinCode(code){
+    return code && code.length === 8 ? code.slice(0,4) + '-' + code.slice(4) : (code || '');
+  }
+  function newNotebookId(){
+    return 'nb' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+  function newColumnId(){
+    return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+  }
+
   // 每個 column 代表一位共編者自己的直向欄位
   let columns = [
-    {id:'p1', name:'我'}
+    {id:'p1', name:'我', ownerId: DEVICE_ID}
   ];
 
-  // 目前這台裝置的操作者是誰：現在真的接了雲端資料庫，「你是哪一位」
-  // 選過一次之後存在這支裝置自己的 localStorage（跟共用的雲端資料是
-  // 分開的兩件事——同一份雲端資料，兩支手機各自記得自己是誰）。沒選過
-  // 就先用 'p1' 當預設值撐著畫面，等 showDeviceUserPicker() 跑完會真的
-  // 定案。編輯/選取權限的判斷（創建者、或已經是參與者之一，才能編輯/
-  // 選取/同步拖移共同行程；不是創建者的參與者只能「退出」不能整場刪除；
-  // 純粹路過看看、還沒加入的人只能看、只能動參與者按鍵——見
-  // canEditInstance）都是以這個變數為準。
-  const DEVICE_USER_KEY = 'shared-planner-device-user';
-  function getDeviceUserId(){
-    try{ return localStorage.getItem(DEVICE_USER_KEY); }catch(err){ return null; }
+  function isMine(colId){
+    const col = columns.find(c => c.id === colId);
+    return !!col && col.ownerId === DEVICE_ID;
   }
-  function setDeviceUserId(id){
-    try{ localStorage.setItem(DEVICE_USER_KEY, id); }catch(err){}
+  function myColumnIds(){
+    return columns.filter(c => c.ownerId === DEVICE_ID).map(c => c.id);
   }
-  let CURRENT_USER_ID = getDeviceUserId() || 'p1';
+  function isParticipantOf(participants){
+    return (participants || []).some(id => isMine(id));
+  }
+  // 這個人是不是行程的「創建者」：創建時用的欄位是我的。
+  // 創建者欄位已經不存在（被刪掉了）、或舊資料沒有 creatorId 的時候，沒有人
+  // 能當創建者，改由「名下欄位有在參與者裡的人」接手，避免行程變成沒人能刪。
+  function isInstanceCreator(creatorId, participants){
+    if(isMine(creatorId)) return true;
+    const creatorExists = !!creatorId && columns.some(c => c.id === creatorId);
+    return !creatorExists && isParticipantOf(participants);
+  }
+  // 從我的欄位裡挑一個「這次動作用的身分」：優先挑 preferIds 裡屬於我的，
+  // 沒有的話用我的第一個欄位；名下一個欄位都沒有就回傳 null。
+  function pickMyColumnId(preferIds){
+    const mine = myColumnIds();
+    return (preferIds || []).find(id => mine.includes(id)) || mine[0] || null;
+  }
 
-  let events = [
-    {id:'e1', title:'晨間會議', date:T0, start:'09:00', end:'10:30', notes:'記得帶筆電與投影線材。', participants:['p1'], creatorId:'p1', color:'morandi-blue'},
-    {id:'e2', title:'研究冰淇淋機', date:T0, start:'14:00', end:'15:00', notes:'客廳桌上製作，不准上床。', participants:['p1'], creatorId:'p1', color:'macaron-peach'},
-    {id:'e3', title:'健身房', date:T0, start:'19:00', end:'20:00', notes:'', participants:['p1'], creatorId:'p1', color:'morandi-sage'}
-  ];
+  let events = [];
 
   // 站內通知：本機一份、雲端一份（見下面的 Supabase 同步區塊），欄位
   // 名稱刻意跟資料表對齊。每一筆：{id, recipientId, message, createdAt, read}
@@ -2252,7 +2495,7 @@
      這一區塊負責把 columns/events/notifications 接到 Supabase，取代原本
      純本機的 localStorage。策略刻意選簡單版本，不做完整即時同步：
      - 開啟 App／切回這個分頁時重新整包抓一次雲端資料（見下面
-       initSupabaseSync 跟 visibilitychange 監聽）
+       bootNotebook 跟 visibilitychange 監聽）
      - 自己這邊改了什麼，靠既有的「復原/重做」系統本來就會做的
        diffById 比對（見 captureUndoCheckpoint／applyUndoEntry），順便
        把「變了哪些 id」精準推上雲端，不用整包重傳
@@ -2274,14 +2517,15 @@
 
   // App 的 JS 物件（camelCase）跟 Supabase 資料表的欄位（snake_case）
   // 互相轉換，只在同步這一層做轉換，其餘程式碼完全不用管資料庫欄位長怎樣。
-  function columnToRow(col){ return { id: col.id, name: col.name }; }
-  function rowToColumn(row){ return { id: row.id, name: row.name }; }
+  function columnToRow(col){ return { id: col.id, name: col.name, owner_id: col.ownerId || null, notebook_id: NOTEBOOK ? NOTEBOOK.id : null }; }
+  function rowToColumn(row){ return { id: row.id, name: row.name, ownerId: row.owner_id || null }; }
   function eventToRow(ev){
     return {
       id: ev.id, title: ev.title || '', date: ev.date, start: ev.start, end: ev.end,
       notes: ev.notes || '', participants: ev.participants || [], creator_id: ev.creatorId,
       color: ev.color || '', recurrence: ev.recurrence || null,
-      excluded: ev.excluded || null, overrides: ev.overrides || null
+      excluded: ev.excluded || null, overrides: ev.overrides || null,
+      notebook_id: NOTEBOOK ? NOTEBOOK.id : null
     };
   }
   function rowToEvent(row){
@@ -2293,7 +2537,7 @@
     };
   }
   function notificationToRow(n){
-    return { id: n.id, recipient_id: n.recipientId, message: n.message, created_at: n.createdAt, read: n.read };
+    return { id: n.id, recipient_id: n.recipientId, message: n.message, created_at: n.createdAt, read: n.read, notebook_id: NOTEBOOK ? NOTEBOOK.id : null };
   }
   function rowToNotification(row){
     return { id: row.id, recipientId: row.recipient_id, message: row.message, createdAt: row.created_at, read: row.read };
@@ -2303,7 +2547,7 @@
   // 推上 Supabase：pickValue(change) 回傳「現在應該長怎樣」，null 代表
   // 這筆已經被刪除了。upsert 用 id 當衝突判斷欄位，刪除用 in(id列表)。
   async function syncChangesToSupabase(table, changes, pickValue){
-    if(!sb || !changes || changes.length === 0) return;
+    if(!sb || !NOTEBOOK || !changes || changes.length === 0) return;
     const toRow = table === 'columns' ? columnToRow : eventToRow;
     const upsertRows = [];
     const deleteIds = [];
@@ -2327,7 +2571,7 @@
   }
 
   async function pushNotificationToSupabase(n){
-    if(!sb) return;
+    if(!sb || !NOTEBOOK) return;
     try{
       const { error } = await sb.from('notifications').insert(notificationToRow(n));
       if(error) console.error('Supabase 通知寫入失敗：', error);
@@ -2349,13 +2593,14 @@
   // 整包從 Supabase 抓一次目前的 columns/events/notifications；抓失敗
   // （離線、key 錯、專案不存在等等）回傳 null，呼叫端要自己接住、退回
   // 本機資料，不能讓整個 App 因此壞掉。
-  async function fetchAllFromSupabase(){
-    if(!sb) return null;
+  async function fetchAllFromSupabase(nbId){
+    const id = nbId || (NOTEBOOK && NOTEBOOK.id);
+    if(!sb || !id) return null;
     try{
       const [colsRes, evsRes, notifsRes] = await Promise.all([
-        sb.from('columns').select('*'),
-        sb.from('events').select('*'),
-        sb.from('notifications').select('*')
+        sb.from('columns').select('*').eq('notebook_id', id),
+        sb.from('events').select('*').eq('notebook_id', id),
+        sb.from('notifications').select('*').eq('notebook_id', id)
       ]);
       if(colsRes.error){ console.error('Supabase 讀取 columns 失敗：', colsRes.error); return null; }
       if(evsRes.error){ console.error('Supabase 讀取 events 失敗：', evsRes.error); return null; }
@@ -2372,7 +2617,7 @@
   }
 
   function queueNotification(recipientId, message){
-    if(!recipientId || recipientId === CURRENT_USER_ID) return; // 不用通知自己
+    if(!recipientId || isMine(recipientId)) return; // 不用通知自己（名下任何欄位都算自己）
     const n = {
       id: 'n' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
       recipientId, message,
@@ -2388,6 +2633,38 @@
     const col = columns.find(c => c.id === id);
     return col ? col.name : '(某人)';
   }
+  // 通知裡「誰做了這件事」用哪個欄位的名字：優先用 hintIds 裡屬於我的欄位。
+  function actingName(hintIds){
+    const id = pickMyColumnId(hintIds);
+    return id ? columnName(id) : '(某人)';
+  }
+  function actingNameFor(master){
+    return actingName([master.creatorId].concat(master.participants || []));
+  }
+  // 一次通知一批欄位：自己名下的不通知；同一位主人名下有好幾個欄位都被
+  // 牽涉到，只通知一次，不會收到重複的訊息。
+  function notifyColumns(recipientIds, message){
+    const seenOwners = new Set();
+    (recipientIds || []).forEach(id => {
+      const col = columns.find(c => c.id === id);
+      if(!col || col.ownerId === DEVICE_ID) return;
+      if(col.ownerId){
+        if(seenOwners.has(col.ownerId)) return;
+        seenOwners.add(col.ownerId);
+      }
+      queueNotification(id, message);
+    });
+  }
+  // 這支裝置名下沒有任何欄位就沒有「身分」可以新增行程，引導他先新增欄位。
+  function promptNeedOwnColumn(){
+    if(columns.length >= 4){
+      showConfirmDialog('欄位已經滿 4 個，這支裝置名下又還沒有欄位。可以點沒有主人的欄位名稱來認領，或請其他人刪掉一個欄位。', function(){}, {okLabel:'知道了'});
+      return;
+    }
+    showConfirmDialog('要先有一個屬於你的欄位，才能新增行程。現在新增一個嗎？', function(){
+      document.getElementById('btnAddColumn').click();
+    }, {okLabel:'新增欄位'});
+  }
 
   /* ---------------- 本機儲存（重新整理、關掉分頁再打開，資料還在） ----------------
      用瀏覽器的 localStorage，只存在「這一台裝置的這個瀏覽器」裡，不會跨裝置
@@ -2396,13 +2673,15 @@
      可能會擋掉 localStorage 的存取；擋掉的話就安靜地退回純記憶體模式（跟
      之前的行為一樣），不會讓其他功能跟著壞掉。實際部署到 Netlify／自己網域
      之後，就是一般瀏覽器環境，會正常運作。 */
-  const STORAGE_KEY = 'shared-planner-v1';
+  // 本機快取依手帳分開存，換手帳不會互相蓋掉
+  function storageKey(){ return 'shared-planner-v2-' + (NOTEBOOK ? NOTEBOOK.id : 'none'); }
   let storageAvailable = true;
 
   function saveToStorage(){
     if(!storageAvailable) return;
     try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({columns, events, notifications}));
+      if(!NOTEBOOK) return; // 還沒選手帳時畫面上只是暫時的預設內容，不存
+      localStorage.setItem(storageKey(), JSON.stringify({columns, events, notifications}));
     }catch(err){
       storageAvailable = false;
     }
@@ -2430,7 +2709,8 @@
 
   function loadFromStorage(){
     try{
-      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!NOTEBOOK) return null;
+      const raw = localStorage.getItem(storageKey());
       if(!raw) return null;
       const data = JSON.parse(raw);
       if(data && Array.isArray(data.columns) && data.columns.length && Array.isArray(data.events)){
@@ -3041,6 +3321,7 @@
     pickerValidateFn = null; // 每次打開都先清掉，避免殘留上一次的驗證規則
     pickerConfirmOkBtn.textContent = opts.okLabel || '確定';
     pickerConfirmOkBtn.classList.toggle('danger', !!opts.danger);
+    pickerConfirmCancelBtn.hidden = !!opts.hideCancel; // 純提示用（只有一顆按鍵）
     pickerOnConfirm = onConfirm;
     pickerDateView.hidden = true;
     pickerTimeView.hidden = true;
@@ -3098,9 +3379,9 @@
   function getInstancesForDate(dateStr){
     const list = [];
     events.forEach(ev => {
-      // 舊資料（此功能上線前建立的行程）可能沒有 creatorId 欄位，
-      // 一律當作是「我」建立的，避免既有行程突然變成「不能選取刪除」。
-      const creatorId = ev.creatorId || CURRENT_USER_ID;
+      // 舊資料可能沒有 creatorId：不再一律當成「我」建立的，
+      // 由 isInstanceCreator() 統一處理（沒有創建者時由參與者接手）。
+      const creatorId = ev.creatorId;
       if(ev.recurrence){
         const excluded = ev.excluded || [];
         if(dateStr >= ev.date &&
@@ -3176,6 +3457,7 @@
       end: newEnd,
       notes: ov.notes !== undefined ? ov.notes : master.notes,
       participants: newParticipants,
+      creatorId: master.creatorId,
       recurrence: null
     });
     master.excluded = master.excluded || [];
@@ -3187,6 +3469,8 @@
   function duplicateInstance(masterId, instanceDate){
     const inst = getInstancesForDate(instanceDate).find(i => i.masterId === masterId);
     if(!inst) return;
+    const creatorId = pickMyColumnId(inst.participants);
+    if(!creatorId){ promptNeedOwnColumn(); return; }
     const newId = 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
     events.push({
       id: newId,
@@ -3196,6 +3480,7 @@
       end: inst.end,
       notes: inst.notes,
       participants: (inst.participants||[]).slice(),
+      creatorId: creatorId,
       color: inst.color,
       recurrence: null
     });
@@ -3209,8 +3494,7 @@
     if(!master) return;
     const title = master.title || '(未命名行程)';
     const notifyOthers = () => {
-      (master.participants||[]).filter(id => id !== CURRENT_USER_ID)
-        .forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 刪除了「'+title+'」'));
+      notifyColumns(master.participants, actingNameFor(master)+' 刪除了「'+title+'」');
     };
     if(!master.recurrence){
       notifyOthers();
@@ -3231,10 +3515,12 @@
     const master = events.find(e => e.id === masterId);
     if(!master) return;
     const title = master.title || '(未命名行程)';
+    const who = actingNameFor(master); // 先取名字：退出之後名下欄位就不在參與者裡了
+    const notMine = id => !isMine(id); // 退出＝把「我名下所有欄位」都從這場行程移除
     if(!master.recurrence){
-      const remaining = (master.participants||[]).filter(id => id !== CURRENT_USER_ID);
+      const remaining = (master.participants||[]).filter(notMine);
       master.participants = remaining;
-      remaining.forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 退出了「'+title+'」'));
+      notifyColumns(remaining, who+' 退出了「'+title+'」');
       if(master.participants.length === 0){
         events = events.filter(e => e !== master);
       }
@@ -3243,8 +3529,8 @@
     master.overrides = master.overrides || {};
     const base = master.overrides[instanceDate] || {};
     const baseParticipants = base.participants || master.participants || [];
-    const newParticipants = baseParticipants.filter(id => id !== CURRENT_USER_ID);
-    newParticipants.forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 退出了「'+title+'」'));
+    const newParticipants = baseParticipants.filter(notMine);
+    notifyColumns(newParticipants, who+' 退出了「'+title+'」');
     if(newParticipants.length === 0){
       master.excluded = master.excluded || [];
       if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
@@ -3304,9 +3590,8 @@
     closeCardMenu();
     const rect = card.getBoundingClientRect();
     const masterId = inst.masterId, instanceDate = inst.instanceDate;
-    const creatorId = inst.creatorId || CURRENT_USER_ID;
-    const isCreator = creatorId === CURRENT_USER_ID;
-    const isParticipant = !!(inst.participants && inst.participants.includes(CURRENT_USER_ID));
+    const isCreator = isInstanceCreator(inst.creatorId, inst.participants);
+    const isParticipant = isParticipantOf(inst.participants);
     // 創建者可以整場刪掉；只是參與者（不是創建者）只能退出（把自己從
     // 參與者名單移除）；純粹路過看看、還沒加入的人這裡完全不出現刪除/
     // 退出這個按鍵，因為根本沒有東西可以讓他刪或退。
@@ -3473,7 +3758,7 @@
   let notifPanelEl = null;
 
   function renderNotificationBadge(){
-    const hasUnread = notifications.some(n => n.recipientId === CURRENT_USER_ID && !n.read);
+    const hasUnread = notifications.some(n => isMine(n.recipientId) && !n.read);
     notifDot.hidden = !hasUnread;
   }
 
@@ -3497,7 +3782,7 @@
     closeCardMenu();
     closeClusterMenu();
     const mine = notifications
-      .filter(n => n.recipientId === CURRENT_USER_ID)
+      .filter(n => isMine(n.recipientId))
       .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     const panel = document.createElement('div');
@@ -3534,7 +3819,7 @@
     let changed = false;
     const justReadIds = [];
     notifications.forEach(n => {
-      if(n.recipientId === CURRENT_USER_ID && !n.read){ n.read = true; changed = true; justReadIds.push(n.id); }
+      if(isMine(n.recipientId) && !n.read){ n.read = true; changed = true; justReadIds.push(n.id); }
     });
     if(changed){
       scheduleSaveToStorage();
@@ -3586,8 +3871,8 @@
 
   /* ---------------- 選取模式（批次刪除行程／使用者欄位） ----------------
      權限規則：
-     - 使用者欄位：僅剩一位使用者時不可刪除；除此之外任何欄位都可以選取
-       ／刪除，包含別人的（見下方 canSelectColumn 的說明）。
+     - 使用者欄位：只有欄位的主人（ownerId 是這支裝置）能選取／刪除／改名；
+       僅剩一個欄位時也不可刪除。
      - 行程：自己創建的行程（無論是否為共同行程）都可以選取／刪除；
        不是自己創建、但只單獨掛在自己欄位上的行程，也視為「自己欄位上的
        行程」可以選取／刪除；不是自己創建、且是跟別人共同參與的行程，
@@ -3600,12 +3885,10 @@
   let selectedEventKeys = new Set();   // 'masterId@instanceDate'
   let selectedColumnIds = new Set();
 
-  // 暫時開放：後端（Supabase）還沒接上真正的多人身份與 owner_id 機制之前，
-  // 這台裝置的操作者可以刪除任何人的欄位，不限自己的。等後端做好之後，
-  // 這裡要改回只放行 col.id === CURRENT_USER_ID（真正的 owner-only）。
+  // 欄位只有主人能刪除（owner-only）。同一位主人名下的多個欄位都算數。
   function canSelectColumn(col){
-    if(columns.length <= 1) return false; // 僅剩一位使用者，不可刪除
-    return true;
+    if(columns.length <= 1) return false; // 僅剩一個欄位，不可刪除
+    return col.ownerId === DEVICE_ID;
   }
 
   function canSelectInstance(inst){
@@ -3662,7 +3945,7 @@
         const instanceDate = key.slice(at+1);
         const master = events.find(e => e.id === masterId);
         if(!master) return;
-        const isCreator = (master.creatorId || CURRENT_USER_ID) === CURRENT_USER_ID;
+        const isCreator = isInstanceCreator(master.creatorId, master.participants);
         if(isCreator){
           deleteInstanceQuick(masterId, instanceDate);
         } else {
@@ -3673,10 +3956,13 @@
       // 2) 刪除被選取的使用者欄位：從所有行程的參與者名單中移除該欄位，
       //    行程若因此變成沒有任何參與者，代表整段都只掛在被刪除的人身上，一併刪除。
       if(selectedColumnIds.size){
-        deleteColumnsById(selectedColumnIds);
+        animateColumnChange(function(){
+          applyColumnDeletion(selectedColumnIds);
+          setSelectMode(false); // 刪除完成後自動關閉選取狀態
+        });
+      } else {
+        setSelectMode(false); // 刪除完成後自動關閉選取狀態
       }
-
-      setSelectMode(false); // 刪除完成後自動關閉選取狀態
       });
     }, {danger:true});
   });
@@ -3685,6 +3971,11 @@
   // 刪除」共用同一套規則，不要各自維護一份容易兜不起來。colIds 是一個
   // Set，裡面放要刪除的欄位 id（可以只有一個）。
   function deleteColumnsById(colIds){
+    animateColumnChange(function(){ applyColumnDeletion(colIds); });
+  }
+  // 真正動資料＋重繪的部分（沒有動畫）；批次刪除會自己包一層動畫，
+  // 把「刪欄位＋離開選取模式」放在同一次動畫裡。
+  function applyColumnDeletion(colIds){
     columns = columns.filter(c => !colIds.has(c.id));
     events = events.filter(ev => {
       ev.participants = (ev.participants||[]).filter(pid => !colIds.has(pid));
@@ -3733,6 +4024,17 @@
   });
 
   function renameColumn(col){
+    if(!col.ownerId){
+      // 舊資料裡還沒有主人的欄位：點名字可以認領成自己的
+      showConfirmDialog('「'+col.name+'」還沒有主人，要認領成你的欄位嗎？', function(){
+        col.ownerId = DEVICE_ID;
+        scheduleSaveToStorage();
+        renderColumnHeader();
+        renderEvents();
+      }, {okLabel:'認領'});
+      return;
+    }
+    if(col.ownerId !== DEVICE_ID) return; // 別人的欄位，只有主人能改名
     showPromptDialog('修改編輯者姓名：', col.name, function(value){
       const newName = (value || '').trim();
       if(!newName || newName === col.name) return;
@@ -3748,6 +4050,118 @@
         return columns.some(c => c.id !== col.id && c.name === v) ? '名稱已被使用' : '';
       }
     });
+  }
+
+  /* ---------------- 新增／刪除欄位的動畫（FLIP：先量位置、改資料重繪、再播位移） ----------------
+     新增：新欄位從右側擠進來，原本的欄位（標題、行程卡、分隔線）順勢被
+     擠窄；刪除：被刪的欄位往右側退出去，剩下的欄位往外撐開補上空位。
+     不用另外算每個元素該在哪，只要「重繪前量一次、重繪後量一次」，用位置
+     差去播 transform 動畫，這樣不管欄位數怎麼變、行程卡跨了幾欄都適用。
+     mutate 是真正改資料＋重繪的函式，這裡會包在中間執行。 */
+  function animateColumnChange(mutate){
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduce || typeof Element.prototype.animate !== 'function'){ mutate(); return; }
+
+    // First：變動前的位置
+    const oldIds = columns.map(c => c.id);
+    const heads = new Map();
+    Array.from(columnHeaderRow.children).forEach((el, i) => {
+      if(oldIds[i]) heads.set(oldIds[i], {rect: el.getBoundingClientRect(), node: el});
+    });
+    const cards = new Map();
+    const perMaster = {};
+    eventsLayer.querySelectorAll('.event-card').forEach(el => {
+      if(el.classList.contains('card-exit')) return; // 已經在播刪除動畫的卡片不用再處理
+      const base = el.dataset.masterId + '@' + el.dataset.date;
+      perMaster[base] = perMaster[base] === undefined ? 0 : perMaster[base] + 1;
+      cards.set(base + '#' + perMaster[base], {rect: el.getBoundingClientRect(), node: el});
+    });
+    const oldLines = Array.from(colDividers.querySelectorAll('.col-div-line'))
+      .map(el => el.getBoundingClientRect());
+    const layerBefore = eventsLayer.getBoundingClientRect();
+    const headRowBefore = columnHeaderRow.getBoundingClientRect();
+
+    mutate();
+
+    // Last：變動後的位置，再算出每個東西要從哪裡播到哪裡
+    const DUR = 300, EASE = 'cubic-bezier(.3,.6,.3,1)';
+    const layerRect = eventsLayer.getBoundingClientRect();
+    const rightEdge = layerRect.right; // 欄位區域最右邊，進場／退場都以這裡為準
+    const newIds = columns.map(c => c.id);
+
+    function slide(el, from, to, enter){
+      const dx = from.left - to.left;
+      const sx = to.width > 0 ? from.width / to.width : 1;
+      if(!enter && Math.abs(dx) < 0.5 && Math.abs(sx - 1) < 0.01) return;
+      const a = {transform:'translateX('+dx+'px) scaleX('+sx+')', transformOrigin:'0 0'};
+      const b = {transform:'none', transformOrigin:'0 0'};
+      if(enter){ a.opacity = 0; b.opacity = 1; }
+      el.animate([a, b], {duration:DUR, easing:EASE});
+    }
+    function exitGhost(node, rect, parent, parentRect){
+      const g = node.cloneNode(true);
+      g.removeAttribute('id');
+      g.removeAttribute('data-master-id');
+      g.removeAttribute('data-date');
+      g.style.position = 'absolute';
+      g.style.left = (rect.left - parentRect.left) + 'px';
+      g.style.top = (rect.top - parentRect.top) + 'px';
+      g.style.width = rect.width + 'px';
+      g.style.height = rect.height + 'px';
+      g.style.right = 'auto';
+      g.style.margin = '0';
+      g.style.pointerEvents = 'none';
+      parent.appendChild(g);
+      const anim = g.animate([
+        {transform:'none', opacity:1},
+        {transform:'translateX('+(rightEdge - rect.left)+'px)', opacity:0}
+      ], {duration:DUR, easing:EASE, fill:'forwards'});
+      const cleanup = function(){ g.remove(); };
+      anim.onfinish = cleanup;
+      anim.oncancel = cleanup;
+    }
+
+    // 欄位標題：留下來的往新位置擠，新來的從右側進場，被刪掉的往右側退場
+    Array.from(columnHeaderRow.children).forEach((el, i) => {
+      const id = newIds[i];
+      if(!id || !el.getBoundingClientRect) return;
+      const to = el.getBoundingClientRect();
+      const old = heads.get(id);
+      if(old) slide(el, old.rect, to, false);
+      else slide(el, {left:rightEdge, width:to.width}, to, true);
+    });
+    heads.forEach((h, id) => {
+      if(!newIds.includes(id)) exitGhost(h.node, h.rect, columnHeaderRow, headRowBefore);
+    });
+
+    // 行程卡片：位置對得上的用位移＋橫向縮放接過去；欄位被刪掉而消失的，跟著往右退場
+    const seen = {};
+    eventsLayer.querySelectorAll('.event-card').forEach(el => {
+      const base = el.dataset.masterId + '@' + el.dataset.date;
+      seen[base] = seen[base] === undefined ? 0 : seen[base] + 1;
+      const key = base + '#' + seen[base];
+      const old = cards.get(key);
+      if(old){ slide(el, old.rect, el.getBoundingClientRect(), false); cards.delete(key); }
+    });
+    cards.forEach(c => exitGhost(c.node, c.rect, eventsLayer, layerBefore));
+
+    // 欄位分隔線：依序對應；多出來的（新增）從右側進場，少掉的（刪除）往右退場
+    const newLineEls = Array.from(colDividers.querySelectorAll('.col-div-line'));
+    newLineEls.forEach((el, i) => {
+      const to = el.getBoundingClientRect();
+      if(oldLines[i]) slide(el, oldLines[i], {left:to.left, width:to.width}, false);
+      else el.animate([{transform:'translateX('+(rightEdge - to.left)+'px)', opacity:0}, {transform:'none', opacity:0.8}], {duration:DUR, easing:EASE});
+    });
+    for(let i = newLineEls.length; i < oldLines.length; i++){
+      const r = oldLines[i];
+      const g = document.createElement('div');
+      g.className = 'col-div-line';
+      g.style.left = (r.left - layerRect.left) + 'px';
+      colDividers.appendChild(g);
+      const anim = g.animate([{transform:'none', opacity:0.8}, {transform:'translateX('+(rightEdge - r.left)+'px)', opacity:0}], {duration:DUR, easing:EASE, fill:'forwards'});
+      anim.onfinish = function(){ g.remove(); };
+      anim.oncancel = function(){ g.remove(); };
+    }
   }
 
   function renderColumnHeader(){
@@ -5627,7 +6041,9 @@
   function createNewEvent(startMin, endMin, participantIds){
     startMin = Math.max(0, Math.min(23*60+55, startMin));
     endMin = Math.max(startMin+5, Math.min(24*60, endMin));
-    if(!participantIds || participantIds.length===0) participantIds = [columns[0].id];
+    const creatorId = pickMyColumnId(participantIds);
+    if(!creatorId){ promptNeedOwnColumn(); return null; } // 名下沒有任何欄位，沒有身分可以當創建者
+    if(!participantIds || participantIds.length===0) participantIds = [creatorId];
     const id = 'e' + Date.now();
     const ev = {
       id: id,
@@ -5637,14 +6053,14 @@
       end: minutesToTime(endMin),
       notes: '',
       participants: participantIds.slice(),
-      creatorId: CURRENT_USER_ID,
+      creatorId: creatorId,
       color: EVENT_COLORS[events.length % EVENT_COLORS.length].id,
       recurrence: null
     };
     events.push(ev);
     // 建立當下如果就跨到了別人的欄位，等於直接把對方加進參與者，
     // 要通知對方（跟事後才把別人加進來的規則一致）。
-    participantIds.forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 把你加進了「'+ev.title+'」'));
+    notifyColumns(participantIds, columnName(creatorId)+' 把你加進了「'+ev.title+'」');
     justCreatedEventId = id; // 讓下一次 renderEvents() 幫這張新卡片跑「捲軸攤開」進場動畫
     renderEvents();
     return id;
@@ -5654,7 +6070,9 @@
     if(selectMode) return;
     const now = new Date();
     const startHour = currentDate === todayStr() ? now.getHours() : 9;
-    const newId = createNewEvent(startHour*60, startHour*60 + 60, [columns[0].id]);
+    const mine = myColumnIds();
+    const newId = createNewEvent(startHour*60, startHour*60 + 60, mine.length ? [mine[0]] : []);
+    if(!newId) return;
     openEdit(newId, currentDate);
   });
 
@@ -5664,10 +6082,12 @@
     showPromptDialog('新增共編使用者的名字：', '', function(value){
       const name = (value || '').trim();
       if(!name) return;
-      const id = 'p' + Date.now();
-      columns.push({id, name});
-      renderColumnHeader();
-      renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
+      const id = newColumnId();
+      animateColumnChange(function(){
+        columns.push({id, name, ownerId: DEVICE_ID});
+        renderColumnHeader();
+        renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
+      });
     }, {
       validate: function(value){
         const v = (value || '').trim();
@@ -5761,9 +6181,7 @@
   // 參與者），其餘人只有本來就是參與者才行。
   function canEditInstance(inst){
     if(!inst) return false;
-    const creatorId = inst.creatorId || CURRENT_USER_ID;
-    if(creatorId === CURRENT_USER_ID) return true;
-    return !!(inst.participants && inst.participants.includes(CURRENT_USER_ID));
+    return isInstanceCreator(inst.creatorId, inst.participants) || isParticipantOf(inst.participants);
   }
 
   function applyEditPermission(inst){
@@ -5771,9 +6189,8 @@
     editLockableFields.classList.toggle('locked', !editCanEditFields);
     fieldLockHint.hidden = editCanEditFields;
 
-    const creatorId = (inst && inst.creatorId) || CURRENT_USER_ID;
-    editIsCreator = creatorId === CURRENT_USER_ID;
-    const isParticipant = !!(inst && inst.participants && inst.participants.includes(CURRENT_USER_ID));
+    editIsCreator = isInstanceCreator(inst && inst.creatorId, inst && inst.participants);
+    const isParticipant = isParticipantOf(inst && inst.participants);
     // 創建者可以整場刪除；只是參與者（不是創建者）改成「退出」（把自己
     // 從參與者名單移除）；純粹路過看看、還沒加入的人這顆鍵直接隱藏，
     // 沒有東西可以讓他刪或退。
@@ -5805,12 +6222,27 @@
     });
   }
 
+  // 這位使用者（欄位）在指定日期／時段，除了「正在編輯的這個行程」自己以外，
+  // 還有沒有時間重疊的行程。用的是編輯頁表單目前填的日期與時間（還沒按
+  // 完成也算），回傳第一個衝突的行程，沒有就回傳 null。重複行程只檢查
+  // 這一天那一次。
+  function findConflictingInstance(colId, dateStr, startStr, endStr){
+    if(!dateStr || !startStr || !endStr) return null;
+    const s = timeToMinutes(startStr), e = timeToMinutes(endStr);
+    if(!(e > s)) return null;
+    return getInstancesForDate(dateStr).find(inst => {
+      if(inst.masterId === editingMasterId) return false; // 自己不算
+      if(!(inst.participants || []).includes(colId)) return false;
+      return timeToMinutes(inst.start) < e && timeToMinutes(inst.end) > s;
+    }) || null;
+  }
+
   function renderParticipantChips(selectedIds){
     selectedParticipants = new Set(selectedIds);
     participantsBox.innerHTML = '';
     columns.forEach(col => {
       const chip = document.createElement('div');
-      const canToggleThisChip = editCanEditFields || col.id === CURRENT_USER_ID;
+      const canToggleThisChip = editCanEditFields || isMine(col.id);
       chip.className = 'participant-chip'
         + (selectedParticipants.has(col.id) ? ' selected' : '')
         + (canToggleThisChip ? '' : ' chip-locked');
@@ -5824,6 +6256,13 @@
             // 至少保留一位參與者，避免行程變成沒人參加
             if(selectedParticipants.size > 1) selectedParticipants.delete(col.id);
           } else {
+            // 新加入的參與者（不是打開編輯頁時就在名單裡的人），如果那個時段
+            // 他已經有別的行程，跳出提示並擋住，不讓加進來。
+            if(!editOriginalParticipants.includes(col.id) &&
+               findConflictingInstance(col.id, fieldDate.value, fieldStart.value, fieldEnd.value)){
+              showConfirmDialog(col.name + '該時段已有行程', function(){}, {okLabel:'知道了', hideCancel:true});
+              return;
+            }
             selectedParticipants.add(col.id);
           }
           chip.classList.toggle('selected', selectedParticipants.has(col.id));
@@ -5831,8 +6270,8 @@
           // 一直都能編輯；非創建者則是「現在還在不在參與者名單裡」決定）：
           // 剛加入自己 -> 解鎖；把自己剛移除掉 -> 鎖回去，不讓人退出了
           // 又繼續改內容還存得進去。
-          if(!editIsCreator && col.id === CURRENT_USER_ID){
-            const stillIn = selectedParticipants.has(CURRENT_USER_ID);
+          if(!editIsCreator && isMine(col.id)){
+            const stillIn = myColumnIds().some(id => selectedParticipants.has(id));
             editCanEditFields = stillIn;
             editLockableFields.classList.toggle('locked', !stillIn);
             fieldLockHint.hidden = stillIn;
@@ -5873,7 +6312,7 @@
     fieldStartBtn.textContent = data.start || '—';
     fieldEndBtn.textContent = data.end || '—';
     fieldNotes.value = data.notes || '';
-    renderParticipantChips(data.participants && data.participants.length ? data.participants : [columns[0].id]);
+    renderParticipantChips(data.participants && data.participants.length ? data.participants : [pickMyColumnId([]) || columns[0].id]);
     renderColorSwatches(data.color || DEFAULT_EVENT_COLOR);
   }
 
@@ -6362,7 +6801,7 @@
 
     const newTitle = fieldTitle.value.trim() || '新行程';
     const newNotes = fieldNotes.value;
-    const newParticipants = selectedParticipants.size ? Array.from(selectedParticipants) : [columns[0].id];
+    const newParticipants = selectedParticipants.size ? Array.from(selectedParticipants) : [pickMyColumnId([]) || columns[0].id];
 
     // 開始／結束時間各自獨立，直接讀取使用者手動填的值；
     // 只有在結束時間沒填或不晚於開始時間時才做最低限度的保底（開始後5分鐘）
@@ -6370,6 +6809,17 @@
     let newEnd = fieldEnd.value;
     if(!newEnd || timeToMinutes(newEnd) <= timeToMinutes(newStart)){
       newEnd = minutesToTime(Math.min(24*60, timeToMinutes(newStart) + 5));
+    }
+
+    // 擋住的規則在儲存時也要再確認一次：先加了人、之後才改日期／時間，
+    // 也可能讓「新加入的人」落在他已經有行程的時段，這種情況一樣不能存。
+    const conflictCol = newParticipants
+      .filter(id => !editOriginalParticipants.includes(id))
+      .map(id => columns.find(c => c.id === id))
+      .find(col => col && findConflictingInstance(col.id, fieldDate.value || master.date, newStart, newEnd));
+    if(conflictCol){
+      showConfirmDialog(conflictCol.name + '該時段已有行程', function(){}, {okLabel:'知道了', hideCancel:true});
+      return;
     }
 
     const newWeekdays = Array.from(selectedWeekdays).sort((a,b)=>a-b);
@@ -6417,25 +6867,25 @@
     // 通知被移除的人；其餘本來就有其他參與者、這次維持不變、也還沒被
     // 上面任何一種訊息涵蓋到的人 -> 通知「更新了」。都不需要核可，純粹
     // 讓大家知道發生過什麼事。
+    const mineIds = new Set(myColumnIds());
+    const notMine = id => !mineIds.has(id);
+    const wasIn = editOriginalParticipants.some(id => mineIds.has(id));
     const addedParticipants = newParticipants.filter(id => !editOriginalParticipants.includes(id));
-    const removedParticipants = editOriginalParticipants.filter(id => id !== CURRENT_USER_ID && !newParticipants.includes(id));
-    const selfJustJoined = addedParticipants.includes(CURRENT_USER_ID);
-    const addedOthers = addedParticipants.filter(id => id !== CURRENT_USER_ID);
+    const removedParticipants = editOriginalParticipants.filter(id => notMine(id) && !newParticipants.includes(id));
+    const selfJustJoined = !wasIn && newParticipants.some(id => mineIds.has(id));
+    const addedOthers = addedParticipants.filter(notMine);
+    const who = actingName([master.creatorId].concat(newParticipants));
 
-    addedOthers.forEach(pid => {
-      queueNotification(pid, columnName(CURRENT_USER_ID)+' 把你加進了「'+newTitle+'」');
-    });
+    notifyColumns(addedOthers, who+' 把你加進了「'+newTitle+'」');
     if(selfJustJoined){
-      editOriginalParticipants.filter(id => id !== CURRENT_USER_ID)
-        .forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 加入了「'+newTitle+'」'));
+      notifyColumns(editOriginalParticipants.filter(notMine), who+' 加入了「'+newTitle+'」');
     }
-    removedParticipants.forEach(pid => {
-      queueNotification(pid, columnName(CURRENT_USER_ID)+' 把你從「'+newTitle+'」移除了');
-    });
+    notifyColumns(removedParticipants, who+' 把你從「'+newTitle+'」移除了');
     if(!selfJustJoined && editOriginalParticipants.length > 1){
-      editOriginalParticipants
-        .filter(id => id !== CURRENT_USER_ID && newParticipants.includes(id) && !addedOthers.includes(id))
-        .forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 更新了「'+newTitle+'」'));
+      notifyColumns(
+        editOriginalParticipants.filter(id => notMine(id) && newParticipants.includes(id) && !addedOthers.includes(id)),
+        who+' 更新了「'+newTitle+'」'
+      );
     }
 
     renderTimeline();
@@ -6453,8 +6903,7 @@
       if(!isLeaving){
         // 創建者：原本的整場/單日刪除邏輯不變，順便通知其他參與者
         const title = master.title || '(未命名行程)';
-        (master.participants||[]).filter(id => id !== CURRENT_USER_ID)
-          .forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 刪除了「'+title+'」'));
+        notifyColumns(master.participants, actingNameFor(master)+' 刪除了「'+title+'」');
         if(!master.recurrence){
           events = events.filter(e => e !== master);
         } else if(syncOn){
@@ -6469,13 +6918,14 @@
         // 退出整個行程／整個系列：把自己從參與者名單移除，留給其他參與者；
         // 如果因此變成沒有任何參與者，代表整段都只剩自己，等同刪除。
         const title = master.title || '(未命名行程)';
-        const remaining = (master.participants||[]).filter(id => id !== CURRENT_USER_ID);
+        const who = actingNameFor(master); // 先取名字，退出後名下欄位就不在參與者裡了
+        const remaining = (master.participants||[]).filter(id => !isMine(id));
         master.participants = remaining;
-        remaining.forEach(pid => queueNotification(pid, columnName(CURRENT_USER_ID)+' 退出了「'+title+'」'));
+        notifyColumns(remaining, who+' 退出了「'+title+'」');
         if(master.overrides){
           Object.keys(master.overrides).forEach(d => {
             const ov = master.overrides[d];
-            if(ov.participants) ov.participants = ov.participants.filter(id => id !== CURRENT_USER_ID);
+            if(ov.participants) ov.participants = ov.participants.filter(id => !isMine(id));
           });
         }
         if(master.participants.length === 0) events = events.filter(e => e !== master);
@@ -6492,12 +6942,15 @@
   /* ---------------- 初始化 ---------------- */
   const deviceUserPickerOverlay = document.getElementById('deviceUserPickerOverlay');
   const deviceUserList = document.getElementById('deviceUserList');
+  const deviceUserConfirmBtn = document.getElementById('deviceUserConfirm');
+  const deviceUserSkipBtn = document.getElementById('deviceUserSkip');
 
-  // 「你是哪一位」：用目前的共編者名單問一次，選好之後把 id 記在這支
-  // 裝置的 localStorage，回傳一個 Promise，選完才 resolve。
-  function showDeviceUserPicker(cols){
+  // 認領欄位：只在「這支裝置名下還沒有任何欄位、雲端上又有沒主人的欄位」
+  // 時才會出現（例如舊版升級上來的資料）。可以多選，因為同一位使用者可能
+  // 有好幾個欄位。回傳 Promise，resolve 成被選中的欄位 id 陣列（略過＝空陣列）。
+  function showClaimPicker(cols){
     return new Promise(resolve => {
-      if(!cols || cols.length === 0){ resolve(); return; } // 沒有任何共編者可選，先跳過，維持預設值
+      const picked = new Set();
       deviceUserList.innerHTML = '';
       cols.forEach(col => {
         const btn = document.createElement('button');
@@ -6505,15 +6958,37 @@
         btn.className = 'device-user-btn';
         btn.textContent = col.name;
         btn.addEventListener('click', function(){
-          setDeviceUserId(col.id);
-          CURRENT_USER_ID = col.id;
-          deviceUserPickerOverlay.hidden = true;
-          resolve();
+          if(picked.has(col.id)) picked.delete(col.id); else picked.add(col.id);
+          btn.classList.toggle('selected', picked.has(col.id));
+          deviceUserConfirmBtn.disabled = picked.size === 0;
         });
         deviceUserList.appendChild(btn);
       });
+      deviceUserConfirmBtn.disabled = true;
+      const finish = ids => { deviceUserPickerOverlay.hidden = true; resolve(ids); };
+      deviceUserConfirmBtn.onclick = () => finish(Array.from(picked));
+      deviceUserSkipBtn.onclick = () => finish([]);
       deviceUserPickerOverlay.hidden = false;
     });
+  }
+
+  // 舊版是「這支裝置選了哪一位」（存欄位 id）：升級時如果那個欄位還沒有
+  // 主人，就自動認領成這支裝置的，舊使用者不用再選一次。回傳被認領的欄位。
+  function claimLegacyColumn(){
+    let legacyId = null;
+    try{ legacyId = localStorage.getItem(LEGACY_DEVICE_USER_KEY); }catch(err){}
+    if(!legacyId) return [];
+    const claimed = [];
+    const col = columns.find(c => c.id === legacyId);
+    if(col && !col.ownerId){ col.ownerId = DEVICE_ID; claimed.push(col); }
+    try{ localStorage.removeItem(LEGACY_DEVICE_USER_KEY); }catch(err){}
+    return claimed;
+  }
+  function isClaimDismissed(){
+    try{ return localStorage.getItem(CLAIM_DISMISSED_KEY) === '1'; }catch(err){ return false; }
+  }
+  function setClaimDismissed(){
+    try{ localStorage.setItem(CLAIM_DISMISSED_KEY, '1'); }catch(err){}
   }
 
   try{
@@ -6524,39 +6999,239 @@
   buildHourRows();
   renderTimeline(); // 先用本機/預設資料立刻畫出畫面，不用等雲端資料回來才有東西可看
 
-  // 開啟 App 的當下去 Supabase 抓一次目前雲端上的完整資料，抓到就取代
-  // 本機資料重新畫一次；抓不到（離線、key 錯、專案還沒建好表）就安靜地
-  // 繼續用本機資料，不會讓 App 壞掉，只是看不到對方的最新更動。
-  (async function initSupabaseSync(){
-    const remote = await fetchAllFromSupabase();
+  /* ---------------- 開啟網頁：創建新手帳／加入別人的手帳 ---------------- */
+  const nbStartOverlay = document.getElementById('notebookStartOverlay');
+  const nbCreateName = document.getElementById('nbCreateName');
+  const nbCreateSubmit = document.getElementById('nbCreateSubmit');
+  const nbJoinCode = document.getElementById('nbJoinCode');
+  const nbJoinSubmit = document.getElementById('nbJoinSubmit');
+  const nbJoinName = document.getElementById('nbJoinName');
+  const nbJoinNameSubmit = document.getElementById('nbJoinNameSubmit');
+  let pendingJoin = null; // 密碼驗證過、還在輸入名字的那本手帳：{nb, remote}
+
+  function showNbStep(step){
+    nbStartOverlay.querySelectorAll('.nb-step').forEach(el => { el.hidden = el.dataset.step !== step; });
+    nbStartOverlay.querySelectorAll('.nb-error').forEach(el => { el.textContent = ''; });
+    const input = nbStartOverlay.querySelector('.nb-step[data-step="'+step+'"] .nb-input');
+    if(input) setTimeout(function(){ input.focus(); }, 50);
+  }
+  function setNbError(id, msg){ document.getElementById(id).textContent = msg || ''; }
+
+  // 選好（或抓好）一本手帳之後的共同入口：記住這本手帳、把剛新增的欄位
+  // 推上雲端、關掉開始畫面、載入內容。
+  async function enterNotebook(nb, data, newColumn){
+    NOTEBOOK = nb;
+    setStoredNotebook(nb);
+    if(newColumn){
+      await syncChangesToSupabase('columns', [{id:newColumn.id, after:newColumn}], ch => ch.after);
+    }
+    nbStartOverlay.hidden = true;
+    await bootNotebook(data);
+  }
+
+  // 載入這本手帳：seed 有值就直接用（剛創建／剛加入時已經有資料了），
+  // 沒有就從雲端抓；抓不到（離線）就沿用本機快取，不會壞掉。
+  async function bootNotebook(seed){
+    const remote = seed || await fetchAllFromSupabase();
     if(remote && remote.columns.length){
       columns = remote.columns;
       events = remote.events;
       notifications = remote.notifications;
-    } else if(remote && sb){
-      // 雲端資料庫是空的（剛接上、還沒有任何資料）：把本機現有內容當成
-      // 起點推上去，這樣兩支手機才有共同的起始資料，不用手動在
-      // Supabase 後台自己建。
-      syncChangesToSupabase('columns', columns.map(c => ({id:c.id, after:c})), ch => ch.after);
-      syncChangesToSupabase('events', events.map(e => ({id:e.id, after:e})), ch => ch.after);
     }
-    if(!getDeviceUserId()){
-      await showDeviceUserPicker(columns);
+    // 欄位主人升級／認領（舊資料才會用到）：只在拿到權威資料（雲端抓成功，
+    // 或根本沒接雲端）時才做，離線時先跳過，下次開啟再處理。認領是在下面
+    // 重設 undo 基準點之前發生的，不會被 diff 到，所以要自己推上 Supabase。
+    if(remote || !sb){
+      const claimed = claimLegacyColumn();
+      if(myColumnIds().length === 0 && !isClaimDismissed()){
+        const unclaimed = columns.filter(c => !c.ownerId);
+        if(unclaimed.length){
+          const ids = await showClaimPicker(unclaimed);
+          if(ids.length){
+            ids.forEach(id => {
+              const c = columns.find(x => x.id === id);
+              if(c && !c.ownerId){ c.ownerId = DEVICE_ID; claimed.push(c); }
+            });
+          } else {
+            setClaimDismissed();
+          }
+        }
+      }
+      if(claimed.length){
+        syncChangesToSupabase('columns', claimed.map(c => ({id:c.id, after:c})), ch => ch.after);
+      }
     }
     lastCommittedColumns = JSON.parse(JSON.stringify(columns));
     lastCommittedEvents = JSON.parse(JSON.stringify(events));
     renderTimeline();
     renderNotificationBadge();
     scheduleSaveToStorage();
-  })();
+  }
+
+  async function submitCreate(){
+    const name = nbCreateName.value.trim();
+    if(!name){ setNbError('nbCreateError', '請輸入使用者名稱'); return; }
+    nbCreateSubmit.disabled = true;
+    try{
+      let nb = null;
+      for(let i = 0; i < 3 && !nb; i++){
+        const cand = {id: newNotebookId(), code: generateJoinCode()};
+        if(!sb){ nb = cand; break; } // 沒接雲端：只在這支裝置上用
+        const { error } = await sb.from('notebooks').insert({id: cand.id, code: cand.code});
+        if(!error){ nb = cand; break; }
+        if(error.code !== '23505') throw error; // 23505＝密碼剛好跟別本重複，換一組再試
+      }
+      if(!nb) throw new Error('密碼重複太多次');
+      const col = {id: newColumnId(), name: name, ownerId: DEVICE_ID};
+      await enterNotebook(nb, {columns:[col], events:[], notifications:[]}, col);
+    }catch(err){
+      console.error('建立手帳失敗：', err);
+      setNbError('nbCreateError', '建立失敗，請確認網路連線（以及 Supabase 資料表已更新）後再試一次。');
+    }finally{
+      nbCreateSubmit.disabled = false;
+    }
+  }
+
+  async function submitJoin(){
+    const code = normalizeJoinCode(nbJoinCode.value);
+    if(code.length !== 8){ setNbError('nbJoinError', '密碼是 8 個英數字，請再確認一次'); return; }
+    if(!sb){ setNbError('nbJoinError', '目前連不上雲端，沒辦法加入別人的手帳'); return; }
+    nbJoinSubmit.disabled = true;
+    try{
+      const { data, error } = await sb.from('notebooks').select('id, code').eq('code', code).limit(1);
+      if(error) throw error;
+      if(!data || data.length === 0){ setNbError('nbJoinError', '找不到這個密碼，請確認後再試'); return; }
+      const nb = {id: data[0].id, code: data[0].code};
+      const remote = await fetchAllFromSupabase(nb.id);
+      if(!remote) throw new Error('讀取手帳內容失敗');
+      // 這支裝置在這本手帳已經有欄位（重新加入），或有舊資料裡沒主人的欄位
+      // 可認領：不用再輸入名字，直接進去。
+      if(remote.columns.some(c => c.ownerId === DEVICE_ID) || remote.columns.some(c => !c.ownerId)){
+        await enterNotebook(nb, remote, null);
+        return;
+      }
+      if(remote.columns.length >= 4){
+        setNbError('nbJoinError', '這本手帳已經有 4 位共編者，加不進去了');
+        return;
+      }
+      pendingJoin = {nb: nb, remote: remote};
+      showNbStep('joinName');
+    }catch(err){
+      console.error('加入手帳失敗：', err);
+      setNbError('nbJoinError', '加入失敗，請確認網路連線後再試一次。');
+    }finally{
+      nbJoinSubmit.disabled = false;
+    }
+  }
+
+  async function submitJoinName(){
+    if(!pendingJoin){ showNbStep('choice'); return; }
+    const name = nbJoinName.value.trim();
+    if(!name){ setNbError('nbJoinNameError', '請輸入使用者名稱'); return; }
+    if(pendingJoin.remote.columns.some(c => c.name === name)){ setNbError('nbJoinNameError', '名稱已被使用'); return; }
+    nbJoinNameSubmit.disabled = true;
+    try{
+      const col = {id: newColumnId(), name: name, ownerId: DEVICE_ID};
+      const remote = pendingJoin.remote;
+      remote.columns.push(col);
+      const nb = pendingJoin.nb;
+      pendingJoin = null;
+      await enterNotebook(nb, remote, col);
+    }catch(err){
+      console.error('加入手帳失敗：', err);
+      setNbError('nbJoinNameError', '加入失敗，請再試一次。');
+    }finally{
+      nbJoinNameSubmit.disabled = false;
+    }
+  }
+
+  document.getElementById('nbBtnCreate').addEventListener('click', function(){ showNbStep('create'); });
+  document.getElementById('nbBtnJoin').addEventListener('click', function(){ showNbStep('join'); });
+  nbStartOverlay.querySelectorAll('[data-nb-back]').forEach(btn => {
+    btn.addEventListener('click', function(){ pendingJoin = null; showNbStep('choice'); });
+  });
+  nbCreateSubmit.addEventListener('click', submitCreate);
+  nbJoinSubmit.addEventListener('click', submitJoin);
+  nbJoinNameSubmit.addEventListener('click', submitJoinName);
+  [[nbCreateName, submitCreate], [nbJoinCode, submitJoin], [nbJoinName, submitJoinName]].forEach(pair => {
+    pair[0].addEventListener('keydown', function(e){ if(e.key === 'Enter') pair[1](); });
+  });
+
+  /* ---------------- 手帳密碼面板（分享密碼／離開手帳） ---------------- */
+  const nbMenuOverlay = document.getElementById('notebookMenuOverlay');
+  const nbMenuCode = document.getElementById('nbMenuCode');
+  const nbMenuCopy = document.getElementById('nbMenuCopy');
+  const nbMenuLeave = document.getElementById('nbMenuLeave');
+  let nbLeaveArmed = false;
+
+  function fallbackCopy(text){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    }catch(err){ return false; }
+  }
+  async function copyText(text){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      try{ await navigator.clipboard.writeText(text); return true; }catch(err){}
+    }
+    return fallbackCopy(text);
+  }
+  function resetNbLeave(){
+    nbLeaveArmed = false;
+    nbMenuLeave.textContent = '離開這本手帳';
+  }
+  function closeNotebookMenu(){
+    nbMenuOverlay.hidden = true;
+    resetNbLeave();
+    nbMenuCopy.textContent = '複製密碼';
+  }
+
+  document.getElementById('btnNotebook').addEventListener('click', function(){
+    if(!NOTEBOOK) return;
+    nbMenuCode.textContent = formatJoinCode(NOTEBOOK.code);
+    resetNbLeave();
+    nbMenuOverlay.hidden = false;
+  });
+  document.getElementById('nbMenuClose').addEventListener('click', closeNotebookMenu);
+  nbMenuCopy.addEventListener('click', async function(){
+    const ok = await copyText(formatJoinCode(NOTEBOOK.code));
+    nbMenuCopy.textContent = ok ? '已複製' : '請長按密碼複製';
+  });
+  // 離開要按兩次：第一次只是把按鍵變成確認提示，避免手滑。
+  // 離開只是這支裝置不再顯示這本手帳，雲端資料還在；之後用密碼就能回來，
+  // 自己名下的欄位也還是自己的。
+  nbMenuLeave.addEventListener('click', function(){
+    if(!nbLeaveArmed){
+      nbLeaveArmed = true;
+      nbMenuLeave.textContent = '再按一次確認離開（之後要輸入密碼才能回來）';
+      return;
+    }
+    clearStoredNotebook();
+    location.reload();
+  });
+
+  // 開啟網頁：已經有手帳就直接載入；沒有就先問「創建」還是「加入」。
+  if(NOTEBOOK){
+    bootNotebook(null);
+  } else {
+    nbStartOverlay.hidden = false;
+    showNbStep('choice');
+  }
 
   // 切回這個分頁／從背景回來時，重新整包抓一次雲端資料——這是目前選擇
   // 的同步策略（開啟/切回時抓一次，不是即時 Realtime 推播），足夠讓
   // 兩支手機看到彼此在自己沒開著 App 的時候做的更動。
   document.addEventListener('visibilitychange', async function(){
-    if(document.visibilityState !== 'visible') return;
+    if(document.visibilityState !== 'visible' || !NOTEBOOK) return;
     const remote = await fetchAllFromSupabase();
-    if(!remote) return;
+    if(!remote || remote.columns.length === 0) return;
     columns = remote.columns;
     events = remote.events;
     notifications = remote.notifications;
