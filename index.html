@@ -153,6 +153,14 @@
   }
   .device-user-btn:active{background:var(--btn-coffee); color:var(--paper);}
   .device-user-btn.selected{background:var(--btn-coffee); color:var(--paper);}
+  /* 開啟頁面「創建／加入」兩顆選項：圖示在文字前面，整組置中 */
+  .nb-choice-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+  }
+  .nb-choice-btn svg{flex:0 0 auto;}
   .device-user-actions{
     display:flex;
     gap:10px;
@@ -2037,11 +2045,30 @@
 <div id="notebookStartOverlay" class="device-user-overlay" hidden>
   <div class="device-user-card">
     <div class="nb-step" data-step="choice">
-      <div class="device-user-title">手帳曆</div>
-      <div class="device-user-hint">選一個開始的方式</div>
+      <div class="device-user-title">Lasso-手帳曆</div>
+      <div class="device-user-hint">自由自在的安排時間</div>
       <div class="device-user-list">
-        <button type="button" class="device-user-btn" id="nbBtnCreate">創建新的手帳</button>
-        <button type="button" class="device-user-btn" id="nbBtnJoin">加入其他人的手帳</button>
+        <!-- 兩顆選項按鍵前面各放一個說明圖示：創建＝一本中間有「＋」的日記書，
+             加入＝一群人（加入別人已經在用的手帳） -->
+        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnCreate">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <!-- 日記書（封面加書脊底下的一條書頁）＋封面中間的「＋」 -->
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            <line x1="13" y1="6.5" x2="13" y2="12.5"></line>
+            <line x1="10" y1="9.5" x2="16" y2="9.5"></line>
+          </svg>
+          <span>創建新的手帳</span>
+        </button>
+        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnJoin">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>加入其他人的手帳</span>
+        </button>
       </div>
     </div>
 
