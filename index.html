@@ -420,10 +420,9 @@
     box-shadow:0 3px 10px rgba(32,38,58,0.3);
   }
   .select-toggle-btn:active{opacity:.6;}
-  .select-toggle-btn.active{
-    background:var(--red);
-    border-color:var(--red);
-  }
+  /* 選取模式中「選取」鍵變成「×」，顏色跟其他按鍵一樣維持深色（以前是紅色，
+     紅色現在留給「刪除」鍵）。.active 這個 class 還是會加上去（JS 用它判斷狀態），
+     只是不再有專屬的配色。 */
   .select-right-controls{
     display:none; /* 已停用：移動/刪除鍵搬到底部懸浮橫排了，這個舊的頭部
                      列右側容器不再使用，保留規則只是避免萬一有殘留標記
@@ -433,8 +432,8 @@
     height:30px;
     padding:0 10px;
     border-radius:10px;
-    border:1.5px solid var(--btn-coffee);
-    background:var(--btn-coffee);
+    border:1.5px solid var(--red);
+    background:var(--red); /* 刪除鍵用紅色，提醒這是不能輕易按的操作 */
     color:var(--paper);
     display:flex;
     align-items:center;
@@ -446,6 +445,9 @@
   }
   .select-delete-btn svg{flex:0 0 auto;}
   .select-delete-btn:active{opacity:.6;}
+  /* 還沒勾選任何行程／欄位時變淡、按了沒反應（跟「移動」鍵同一套規則） */
+  .select-delete-btn.is-disabled,
+  .select-delete-btn.is-disabled:active{opacity:.45; cursor:default;}
   .select-delete-btn[hidden]{display:none;}
   /* 選取模式時，最下面懸浮橫排最後一格從「新增行程」鉛筆換成「刪除」，
      兩顆疊在同一格用 hidden 互斥顯示（見 JS 的 setSelectMode）；上一步／
@@ -461,8 +463,9 @@
     display:none;
   }
   /* 「移動」鍵：固定卡在底部懸浮橫排的上一步／下一步中間，大小/字體
-     比照「選取」鍵，維持整排按鍵視覺一致。預設用 [hidden] 隱藏，只有
-     選取模式中且至少勾選一個行程時才由 JS 拿掉 hidden。 */
+     比照「選取」鍵，維持整排按鍵視覺一致。一進入選取模式就出現（不用先
+     勾選行程），還沒勾選任何行程之前是變淡、按了沒反應的狀態（.is-disabled，
+     跟上一步／下一步不能用時的樣子一致），勾選之後才恢復成可以按。 */
   .select-move-btn{
     height:30px;
     padding:0 8px;
@@ -483,6 +486,8 @@
     box-shadow:0 3px 10px rgba(32,38,58,0.3);
   }
   .select-move-btn:active{opacity:.6;}
+  .select-move-btn.is-disabled,
+  .select-move-btn.is-disabled:active{opacity:.45; cursor:default;}
   .select-move-btn[hidden]{display:none;}
   .date-display{
     position:relative;
@@ -2200,8 +2205,9 @@
           <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
         </svg>
       </button>
-      <!-- 「移動」鍵：只有選取模式中且至少勾選一個行程時才由 JS 拿掉
-           hidden，位置固定卡在上一步/下一步中間，不會讓兩側的鍵跟著跳動。 -->
+      <!-- 「移動」鍵：一進入選取模式就由 JS 拿掉 hidden（還沒勾選行程時
+           是變淡不能按的狀態），位置固定卡在上一步/下一步中間，不會讓兩側
+           的鍵跟著跳動。 -->
       <div id="btnMoveSelected" class="select-move-btn" aria-label="移動選取的行程" hidden>
         <span>移動</span>
         <input type="date" id="moveTargetDatePicker" hidden>
@@ -3968,10 +3974,21 @@
   btnUndo.addEventListener('click', undo);
   btnRedo.addEventListener('click', redo);
 
-  // 「移動」鍵只在選取模式中、且至少勾選一個行程時才顯示；使用者欄位的
-  // 勾選（selectedColumnIds）不會讓它出現，移動功能目前只針對行程本身。
+  // 「移動」鍵一進入選取模式就出現，位置固定不會跳；還沒勾選任何行程之前
+  // 是變淡不能按的狀態，勾選了行程才恢復。使用者欄位的勾選
+  // （selectedColumnIds）不會讓它啟用，移動功能目前只針對行程本身。
   function updateMoveButtonVisibility(){
-    moveSelectedBtn.hidden = !(selectMode && selectedEventKeys.size > 0);
+    moveSelectedBtn.hidden = !selectMode;
+    const enabled = selectMode && selectedEventKeys.size > 0;
+    moveSelectedBtn.classList.toggle('is-disabled', !enabled);
+    moveSelectedBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    updateDeleteButtonState();
+  }
+  // 垃圾桶：行程或欄位任何一個被勾選才是可以按的狀態，都沒勾就變淡不能按。
+  function updateDeleteButtonState(){
+    const enabled = selectMode && (selectedEventKeys.size > 0 || selectedColumnIds.size > 0);
+    deleteSelectedBtn.classList.toggle('is-disabled', !enabled);
+    deleteSelectedBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
   }
 
   function setSelectMode(on){
@@ -4245,6 +4262,7 @@
             else selectedColumnIds.add(col.id);
             renderColumnHeader();
             renderColumnDividers();
+            updateDeleteButtonState();
           });
         } else {
           cell.classList.add('select-locked');
