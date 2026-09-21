@@ -18,11 +18,11 @@
     --ink-faint:#96876F; /* 低飽和度咖啡色，取代原本偏藍灰的淡字色 */
     --btn-coffee:var(--ink); /* 按鍵底色：改成跟主要文字同一種深藍黑色 */
     --btn-brown:#4A3728; /* 深咖啡色：頂端那排圖示按鍵的外框與圖示顏色 */
-    /* 頂端那排按鍵的「紙片浮凸」質感：底色就是手帳背景色（單色，沒有漸層、
-       沒有高光），靠底部一圈咖啡色薄邊（像紙片的厚度）＋柔和的暖色投影浮起來；
-       按下去時整顆下沉 2px、薄邊與投影收起來、內側出現一點凹陷的陰影。 */
+    /* 頂端那排按鍵：沒有外框線，底色就是手帳背景色（單色），只靠柔和的暖色
+       陰影「暗示」按鍵的位置；圖示仍是深咖啡色。按下去時整顆下沉 2px、投影
+       收起來、內側出現一點凹陷的陰影，底色略深一點。 */
     --btn-face:var(--paper);
-    --btn-relief:0 2px 0 rgba(74,55,40,.55), 0 4px 8px rgba(74,55,40,.20);
+    --btn-relief:0 2px 6px rgba(74,55,40,.30), 0 1px 2px rgba(74,55,40,.22);
     --btn-face-pressed:var(--paper-deep);
     --btn-relief-pressed:inset 0 1px 3px rgba(74,55,40,.28), 0 0 0 rgba(74,55,40,0);
     --red:#B23A2F;
@@ -330,7 +330,7 @@
     height:36px; /* 頂端四顆按鍵統一高度（跟「新增欄位」鍵共用同一個數字） */
     padding:0 10px;
     border-radius:10px;
-    border:1.5px solid var(--btn-brown);
+    border:1.5px solid transparent; /* 不畫外框線；留著透明的 1.5px 是為了讓按鍵大小、位置跟以前完全一樣 */
     background:var(--btn-face);
     box-shadow:var(--btn-relief);
     color:var(--btn-brown);
@@ -376,7 +376,7 @@
     height:36px; /* 跟 .month-header-btn 同高 */
     padding:0 10px;
     border-radius:10px;
-    border:1.5px solid var(--btn-brown);
+    border:1.5px solid transparent; /* 不畫外框線；留著透明的 1.5px 是為了讓按鍵大小、位置跟以前完全一樣 */
     background:var(--btn-face);
     box-shadow:var(--btn-relief);
     color:var(--btn-brown);
