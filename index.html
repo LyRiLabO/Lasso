@@ -201,32 +201,58 @@
     color:var(--red);
     text-align:center;
   }
-  .nb-code-display{
+  /* 分享手帳密碼的小視窗：跟通知面板（.notif-panel）同一套浮動深色卡片外觀，
+     按鑰匙鍵時在鍵的下方浮出，不換頁（寬度沿用 .notif-panel）。 */
+  .nb-panel-body{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:2px 14px 14px;
+    font-family:'Noto Sans TC', sans-serif;
+    color:var(--paper);
+  }
+  .nb-panel-code{
     font-family:ui-monospace, Menlo, Consolas, monospace;
-    font-size:30px;
+    font-size:26px;
     font-weight:700;
     letter-spacing:.14em;
-    color:var(--ink);
     text-align:center;
-    padding:18px 8px;
-    border:1.5px dashed var(--btn-coffee);
-    border-radius:14px;
-    background:var(--card);
+    padding:12px 6px;
+    border:1.5px dashed rgba(246,241,228,0.45);
+    border-radius:10px;
     user-select:all;
     -webkit-user-select:all;
   }
-  .nb-leave{
-    margin-top:26px;
+  .nb-panel-hint{
+    font-size:12px;
+    line-height:1.5;
+    color:rgba(246,241,228,0.7);
+  }
+  .nb-panel-btn{
+    border:1.5px solid var(--paper);
+    background:transparent;
+    color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:14px;
+    font-weight:700;
+    padding:10px;
+    border-radius:10px;
+    cursor:pointer;
+  }
+  .nb-panel-btn:active{opacity:.6;}
+  .nb-panel-leave{
     align-self:center;
     background:none;
     border:none;
-    color:var(--red);
+    color:#F0A79E;
     font-family:'Noto Sans TC', sans-serif;
-    font-size:14px;
+    font-size:13px;
     text-decoration:underline;
+    text-align:center;
     cursor:pointer;
-    padding:8px;
+    padding:4px 6px;
   }
+  .nb-panel-leave[hidden]{display:none;}
 
   .page{
     position:absolute; inset:0;
@@ -1555,6 +1581,7 @@
     color:var(--ink);
     text-align:center;
     line-height:1.5;
+    white-space:pre-line; /* 訊息裡的 \n 會真的換行（例如新增欄位的兩行標題） */
   }
   .picker-confirm-input-wrap{
     padding:0 4px;
@@ -2015,19 +2042,6 @@
   </div>
 </div>
 
-<!-- 手帳密碼面板：顯示分享密碼、一鍵複製、離開這本手帳。 -->
-<div id="notebookMenuOverlay" class="device-user-overlay" hidden>
-  <div class="device-user-card">
-    <div class="device-user-title">這本手帳的密碼</div>
-    <div class="device-user-hint">把密碼傳給朋友，他們打開網頁選「加入其他人的手帳」輸入就能一起編輯。</div>
-    <div class="nb-code-display" id="nbMenuCode"></div>
-    <div class="device-user-actions">
-      <button type="button" class="device-user-action" id="nbMenuCopy">複製密碼</button>
-      <button type="button" class="device-user-action primary" id="nbMenuClose">關閉</button>
-    </div>
-    <button type="button" class="nb-leave" id="nbMenuLeave">離開這本手帳</button>
-  </div>
-</div>
 <div id="phone">
 
   <!-- ============ 頁面一：時間軸主頁 ============ -->
@@ -2090,8 +2104,13 @@
         </button>
         <!-- 分享手帳密碼：查看／複製分享密碼、離開這本手帳。 -->
         <button id="btnNotebook" class="month-header-btn notebook-btn" aria-label="分享手帳密碼">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <!-- 鑰匙圖示（依使用者提供的圖描出來的輪廓）：外形是一條封閉的線＋鑰匙頭的小圓孔，
+                 線寬 1.6（換算成 24 格的座標），跟旁邊的鈴鐺、月曆粗細接近。 -->
+            <g transform="translate(-8.860 -8.794) scale(0.03343)" stroke-width="47.9">
+              <path d="M680.3 625 L611 699 L616 760 L603 767 L552 769 L557 805 L552 825 L489 831 L491 887 L479 893 L441 895 L436 938 L426 951 L410 952 L349 925 L341 880 L346 816 L596.2 562.9 A171.3 171.3 0 1 1 680.3 625 Z"></path>
+              <circle cx="792" cy="415" r="51.5"></circle>
+            </g>
           </svg>
         </button>
       </div>
@@ -3783,6 +3802,7 @@
 
   function openNotificationPanel(){
     closeNotificationPanel();
+    closeNotebookPanel();
     closeCardMenu();
     closeClusterMenu();
     const mine = notifications
@@ -6083,7 +6103,7 @@
   document.getElementById('btnAddColumn').addEventListener('click', function(){
     if(selectMode) return;
     if(columns.length >= 4) return; // 保險：按鍵這時候本來就該是隱藏的，理論上按不到
-    showPromptDialog('新增欄位的名稱：', '', function(value){
+    showPromptDialog('新增欄位\n請輸入欄位名稱', '', function(value){
       const name = (value || '').trim();
       if(!name) return;
       const id = newColumnId();
@@ -7168,13 +7188,15 @@
     pair[0].addEventListener('keydown', function(e){ if(e.key === 'Enter') pair[1](); });
   });
 
-  /* ---------------- 手帳密碼面板（分享密碼／離開手帳） ---------------- */
-  const nbMenuOverlay = document.getElementById('notebookMenuOverlay');
-  const nbMenuCode = document.getElementById('nbMenuCode');
-  const nbMenuCopy = document.getElementById('nbMenuCopy');
-  const nbMenuLeave = document.getElementById('nbMenuLeave');
-  let nbLeaveArmed = false;
+  /* ---------------- 分享手帳密碼的小視窗（密碼／複製／離開手帳） ----------------
+     跟通知面板同一套做法：按鑰匙鍵就在鍵的下方浮出一張小卡片，再按一次鑰匙
+     鍵、或點卡片以外的地方就收起來，不換頁、不蓋掉整個畫面。 */
+  const btnNotebook = document.getElementById('btnNotebook');
+  let nbPanelEl = null;
 
+  function closeNotebookPanel(){
+    if(nbPanelEl){ nbPanelEl.remove(); nbPanelEl = null; }
+  }
   function fallbackCopy(text){
     try{
       const ta = document.createElement('textarea');
@@ -7194,41 +7216,73 @@
     }
     return fallbackCopy(text);
   }
-  function resetNbLeave(){
-    nbLeaveArmed = false;
-    nbMenuLeave.textContent = '離開這本手帳';
-  }
-  function closeNotebookMenu(){
-    nbMenuOverlay.hidden = true;
-    resetNbLeave();
-    nbMenuCopy.textContent = '複製密碼';
+
+  function openNotebookPanel(){
+    if(!NOTEBOOK) return;
+    closeNotebookPanel();
+    closeNotificationPanel();
+    closeCardMenu();
+    closeClusterMenu();
+
+    const panel = document.createElement('div');
+    panel.className = 'notif-panel nb-panel';
+    panel.innerHTML =
+      '<div class="notif-panel-title">手帳密碼</div>' +
+      '<div class="nb-panel-body">' +
+        '<div class="nb-panel-code" id="nbPanelCode"></div>' +
+        '<div class="nb-panel-hint">把密碼傳給朋友，他們打開網頁選「加入其他人的手帳」輸入就能一起編輯。</div>' +
+        '<button type="button" class="nb-panel-btn" id="nbPanelCopy">複製密碼</button>' +
+        '<button type="button" class="nb-panel-leave" id="nbPanelLeave">離開這本手帳</button>' +
+      '</div>';
+    document.body.appendChild(panel);
+
+    const codeText = formatJoinCode(NOTEBOOK.code);
+    panel.querySelector('#nbPanelCode').textContent = codeText;
+
+    const copyBtn = panel.querySelector('#nbPanelCopy');
+    copyBtn.addEventListener('click', async function(){
+      const ok = await copyText(codeText);
+      copyBtn.textContent = ok ? '已複製' : '請長按密碼複製';
+    });
+
+    // 手帳裡只剩一個欄位時不能離開：直接把「離開這本手帳」隱藏。
+    // 離開要按兩次：第一次只是把按鍵變成確認提示，避免手滑。離開只是這支
+    // 裝置不再顯示這本手帳，雲端資料還在；之後用密碼就能回來，自己名下的
+    // 欄位也還是自己的。
+    const leaveBtn = panel.querySelector('#nbPanelLeave');
+    leaveBtn.hidden = columns.length <= 1;
+    let leaveArmed = false;
+    leaveBtn.addEventListener('click', function(){
+      if(!leaveArmed){
+        leaveArmed = true;
+        leaveBtn.textContent = '再按一次確認離開（之後要輸入密碼才能回來）';
+        return;
+      }
+      clearStoredNotebook();
+      location.reload();
+    });
+
+    // 鑰匙鍵在右上角，小卡片靠右對齊鍵、貼在鍵的下方，並且不超出畫面。
+    const rect = btnNotebook.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    let left = rect.right - panelRect.width;
+    left = Math.max(8, Math.min(left, window.innerWidth - panelRect.width - 8));
+    panel.style.left = left + 'px';
+    panel.style.top = (rect.bottom + 8) + 'px';
+
+    nbPanelEl = panel;
   }
 
-  document.getElementById('btnNotebook').addEventListener('click', function(){
-    if(!NOTEBOOK) return;
-    nbMenuCode.textContent = formatJoinCode(NOTEBOOK.code);
-    resetNbLeave();
-    // 手帳裡只剩一個欄位時不能離開：直接把「離開這本手帳」隱藏。
-    nbMenuLeave.hidden = columns.length <= 1;
-    nbMenuOverlay.hidden = false;
+  btnNotebook.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(nbPanelEl){ closeNotebookPanel(); return; }
+    openNotebookPanel();
   });
-  document.getElementById('nbMenuClose').addEventListener('click', closeNotebookMenu);
-  nbMenuCopy.addEventListener('click', async function(){
-    const ok = await copyText(formatJoinCode(NOTEBOOK.code));
-    nbMenuCopy.textContent = ok ? '已複製' : '請長按密碼複製';
-  });
-  // 離開要按兩次：第一次只是把按鍵變成確認提示，避免手滑。
-  // 離開只是這支裝置不再顯示這本手帳，雲端資料還在；之後用密碼就能回來，
-  // 自己名下的欄位也還是自己的。
-  nbMenuLeave.addEventListener('click', function(){
-    if(!nbLeaveArmed){
-      nbLeaveArmed = true;
-      nbMenuLeave.textContent = '再按一次確認離開（之後要輸入密碼才能回來）';
-      return;
-    }
-    clearStoredNotebook();
-    location.reload();
-  });
+  document.addEventListener('pointerdown', function(e){
+    if(!nbPanelEl) return;
+    if(nbPanelEl.contains(e.target) || btnNotebook.contains(e.target)) return;
+    closeNotebookPanel();
+  }, true);
 
   // 開啟網頁：已經有手帳就直接載入；沒有就先問「創建」還是「加入」。
   if(NOTEBOOK){
