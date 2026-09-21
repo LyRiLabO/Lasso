@@ -220,31 +220,34 @@
     color:var(--paper);
   }
   .nb-panel-code{
+    align-self:center; /* 外框只包住密碼本身，不撐滿整張卡片 */
     font-family:ui-monospace, Menlo, Consolas, monospace;
-    font-size:26px;
+    font-size:19px;
     font-weight:700;
-    letter-spacing:.14em;
+    letter-spacing:.18em;
     text-align:center;
-    padding:12px 6px;
-    border:1.5px dashed rgba(246,241,228,0.45);
-    border-radius:10px;
+    padding:6px 8px 6px 16px; /* 右邊少一點，抵掉字距最後多出來的空隙，視覺才會置中 */
+    border:1px dashed rgba(246,241,228,0.45);
+    border-radius:8px;
     user-select:all;
     -webkit-user-select:all;
   }
   .nb-panel-hint{
     font-size:12px;
     line-height:1.5;
+    text-align:center;
     color:rgba(246,241,228,0.7);
   }
   .nb-panel-btn{
+    align-self:center; /* 不撐滿整張卡片，寬度只跟著文字走 */
     border:1.5px solid var(--paper);
     background:transparent;
     color:var(--paper);
     font-family:'Noto Sans TC', sans-serif;
-    font-size:14px;
+    font-size:13px;
     font-weight:700;
-    padding:10px;
-    border-radius:10px;
+    padding:6px 16px;
+    border-radius:9px;
     cursor:pointer;
   }
   .nb-panel-btn:active{opacity:.6;}
@@ -2058,7 +2061,7 @@
       <div class="device-user-title">加入其他人的手帳</div>
       <div class="device-user-hint">輸入對方提供給你的密碼。</div>
       <div class="nb-field-label">手帳密碼</div>
-      <input type="text" id="nbJoinCode" class="nb-input code" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="XXXX-XXXX">
+      <input type="text" id="nbJoinCode" class="nb-input code" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="6 碼數字密碼">
       <div class="nb-error" id="nbJoinError"></div>
       <div class="device-user-actions">
         <button type="button" class="device-user-action" data-nb-back>返回</button>
@@ -2475,7 +2478,7 @@
   const DEVICE_ID = getOrCreateDeviceId();
 
   /* ---------------- 手帳（notebook）：一本手帳 = 一組共編者 + 一組分享密碼 ----------------
-     - 創建手帳：產生 8 碼密碼，寫進 Supabase 的 notebooks 表，自己成為第一位共編者。
+     - 創建手帳：產生 6 碼數字密碼，寫進 Supabase 的 notebooks 表，自己成為第一位共編者。
      - 加入手帳：輸入別人給的密碼，找到對應的手帳，再輸入自己的使用者名稱。
      - columns / events / notifications 都帶 notebook_id，每支裝置只讀寫自己
        這本手帳的資料。這支裝置目前在哪一本，存在自己的 localStorage。 */
@@ -2496,21 +2499,20 @@
   }
   let NOTEBOOK = getStoredNotebook(); // {id, code}；null＝這支裝置還沒選過「創建／加入」
 
-  // 密碼字元刻意去掉容易看錯的 0/O/1/I/L
-  const JOIN_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  // 手帳密碼是 6 碼數字（好記、手機上輸入方便，會跳出數字鍵盤）。
+  // 舊版產生的 8 碼英數字密碼還是認得（見 normalizeJoinCode / submitJoin）。
   function generateJoinCode(){
-    const buf = new Uint8Array(8);
+    const buf = new Uint32Array(1);
     if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(buf);
-    else for(let i=0;i<8;i++) buf[i] = Math.floor(Math.random()*256);
-    let out = '';
-    for(let i=0;i<8;i++) out += JOIN_CODE_ALPHABET[buf[i] % JOIN_CODE_ALPHABET.length];
-    return out;
+    else buf[0] = Math.floor(Math.random() * 4294967296);
+    return String(buf[0] % 1000000).padStart(6, '0'); // 前面的 0 要保留，例如 048213
   }
   function normalizeJoinCode(text){
     return String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   }
   function formatJoinCode(code){
-    return code && code.length === 8 ? code.slice(0,4) + '-' + code.slice(4) : (code || '');
+    if(!code) return '';
+    return code.length === 8 ? code.slice(0,4) + '-' + code.slice(4) : code; // 舊版 8 碼維持原本的顯示方式
   }
   function newNotebookId(){
     return 'nb' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
@@ -7219,7 +7221,7 @@
 
   async function submitJoin(){
     const code = normalizeJoinCode(nbJoinCode.value);
-    if(code.length !== 8){ setNbError('nbJoinError', '密碼是 8 個英數字，請再確認一次'); return; }
+    if(code.length !== 6 && code.length !== 8){ setNbError('nbJoinError', '密碼是 6 碼數字，請再確認一次'); return; }
     if(!sb){ setNbError('nbJoinError', '目前連不上雲端，沒辦法加入別人的手帳'); return; }
     nbJoinSubmit.disabled = true;
     try{
@@ -7324,8 +7326,8 @@
       '<div class="notif-panel-title">手帳密碼</div>' +
       '<div class="nb-panel-body">' +
         '<div class="nb-panel-code" id="nbPanelCode"></div>' +
-        '<div class="nb-panel-hint">把密碼傳給朋友，他們打開網頁選「加入其他人的手帳」輸入就能一起編輯。</div>' +
-        '<button type="button" class="nb-panel-btn" id="nbPanelCopy">複製密碼</button>' +
+        '<div class="nb-panel-hint">分享密碼 和朋友們一起安排行程</div>' +
+        '<button type="button" class="nb-panel-btn" id="nbPanelCopy">一鍵複製</button>' +
         '<button type="button" class="nb-panel-leave" id="nbPanelLeave">離開這本手帳</button>' +
       '</div>';
     document.body.appendChild(panel);
@@ -7333,10 +7335,18 @@
     const codeText = formatJoinCode(NOTEBOOK.code);
     panel.querySelector('#nbPanelCode').textContent = codeText;
 
+    // 一鍵複製：同時複製「手帳密碼」和這個網頁的網址，格式是
+    //   手帳密碼：123456
+    //   https://…（網址）
+    // 網址用不帶 ?參數／#片段 的乾淨版本，並去掉結尾的 index.html。
+    const pageUrl = location.protocol === 'file:'
+      ? location.href.replace(/[?#].*$/, '')
+      : location.origin + location.pathname.replace(/index\.html$/, '');
+    const shareText = '手帳密碼：' + codeText + '\n' + pageUrl;
     const copyBtn = panel.querySelector('#nbPanelCopy');
     copyBtn.addEventListener('click', async function(){
-      const ok = await copyText(codeText);
-      copyBtn.textContent = ok ? '已複製' : '請長按密碼複製';
+      const ok = await copyText(shareText);
+      copyBtn.textContent = ok ? '已複製' : '複製失敗，請長按密碼手動複製';
     });
 
     // 手帳裡只剩一個欄位時不能離開：直接把「離開這本手帳」隱藏。
