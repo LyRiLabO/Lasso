@@ -12,6 +12,7 @@
     --paper:#F6F1E4;
     --paper-deep:#EFE8D6;
     --line:#DBD0B4;
+    --line-soft:#EBE4D2; /* --line 淡化版，手帳清單按鍵裡模仿日記橫線用，讓文字更顯眼 */
     --line-soft:#E8E0CC;
     --ink:#20263A;
     --ink-soft:#5B6178;
@@ -274,14 +275,22 @@
   .nav-head:active{background:var(--paper-deep);}
   .nav-icon{flex:0 0 auto; color:var(--btn-brown);}
   .nav-label{flex:1; min-width:0;}
-  .nav-chevron{flex:0 0 auto; color:var(--ink-faint); transition:transform .2s ease;}
+  .nav-chevron{flex:0 0 auto; color:var(--ink-faint); transition:transform .28s cubic-bezier(.3,.6,.3,1);}
   .nav-item.open .nav-chevron{transform:rotate(180deg);}
+  /* .nav-body：下拉/收合動畫的外層容器，只負責裁切高度，不放 padding
+     （padding 放在裡面的 .nav-body-inner），這樣量測 scrollHeight 時
+     拿到的一律是「完整內容高度（含 padding）」，不會因為展開中途 padding
+     也在變而量錯，動畫才會平滑、不會忽快忽慢。maxHeight 用 JS 設成實際
+     像素值再轉場（CSS 沒辦法直接把 max-height 從 0 轉場到 auto/內容高度）。 */
   .nav-body{
+    overflow:hidden; max-height:0;
+    transition:max-height .32s cubic-bezier(.3,.6,.3,1);
+  }
+  .nav-body-inner{
     display:flex; flex-direction:column; align-items:stretch; gap:10px;
     padding:2px 10px 14px;
     font-family:'Noto Sans TC', sans-serif; color:var(--ink);
   }
-  .nav-body[hidden]{display:none;}
   .nav-code-row{display:flex; align-items:stretch; gap:4px;}
   .nav-code{
     display:flex; align-items:center;
@@ -320,7 +329,7 @@
     width:100%; text-align:left;
     padding:8px 10px 8px 30px;
     background:
-      repeating-linear-gradient(to bottom, transparent 0 13px, var(--line) 13px 14px),
+      repeating-linear-gradient(to bottom, transparent 0 13px, var(--line-soft) 13px 14px),
       var(--card);
     border:1px solid var(--line); border-radius:9px;
     color:var(--ink); font-family:'Noto Sans TC', sans-serif; cursor:pointer;
@@ -340,10 +349,10 @@
     opacity:.55;
   }
   .nav-row:active{background:
-      repeating-linear-gradient(to bottom, transparent 0 13px, var(--line) 13px 14px),
+      repeating-linear-gradient(to bottom, transparent 0 13px, var(--line-soft) 13px 14px),
       var(--paper-deep);}
   .nav-row.current{border-color:var(--btn-brown); cursor:default;}
-  .nav-row-title{font-size:13px; font-weight:700; word-break:break-all;}
+  .nav-row-title{font-family:'Noto Serif TC', serif; font-size:16px; font-weight:700; word-break:break-all;}
   .nav-row-sub{font-size:11px; color:var(--ink-faint);}
 
   .page{
@@ -1220,7 +1229,7 @@
     display:flex;
     align-items:center;
     gap:8px;
-    padding:14px 20px 10px 20px;
+    padding:9px 20px 7px 20px; /* 原本 14px/10px 的 2/3，這一列整體變矮 */
     background:var(--paper);
     position:relative;
     z-index:3;
@@ -1244,7 +1253,7 @@
     cursor:pointer;
     border:none;
     border-bottom:1.5px solid var(--ink-faint); /* 淺咖啡色底線，取代原本的外框 */
-    padding:1px 2px 3px;
+    padding:1px 2px 1px; /* 底線離文字更近 */
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
@@ -1255,7 +1264,7 @@
 
   .column-header-row{
     display:flex;
-    padding:6.7px 14px 5.3px 58px; /* 原本 10px/8px 的 2/3，欄位名稱列整體變矮 */
+    padding:4.5px 14px 3.5px 58px; /* 原本 10px/8px 再打 2/3，欄位名稱列整體再變矮 */
     background:var(--paper);
     border-bottom:1px solid var(--line);
     gap:0;
@@ -1282,7 +1291,7 @@
     border:none;
     border-bottom:1.5px solid var(--ink-faint); /* 淺咖啡色底線，跟手帳名稱同一套改名視覺 */
     border-radius:0;
-    padding:2px 2px 3px;
+    padding:2px 2px 1px; /* 底線離文字更近 */
     /* 一定要設，不然手指按著不放的過程中只要有一點點自然的手震，瀏覽器
        就可能把它判定成「使用者想捲動」而觸發原生的捲動接管，接管當下
        會對這個元素丟出 pointercancel，把我們自己計時中的長按判斷整組
@@ -2248,7 +2257,7 @@
       <div class="device-user-title">加入其他人的手帳</div>
       <div class="device-user-hint">輸入對方提供給你的密碼。</div>
       <div class="nb-field-label">手帳密碼</div>
-      <input type="text" id="nbJoinCode" class="nb-input code" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="6 碼數字密碼">
+      <input type="text" id="nbJoinCode" class="nb-input code" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="－－－－－－">
       <div class="nb-error" id="nbJoinError"></div>
       <div class="device-user-actions">
         <button type="button" class="device-user-action" data-nb-back>返回</button>
@@ -2304,12 +2313,14 @@
         <span class="nav-label">分享手帳密碼</span>
         <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </button>
-      <div class="nav-body" hidden>
-        <div class="nav-code-row">
-          <div class="nav-code" id="navCode"></div>
-          <button type="button" class="nav-btn" id="navCopy">複製</button>
+      <div class="nav-body">
+        <div class="nav-body-inner">
+          <div class="nav-code-row">
+            <div class="nav-code" id="navCode"></div>
+            <button type="button" class="nav-btn" id="navCopy">複製</button>
+          </div>
+          <div class="nav-hint">分享密碼<br>和朋友們一起安排行程</div>
         </div>
-        <div class="nav-hint">分享密碼<br>和朋友們一起安排行程</div>
       </div>
     </div>
 
@@ -2319,9 +2330,11 @@
         <span class="nav-label">匯入其他手帳資料</span>
         <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </button>
-      <div class="nav-body" hidden>
-        <div class="nav-hint">選一本手帳，把你在那裡的行程複製過來（原本那本不會變）。</div>
-        <div class="nav-rows" id="navImportList"></div>
+      <div class="nav-body">
+        <div class="nav-body-inner">
+          <div class="nav-hint">選一本手帳，把你在那裡的行程複製過來（原本那本不會變）。</div>
+          <div class="nav-rows" id="navImportList"></div>
+        </div>
       </div>
     </div>
 
@@ -2331,9 +2344,11 @@
         <span class="nav-label">我的手帳</span>
         <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </button>
-      <div class="nav-body" hidden>
-        <div class="nav-rows" id="navBookList"></div>
-        <button type="button" class="nav-btn nav-leave" id="navLeave">退出這本手帳</button>
+      <div class="nav-body">
+        <div class="nav-body-inner">
+          <div class="nav-rows" id="navBookList"></div>
+          <button type="button" class="nav-btn nav-leave" id="navLeave">退出這本手帳</button>
+        </div>
       </div>
     </div>
   </aside>
@@ -8162,23 +8177,46 @@
     return fallbackCopy(text);
   }
 
+  // 手風琴展開/收合動畫：max-height 沒辦法直接轉場到 auto，所以展開時
+  // 用 JS 量出 .nav-body-inner 的真實高度（scrollHeight，含 padding），
+  // 設成明確的像素值再讓 CSS transition 跑；收合則轉回 0。
+  // 展開後把 max-height 鬆綁成一個夠大的值（而不是卡死在量到的那個數字），
+  // 這樣如果裡面的清單之後變多變少（例如切換手帳、匯入清單重新渲染），
+  // 高度還是跟得上，不會被舊的量測值卡住裁切掉。
+  function setNavBodyOpen(item, willOpen){
+    const body = item.querySelector('.nav-body');
+    const head = item.querySelector('.nav-head');
+    item.classList.toggle('open', willOpen);
+    head.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    if(willOpen){
+      body.style.maxHeight = body.scrollHeight + 'px';
+    }else{
+      // 如果目前是「鬆綁後的大值」，先夾回目前實際高度，收合動畫才有起點可以轉場
+      body.style.maxHeight = body.scrollHeight + 'px';
+      void body.offsetHeight; // 強制 reflow，確保上面那行先套用
+      body.style.maxHeight = '0px';
+    }
+  }
   function collapseNavItems(exceptItem){
     navDrawer.querySelectorAll('.nav-item').forEach(function(it){
       if(it === exceptItem) return;
-      it.classList.remove('open');
-      it.querySelector('.nav-body').hidden = true;
-      it.querySelector('.nav-head').setAttribute('aria-expanded', 'false');
+      setNavBodyOpen(it, false);
     });
   }
+  navDrawer.querySelectorAll('.nav-item').forEach(function(item){
+    const body = item.querySelector('.nav-body');
+    body.addEventListener('transitionend', function(ev){
+      if(ev.propertyName !== 'max-height') return;
+      if(item.classList.contains('open')) body.style.maxHeight = '2000px';
+    });
+  });
   navDrawer.querySelectorAll('.nav-head').forEach(function(head){
     head.addEventListener('click', function(){
       const item = head.parentElement;
       const willOpen = !item.classList.contains('open');
       // 多個項目可以同時展開，點開一個不會把其他已經展開的收起來
       // （只有整個選單關掉再打開時才會全部恢復收合，見 openDrawer 裡的 collapseNavItems(null)）。
-      item.classList.toggle('open', willOpen);
-      item.querySelector('.nav-body').hidden = !willOpen;
-      head.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      setNavBodyOpen(item, willOpen);
     });
   });
 
