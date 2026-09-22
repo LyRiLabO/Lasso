@@ -282,7 +282,7 @@
     font-family:'Noto Sans TC', sans-serif; color:var(--ink);
   }
   .nav-body[hidden]{display:none;}
-  .nav-code-row{display:flex; align-items:stretch; gap:8px;}
+  .nav-code-row{display:flex; align-items:stretch; gap:4px;}
   .nav-code{
     display:flex; align-items:center;
     font-family:ui-monospace, Menlo, Consolas, monospace;
@@ -301,19 +301,47 @@
     box-sizing:border-box;
   }
   .nav-btn:active{opacity:.6;}
+  .nav-code-row .nav-btn{
+    flex:0 0 auto; white-space:nowrap; /* 密碼列縮小後空間變擠，按鍵字數少但不能被壓到一字一行 */
+  }
   .nav-leave{
     border-color:var(--red); color:var(--red);
   }
   .nav-leave[hidden]{display:none;}
-  .nav-rows{display:flex; flex-direction:column; gap:6px;}
+  .nav-rows{display:flex; flex-direction:column; gap:8px;}
+  /* 手帳清單的每一顆按鍵，做成日記紙的感覺：整塊背景是淺色橫線（像筆記本
+     內頁），左側留一條裝訂邊，邊上打 3～4 個小圓孔（能打幾個看這顆按鍵
+     實際高度，圓孔本身沿用「打孔看得到底下頁面顏色、外圈一圈淺咖啡色
+     壓痕」的畫法）。 */
   .nav-row{
+    position:relative;
+    overflow:hidden; /* 橫線、圓孔都不能超出圓角範圍 */
     display:flex; flex-direction:column; align-items:flex-start; gap:1px;
     width:100%; text-align:left;
-    padding:7px 9px;
-    background:var(--card); border:1px solid var(--line); border-radius:9px;
+    padding:8px 10px 8px 30px;
+    background:
+      repeating-linear-gradient(to bottom, transparent 0 13px, var(--line) 13px 14px),
+      var(--card);
+    border:1px solid var(--line); border-radius:9px;
     color:var(--ink); font-family:'Noto Sans TC', sans-serif; cursor:pointer;
   }
-  .nav-row:active{background:var(--paper-deep);}
+  .nav-row::before{
+    content:'';
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:22px;
+    border-right:1px dashed var(--ink-faint); /* 裝訂邊的虛線 */
+    background-image:
+      radial-gradient(circle, var(--paper) 2.6px, transparent 2.7px),
+      radial-gradient(circle, var(--ink-faint) 3.6px, transparent 3.7px);
+    background-size:22px 16px, 22px 16px;
+    background-position:center 8px, center 8px;
+    background-repeat:repeat-y, repeat-y;
+    opacity:.55;
+  }
+  .nav-row:active{background:
+      repeating-linear-gradient(to bottom, transparent 0 13px, var(--line) 13px 14px),
+      var(--paper-deep);}
   .nav-row.current{border-color:var(--btn-brown); cursor:default;}
   .nav-row-title{font-size:13px; font-weight:700; word-break:break-all;}
   .nav-row-sub{font-size:11px; color:var(--ink-faint);}
@@ -1182,25 +1210,41 @@
     font-size:13px;
   }
 
-  /* 手帳名稱：一整條放在欄位標題列正上方，文字靠左，點擊可以改名
-     （跟欄位名稱的點擊改名是同一套互動邏輯，見 JS 的 renameNotebook）。 */
+  /* 手帳名稱：放在整個頁面最上面，通知／月曆／日期／新增欄位／選單那排
+     圖示按鍵的上方，左邊多一顆回到「創建／加入」開始畫面的箭頭鍵。字體
+     故意跟第一頁「Lasso-手帳曆」標題同一款襯線字，字級也比一般介面文字
+     大一點，讓它看起來像整本手帳的「書名」，跟其他功能性按鍵區隔開來。
+     點文字可以改名（跟欄位名稱的點擊改名是同一套互動邏輯，見 JS 的
+     renameNotebook）。 */
   .notebook-name-bar{
     display:flex;
-    padding:7px 14px 0 58px;
+    align-items:center;
+    gap:8px;
+    padding:14px 20px 10px 20px;
     background:var(--paper);
     position:relative;
     z-index:3;
   }
+  .notebook-back-btn{
+    flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center;
+    width:26px; height:26px;
+    padding:0;
+    border:none; background:none;
+    color:var(--btn-brown);
+    cursor:pointer;
+  }
+  .notebook-back-btn:active{opacity:.6;}
   .notebook-name-text{
-    font-family:'Noto Sans TC', sans-serif;
+    font-family:'Noto Serif TC', serif;
     font-weight:700;
-    font-size:13px;
+    font-size:19px;
     color:var(--ink);
     text-align:left;
     cursor:pointer;
-    border:1.5px solid var(--gold);
-    border-radius:6px;
-    padding:2px 8px;
+    border:none;
+    border-bottom:1.5px solid var(--ink-faint); /* 淺咖啡色底線，取代原本的外框 */
+    padding:1px 2px 3px;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
@@ -1235,9 +1279,10 @@
   }
   .col-head .col-name.col-name-editable{
     cursor:pointer;
-    border:1.5px solid var(--gold);
-    border-radius:6px;
-    padding:2px 7px;
+    border:none;
+    border-bottom:1.5px solid var(--ink-faint); /* 淺咖啡色底線，跟手帳名稱同一套改名視覺 */
+    border-radius:0;
+    padding:2px 2px 3px;
     /* 一定要設，不然手指按著不放的過程中只要有一點點自然的手震，瀏覽器
        就可能把它判定成「使用者想捲動」而觸發原生的捲動接管，接管當下
        會對這個元素丟出 pointercancel，把我們自己計時中的長按判斷整組
@@ -2163,9 +2208,25 @@
           </svg>
           <span>加入其他人的手帳</span>
         </button>
+        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnMyBooks">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>我的手帳</span>
+        </button>
       </div>
       <!-- 已經在某本手帳裡、從選單來「創建／加入另一本」的時候才會出現 -->
       <button type="button" class="nb-link" id="nbAddCancel" hidden>返回目前的手帳</button>
+    </div>
+
+    <div class="nb-step" data-step="mybooks" hidden>
+      <div class="device-user-title">我的手帳</div>
+      <div class="device-user-hint">選一本進去。</div>
+      <div class="nav-rows" id="nbMyBooksList"></div>
+      <div class="device-user-actions">
+        <button type="button" class="device-user-action" data-nb-back>返回</button>
+      </div>
     </div>
 
     <div class="nb-step" data-step="create" hidden>
@@ -2272,8 +2333,6 @@
       </button>
       <div class="nav-body" hidden>
         <div class="nav-rows" id="navBookList"></div>
-        <button type="button" class="nav-btn" id="navNewBook">創建新的手帳</button>
-        <button type="button" class="nav-btn" id="navJoinBook">加入其他人的手帳</button>
         <button type="button" class="nav-btn nav-leave" id="navLeave">退出這本手帳</button>
       </div>
     </div>
@@ -2295,6 +2354,12 @@
          的寫法，這樣包一層進去不會讓任何內部依賴「相對 .page 定位」的
          絕對定位子元素（鉛筆鍵、月曆鍵、懸浮提示）跑位。 -->
     <div class="zoom-inner" id="zoomInner">
+    <div class="notebook-name-bar" id="notebookNameBar">
+      <button type="button" class="notebook-back-btn" id="notebookBackBtn" aria-label="回到第一頁">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 6 9 12 15 18"></polyline></svg>
+      </button>
+      <span class="notebook-name-text" id="notebookNameText"></span>
+    </div>
     <header class="planner-header">
       <div class="date-center-nav">
         <!-- 左上角：月曆檢視入口，原本是「選取」鍵的位置——選取／復原／
@@ -2348,9 +2413,6 @@
       </div>
     </header>
 
-    <div class="notebook-name-bar" id="notebookNameBar">
-      <span class="notebook-name-text" id="notebookNameText"></span>
-    </div>
     <div class="column-header-row" id="columnHeaderRow"></div>
     <div class="timeline-scroll" id="timelineScroll">
       <div class="day-slider" id="daySlider">
@@ -4459,6 +4521,13 @@
     });
   }
   document.getElementById('notebookNameText').addEventListener('click', renameNotebook);
+  // 手帳名稱左邊的箭頭：回到第一頁（創建／加入的開始畫面），不是「離開」，
+  // 這支裝置目前的手帳還是原封不動。創建新手帳、加入別人的手帳現在統一
+  // 從這裡進去，選單裡的「我的手帳」只留切換／退出，openStartOverlay 裡
+  // NOTEBOOK 還在，所以會看到「返回目前的手帳」可以點回來。
+  document.getElementById('notebookBackBtn').addEventListener('click', function(){
+    openStartOverlay('choice');
+  });
   // 名稱有可能是別人在別的裝置上改的：切回分頁、或剛載入手帳時，
   // 順便跟雲端核對一次，跟其他共編者的裝置改名之後保持一致。
   async function refreshNotebookName(){
@@ -7807,6 +7876,34 @@
 
   document.getElementById('nbBtnCreate').addEventListener('click', function(){ showNbStep('create'); });
   document.getElementById('nbBtnJoin').addEventListener('click', function(){ showNbStep('join'); });
+  document.getElementById('nbBtnMyBooks').addEventListener('click', function(){
+    renderMyBooksList();
+    showNbStep('mybooks');
+  });
+  // 「我的手帳」清單：跟選單裡「我的手帳」同一份資料，點一本就直接切過去
+  // （跟選單裡點一本手帳的 switchToNotebook 共用同一個函式）。
+  function renderMyBooksList(){
+    const listEl = document.getElementById('nbMyBooksList');
+    listEl.innerHTML = '';
+    const all = getNotebookList();
+    if(!all.length){
+      const hint = document.createElement('div');
+      hint.className = 'device-user-hint';
+      hint.style.marginBottom = '0';
+      hint.textContent = '這支裝置還沒有任何手帳。';
+      listEl.appendChild(hint);
+      return;
+    }
+    all.forEach(function(nb){
+      const isCurrent = NOTEBOOK && nb.id === NOTEBOOK.id;
+      const row = makeNavRow(notebookDisplayName(nb), (isCurrent ? '當前手帳・' : '') + participantsLabel(nb), isCurrent);
+      row.addEventListener('click', function(){
+        if(isCurrent){ nbStartOverlay.hidden = true; return; } // 本來就在這本，直接關掉開始畫面就好
+        switchToNotebook(nb);
+      });
+      listEl.appendChild(row);
+    });
+  }
   nbStartOverlay.querySelectorAll('[data-nb-back]').forEach(btn => {
     btn.addEventListener('click', function(){ pendingJoin = null; showNbStep('choice'); });
   });
@@ -8169,7 +8266,7 @@
       ? location.href.replace(/[?#].*$/, '')
       : location.origin + location.pathname.replace(/index\.html$/, '');
     const ok = await copyText('手帳密碼：' + formatJoinCode(NOTEBOOK.code) + '\n' + pageUrl);
-    navCopy.textContent = ok ? '已複製' : '複製失敗，請長按密碼手動複製';
+    if(!ok) navCopy.textContent = '複製失敗，請長按密碼手動複製'; // 成功就維持原樣顯示「複製」，不特別換字
   });
   // 退出：把自己名下的欄位、以及只剩自己參與的行程從這本手帳裡真的刪掉
   // （不是只有這支裝置不再顯示而已）；共同行程只拿掉自己的參與者，行程
@@ -8223,8 +8320,6 @@
     const msg = '退出後將永久刪除你在這本手帳的行程資料，無法還原。\n此動作不影響其他手帳。\n確定退出？';
     showConfirmDialog(msg, function(){ leaveCurrentNotebook(); }, {okLabel:'退出', danger:true});
   });
-  document.getElementById('navNewBook').addEventListener('click', function(){ closeDrawer(); openStartOverlay('create'); });
-  document.getElementById('navJoinBook').addEventListener('click', function(){ closeDrawer(); openStartOverlay('join'); });
   nbAddCancel.addEventListener('click', function(){ nbStartOverlay.hidden = true; });
 
   // 開啟網頁：已經有手帳就直接載入；沒有就先問「創建」還是「加入」。
