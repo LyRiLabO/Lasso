@@ -302,12 +302,8 @@
   }
   .nav-btn:active{opacity:.6;}
   .nav-leave{
-    align-self:flex-start;
-    border:1.5px solid var(--red); background:transparent; color:var(--red);
-    font-family:'Noto Sans TC', sans-serif; font-size:13px; font-weight:700;
-    padding:6px 14px; border-radius:8px; cursor:pointer;
+    border-color:var(--red); color:var(--red);
   }
-  .nav-leave:active{opacity:.6;}
   .nav-leave[hidden]{display:none;}
   .nav-rows{display:flex; flex-direction:column; gap:6px;}
   .nav-row{
@@ -1837,6 +1833,31 @@
     text-align:center;
     letter-spacing:.03em;
   }
+  .month-slider{
+    position:relative;
+    overflow:hidden;
+    margin:0 8px 8px 8px;
+    flex:1 1 auto;
+    min-height:0;
+  }
+  /* 月曆頁的「連續滑頁」：跟時間軸日期切換（.day-slider / .timeline-grid /
+     .day-preview-panel）同一套做法——手勢一開始就先在旁邊把下一頁/上一頁
+     整個畫好（.month-preview-panel，跟真正的 .month-grid 長得一模一樣），
+     兩塊面板全程跟著手指一起移動；放開手指只是讓這兩塊「已經都在那裡」
+     的面板繼續滑到定位，不會有「先滑走、等內容重新畫好、才滑進來」中間
+     那段空白／延遲。真正切換月份（改 monthViewYear/monthViewMonth、呼叫
+     renderMonthGrid()）在動畫播完、面板早就定位好、使用者看不出破綻的
+     時候才悄悄發生。 */
+  .month-grid, .month-preview-panel{
+    position:absolute;
+    top:0; left:0; right:0; bottom:0;
+    will-change:transform;
+  }
+  .month-preview-panel{ pointer-events:none; } /* 純預覽用，滑動中不可互動 */
+  .month-slider.animating .month-grid,
+  .month-slider.animating .month-preview-panel{
+    transition:transform .26s cubic-bezier(.2,.7,.3,1);
+  }
   .month-grid{
     display:grid; grid-template-columns:repeat(7,1fr);
     /* grid-template-rows 由 JS 依這個月實際幾週動態設成 repeat(N,1fr)，
@@ -1851,9 +1872,6 @@
     border:1px solid var(--line);
     border-radius:10px;
     overflow:hidden; /* 四個角落沿著 border-radius 裁乾淨，格子本身維持方正 */
-    margin:0 8px 8px 8px;
-    flex:1 1 auto;
-    min-height:0;
   }
   .month-cell{
     width:100%; height:100%;
@@ -2256,26 +2274,7 @@
         <div class="nav-rows" id="navBookList"></div>
         <button type="button" class="nav-btn" id="navNewBook">創建新的手帳</button>
         <button type="button" class="nav-btn" id="navJoinBook">加入其他人的手帳</button>
-      </div>
-    </div>
-
-    <!-- 退出這本手帳：放在整個選單最下面，跟其他項目一樣可以下拉展開。
-         退出＝把自己名下的欄位、行程從這本手帳裡拿掉；如果退出後手帳裡
-         已經沒有任何人，就把手帳跟殘留資料整個刪掉——刻意不另外做一個
-         「刪除手帳」的功能，靠「所有人都退出」自然達成同樣的效果。 -->
-    <div class="nav-item" data-nav="leave">
-      <button type="button" class="nav-head" aria-expanded="false">
-        <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
-        <span class="nav-label">退出這本手帳</span>
-        <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </button>
-      <div class="nav-body" hidden>
-        <div class="nav-hint">退出後，你在這本手帳裡的行程資料會一併消失，不會影響你的其他手帳。如果所有人都退出，這本手帳會整個消失，沒有另外的刪除功能。</div>
-        <button type="button" class="nav-leave" id="navLeave">退出這本手帳</button>
+        <button type="button" class="nav-btn nav-leave" id="navLeave">退出這本手帳</button>
       </div>
     </div>
   </aside>
@@ -2556,7 +2555,9 @@
       </div>
     </header>
     <div class="month-weekdays" id="monthWeekdaysRow"></div>
-    <div class="month-grid" id="monthGrid"></div>
+    <div class="month-slider" id="monthSlider">
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
   </section>
 
   <!-- ============ 共用元件：自訂日期／時間選擇器 ============
@@ -3488,12 +3489,12 @@
     renderCalGrid();
   });
 
-  // 日期選擇器的「回到今天」跟月曆檢視那顆一樣：不同月份時一頁一頁翻
-  // 過去，而不是直接跳過去。邏輯跟 animateMonthGridStep/animateMonthGridTo
-  // 幾乎一模一樣，只是換一組容器/年月變數/渲染函式，沒有直接共用同一份
-  // 是因為兩邊繫結的變數（monthGrid vs calGrid、monthViewYear vs
-  // calViewYear...）不一樣，硬要共用反而要多包一層參數傳遞，不如各自
-  // 留一份直觀。
+  // 日期選擇器的「回到今天」跟月曆檢視那顆想法一樣：不同月份時一頁一頁翻
+  // 過去，而不是直接跳過去。這裡維持原本「先滑出去、換內容、再滑進來」
+  // 的簡單寫法（沒有像月曆檢視那樣做成兩塊面板連續滑），是因為日期選擇器
+  // 本來就是彈出來蓋在最上層的小面板，翻頁次數少、也沒有使用者反應過
+  // 這裡會頓；真的要改，可以參考月曆檢視的 ensureMonthPreview/
+  // commitMonthSwipe 那一套。
   function animateCalGridStep(dir, applyMonthChange){
     const w = calGrid.clientWidth || 300;
     calGrid.style.transition = 'none';
@@ -6823,27 +6824,21 @@
   const monthYearLabel = document.getElementById('monthYearLabel');
   const monthMonthLabel = document.getElementById('monthMonthLabel');
   const monthWeekdaysRow = document.getElementById('monthWeekdaysRow');
+  const monthSlider = document.getElementById('monthSlider');
   const monthGrid = document.getElementById('monthGrid');
   let monthViewYear = 0, monthViewMonth = 0; // 目前月曆頁顯示的年月，0-based month
 
-  function renderMonthGrid(){
-    monthYearLabel.textContent = monthViewYear + '年';
-    monthMonthLabel.textContent = (monthViewMonth+1) + '月';
-    if(monthWeekdaysRow.children.length === 0){
-      WEEKDAYS.forEach(w => {
-        const el = document.createElement('span');
-        el.textContent = w.slice(1); // 週日 → 日
-        monthWeekdaysRow.appendChild(el);
-      });
-    }
-
-    monthGrid.innerHTML = '';
-    const startOffset = new Date(monthViewYear, monthViewMonth, 1).getDay(); // 0=日
-    const daysInMonth = new Date(monthViewYear, monthViewMonth+1, 0).getDate();
-    const daysInPrevMonth = new Date(monthViewYear, monthViewMonth, 0).getDate();
+  // 把某年某月的格子畫進指定的 container：抽成獨立函式，讓「連續滑頁」
+  // 動畫能用同一套邏輯，把下一頁/上一頁預先畫進另一塊 .month-preview-panel
+  // 裡（見下面 ensureMonthPreview），不用等真的切換月份才臨時生出內容。
+  function buildMonthCells(container, year, month){
+    container.innerHTML = '';
+    const startOffset = new Date(year, month, 1).getDay(); // 0=日
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
     const today = todayStr();
     const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7; // 補滿整數週
-    monthGrid.style.gridTemplateRows = 'repeat(' + (totalCells/7) + ', 1fr)'; // 不管這個月幾週，每排永遠平分滿整個可視高度
+    container.style.gridTemplateRows = 'repeat(' + (totalCells/7) + ', 1fr)'; // 不管這個月幾週，每排永遠平分滿整個可視高度
 
     for(let i=0; i<totalCells; i++){
       const dayNum = i - startOffset + 1;
@@ -6851,19 +6846,19 @@
 
       if(dayNum < 1){
         displayNum = daysInPrevMonth + dayNum;
-        const pm = monthViewMonth === 0 ? 11 : monthViewMonth - 1;
-        const py = monthViewMonth === 0 ? monthViewYear - 1 : monthViewYear;
+        const pm = month === 0 ? 11 : month - 1;
+        const py = month === 0 ? year - 1 : year;
         cellDate = py + '-' + pad2(pm+1) + '-' + pad2(displayNum);
         outside = true;
       } else if(dayNum > daysInMonth){
         displayNum = dayNum - daysInMonth;
-        const nm = monthViewMonth === 11 ? 0 : monthViewMonth + 1;
-        const ny = monthViewMonth === 11 ? monthViewYear + 1 : monthViewYear;
+        const nm = month === 11 ? 0 : month + 1;
+        const ny = month === 11 ? year + 1 : year;
         cellDate = ny + '-' + pad2(nm+1) + '-' + pad2(displayNum);
         outside = true;
       } else {
         displayNum = dayNum;
-        cellDate = monthViewYear + '-' + pad2(monthViewMonth+1) + '-' + pad2(dayNum);
+        cellDate = year + '-' + pad2(month+1) + '-' + pad2(dayNum);
       }
 
       const cell = document.createElement('div');
@@ -6916,8 +6911,21 @@
         }, 90);
       });
 
-      monthGrid.appendChild(cell);
+      container.appendChild(cell);
     }
+  }
+
+  function renderMonthGrid(){
+    monthYearLabel.textContent = monthViewYear + '年';
+    monthMonthLabel.textContent = (monthViewMonth+1) + '月';
+    if(monthWeekdaysRow.children.length === 0){
+      WEEKDAYS.forEach(w => {
+        const el = document.createElement('span');
+        el.textContent = w.slice(1); // 週日 → 日
+        monthWeekdaysRow.appendChild(el);
+      });
+    }
+    buildMonthCells(monthGrid, monthViewYear, monthViewMonth);
 
     syncMonthCellScrollHeights();
   }
@@ -7039,50 +7047,85 @@
     }
     showPage('month');
   }
+  // ---------------- 月曆頁的「連續滑頁」核心 ----------------
+  // 跟時間軸日期切換的 ensurePreviewPanel/updateDaySlide/endDaySlide 同一套
+  // 想法：把要去的那一頁（下一個月／上一個月）預先整個畫好、放在旁邊，
+  // 兩塊面板全程一起移動，使用者看到的永遠是「兩頁本來就都在那裡」，
+  // 不會有「這頁滑走了、等內容重新畫好、下一頁才滑進來」中間那段空白。
+  let monthPreviewPanel = null, monthPreviewDir = null;
+  function ensureMonthPreview(direction){
+    if(monthPreviewPanel && monthPreviewDir === direction) return monthPreviewPanel;
+    if(monthPreviewPanel){ monthPreviewPanel.remove(); monthPreviewPanel = null; }
+    monthPreviewDir = direction;
+    let py = monthViewYear, pm = monthViewMonth + (direction === 'next' ? 1 : -1);
+    if(pm < 0){ pm = 11; py--; } else if(pm > 11){ pm = 0; py++; }
+    const panel = document.createElement('div');
+    panel.className = 'month-grid month-preview-panel';
+    buildMonthCells(panel, py, pm);
+    panel.style.transform = 'translateX(' + (direction === 'next' ? '100%' : '-100%') + ')';
+    monthSlider.appendChild(panel);
+    monthPreviewPanel = panel;
+    return panel;
+  }
+  function clearMonthPreview(){
+    if(monthPreviewPanel){ monthPreviewPanel.remove(); monthPreviewPanel = null; }
+    monthPreviewDir = null;
+  }
+  // 兩塊面板已經在位（不管是手勢中途、還是按鍵剛建立的），讓它們真的滑到
+  // 定位；動畫播完、面板早就定位好、使用者看不出破綻的時候，才悄悄把
+  // 「滑進來的那塊」內容換成真正的 #monthGrid（換月份＋renderMonthGrid()）。
+  function commitMonthSwipe(direction){
+    const w = monthSlider.clientWidth || 300;
+    const panel = ensureMonthPreview(direction);
+    const dir = direction === 'next' ? -1 : 1; // -1：往未來翻一頁（滑向左），1：往過去翻一頁（滑向右）
+    monthSlider.classList.add('animating');
+    requestAnimationFrame(function(){
+      monthGrid.style.transform = 'translateX(' + (dir * w) + 'px)';
+      panel.style.transform = 'translateX(0px)';
+    });
+    return new Promise(function(resolve){
+      setTimeout(function(){
+        monthSlider.classList.remove('animating');
+        if(direction === 'next'){ monthViewMonth++; if(monthViewMonth > 11){ monthViewMonth = 0; monthViewYear++; } }
+        else { monthViewMonth--; if(monthViewMonth < 0){ monthViewMonth = 11; monthViewYear--; } }
+        clearMonthPreview();
+        monthGrid.style.transform = '';
+        renderMonthGrid();
+        resolve();
+      }, 260);
+    });
+  }
+  // 手勢沒拖過門檻：兩塊面板一起彈回原位，不真的換月份。
+  function cancelMonthSwipe(){
+    const w = monthSlider.clientWidth || 300;
+    monthSlider.classList.add('animating');
+    monthGrid.style.transform = 'translateX(0px)';
+    if(monthPreviewPanel){
+      const base = monthPreviewDir === 'next' ? w : -w;
+      monthPreviewPanel.style.transform = 'translateX(' + base + 'px)';
+    }
+    setTimeout(function(){
+      monthSlider.classList.remove('animating');
+      clearMonthPreview();
+      monthGrid.style.transform = '';
+    }, 260);
+  }
+
   document.getElementById('btnOpenMonth').addEventListener('click', openMonthView);
   document.getElementById('btnMonthBack').addEventListener('click', goBackToTimeline);
-  document.getElementById('monthPrevBtn').addEventListener('click', function(){
-    monthViewMonth--;
-    if(monthViewMonth < 0){ monthViewMonth = 11; monthViewYear--; }
-    renderMonthGrid();
-  });
-  document.getElementById('monthNextBtn').addEventListener('click', function(){
-    monthViewMonth++;
-    if(monthViewMonth > 11){ monthViewMonth = 0; monthViewYear++; }
-    renderMonthGrid();
-  });
+  document.getElementById('monthPrevBtn').addEventListener('click', function(){ commitMonthSwipe('prev'); });
+  document.getElementById('monthNextBtn').addEventListener('click', function(){ commitMonthSwipe('next'); });
 
   // 「回到今天」在不同月份時：不要直接跳過去，改成一頁一頁翻過去，
   // 讓使用者感覺得到自己「翻了幾個月」，而不是畫面忽然變成別的月份。
-  // dir 沿用 attachSwipeNav 的方向習慣：-1＝往未來翻一頁（滑向左），
-  // 1＝往過去翻一頁（滑向右）。
-  function animateMonthGridStep(dir, applyMonthChange){
-    const w = monthGrid.clientWidth || 300;
-    monthGrid.style.transition = 'none';
-    monthGrid.style.transform = 'translateX(0)';
-    void monthGrid.offsetWidth; // 強制 reflow，確保上面「歸零」先生效
-    monthGrid.style.transition = 'transform .15s ease';
-    monthGrid.style.transform = 'translateX(' + (dir * w) + 'px)';
-    const onSlideOutDone = function(){
-      monthGrid.removeEventListener('transitionend', onSlideOutDone);
-      monthGrid.style.transition = 'none';
-      monthGrid.style.transform = 'translateX(' + (-dir * w) + 'px)';
-      applyMonthChange(); // 這裡才真的換月份＋renderMonthGrid()，換的當下格子還在畫面外
-      void monthGrid.offsetWidth;
-      monthGrid.style.transition = 'transform .15s ease';
-      monthGrid.style.transform = 'translateX(0)';
-    };
-    monthGrid.addEventListener('transitionend', onSlideOutDone);
-  }
-
-  function animateMonthGridTo(targetYear, targetMonth){
+  async function animateMonthGridTo(targetYear, targetMonth){
     const MAX_ANIMATED_STEPS = 6; // 隔太多年的話一頁一頁翻會翻到讓人不耐煩，超過的部分先直接跳過去，只留最後幾步做翻頁動畫
     const curIdx = monthViewYear*12 + monthViewMonth;
     const targetIdx = targetYear*12 + targetMonth;
     let diff = targetIdx - curIdx;
     if(diff === 0) return;
 
-    const dir = diff > 0 ? -1 : 1; // 目標在未來→往左翻；目標在過去→往右翻
+    const direction = diff > 0 ? 'next' : 'prev';
     let stepsLeft = Math.abs(diff);
 
     if(stepsLeft > MAX_ANIMATED_STEPS){
@@ -7094,37 +7137,29 @@
       stepsLeft = MAX_ANIMATED_STEPS;
     }
 
-    function stepOnce(){
-      if(stepsLeft <= 0) return;
-      stepsLeft--;
-      animateMonthGridStep(dir, function(){
-        monthViewMonth += (dir === -1 ? 1 : -1);
-        if(monthViewMonth < 0){ monthViewMonth = 11; monthViewYear--; }
-        else if(monthViewMonth > 11){ monthViewMonth = 0; monthViewYear++; }
-        renderMonthGrid();
-      });
-      if(stepsLeft > 0) setTimeout(stepOnce, 150); // 跟 animateMonthGridStep 的位移動畫時長對齊，一頁翻完接著翻下一頁
+    for(let i=0; i<stepsLeft; i++){
+      await commitMonthSwipe(direction);
     }
-    stepOnce();
   }
 
-  /* ---------------- 左右滑動翻頁（月曆檢視 + 日期選擇器） ----------------
-     兩個地方都是「一個 7 欄的月曆格子容器，上面已經有上一頁／下一頁的
-     箭頭按鍵」，滑動手勢其實就是幫使用者按掉那顆箭頭鍵而已，所以這裡
-     寫成一個共用的小工具：量測水平拖曳，超過門檻就讓格子容器整個滑出去、
-     呼叫對應方向的既有換頁邏輯把內容換掉、再讓新內容從另一側滑回中間。
-     沒超過門檻（或其實是想直向捲動格子內的行程清單）就彈回原位，不做
-     任何事，原本點格子進某一天、格子內清單直向捲動都不受影響。 */
+  /* ---------------- 左右滑動翻頁（日期選擇器） ----------------
+     「一個 7 欄的月曆格子容器，上面已經有上一頁／下一頁的箭頭按鍵」，滑動
+     手勢其實就是幫使用者按掉那顆箭頭鍵而已，所以這裡寫成一個共用的小
+     工具：量測水平拖曳，超過門檻就讓格子容器整個滑出去、呼叫對應方向的
+     既有換頁邏輯把內容換掉、再讓新內容從另一側滑回中間。沒超過門檻（或
+     其實是想直向捲動格子內的行程清單）就彈回原位，不做任何事，原本點
+     格子進某一天、格子內清單直向捲動都不受影響。（月曆檢視頁面改用上面
+     專屬的「連續滑頁」寫法，見 attachMonthSwipe，不再共用這個。） */
   function attachSwipeNav(containerEl, onSwipeLeft, onSwipeRight){
     const THRESHOLD = 45; // px，拖曳距離超過這個值（或容器寬度的 1/5，取較大者）才算成功翻頁
     let startX = null, startY = null, axisLocked = null, dragging = false;
     // scrollTarget：這次手勢的起點如果落在某個 .cell-events（月曆格子裡的
     // 行程清單）上，記住是哪一個。原本這裡是讓瀏覽器用 touch-action:pan-y
-    // 自己原生處理垂直捲動，但巢狀在 monthGrid 這種自己攔水平手勢的容器
-    // 裡面，原生捲動判定在部分手機瀏覽器上不可靠（常常要滑好幾次才會
-    // 剛好被辨識成捲動，而不是被當成一次點擊或什麼都沒發生）。改成跟
-    // 時間軸主頁 timeline-scroll 一樣的做法：垂直手勢自己用座標差手動改
-    // scrollTop，不依賴瀏覽器的手勢仲裁。
+    // 自己原生處理垂直捲動，但巢狀在這種自己攔水平手勢的容器裡面，原生
+    // 捲動判定在部分手機瀏覽器上不可靠（常常要滑好幾次才會剛好被辨識成
+    // 捲動，而不是被當成一次點擊或什麼都沒發生）。改成跟時間軸主頁
+    // timeline-scroll 一樣的做法：垂直手勢自己用座標差手動改 scrollTop，
+    // 不依賴瀏覽器的手勢仲裁。
     let scrollTarget = null;
     let lastY = null;
 
@@ -7195,10 +7230,70 @@
     containerEl.addEventListener('pointercancel', endDrag);
   }
 
-  attachSwipeNav(monthGrid,
-    function(){ document.getElementById('monthNextBtn').click(); }, // 左滑 → 下個月
-    function(){ document.getElementById('monthPrevBtn').click(); }  // 右滑 → 上個月
-  );
+  // 月曆檢視頁面專屬的滑動手勢：跟按鍵、跟「回到今天」共用同一套
+  // ensureMonthPreview/commitMonthSwipe/cancelMonthSwipe，全程「兩塊面板
+  // 一起移動」，不會有滑到一半兩頁之間出現空白的問題。
+  function attachMonthSwipe(){
+    const THRESHOLD = 45;
+    let startX = null, startY = null, axisLocked = null, dragging = false;
+    let scrollTarget = null, lastY = null;
+
+    monthGrid.style.touchAction = 'pan-y';
+
+    monthGrid.addEventListener('pointerdown', function(e){
+      if(e.pointerType === 'mouse' && e.buttons !== 1) return;
+      dragging = true; axisLocked = null;
+      startX = e.clientX; startY = e.clientY;
+      lastY = e.clientY;
+      scrollTarget = (e.target && e.target.closest) ? e.target.closest('.cell-events') : null;
+    });
+
+    monthGrid.addEventListener('pointermove', function(e){
+      if(!dragging || startX == null) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if(axisLocked === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)){
+        axisLocked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      }
+      if(axisLocked === 'x'){
+        e.preventDefault();
+        const w = monthSlider.clientWidth || 300;
+        const direction = dx < 0 ? 'next' : 'prev';
+        const panel = ensureMonthPreview(direction);
+        const clamped = Math.max(-w, Math.min(w, dx));
+        monthGrid.style.transform = 'translateX(' + clamped + 'px)';
+        const base = direction === 'next' ? w : -w;
+        panel.style.transform = 'translateX(' + (base + clamped) + 'px)';
+      } else if(axisLocked === 'y' && scrollTarget){
+        e.preventDefault();
+        scrollTarget.scrollTop -= (e.clientY - lastY);
+        lastY = e.clientY;
+      }
+    });
+
+    function endDrag(e){
+      if(!dragging) return;
+      dragging = false;
+      if(axisLocked !== 'x'){
+        scrollTarget = null; startX = null; axisLocked = null;
+        clearMonthPreview();
+        return;
+      }
+      const dx = (e.clientX != null ? e.clientX : startX) - startX;
+      const w = monthSlider.clientWidth || 300;
+      const committed = Math.abs(dx) > Math.max(THRESHOLD, w * 0.2);
+      scrollTarget = null; startX = null; axisLocked = null;
+      if(committed && monthPreviewDir){
+        commitMonthSwipe(monthPreviewDir);
+      } else {
+        cancelMonthSwipe();
+      }
+    }
+
+    monthGrid.addEventListener('pointerup', endDrag);
+    monthGrid.addEventListener('pointercancel', endDrag);
+  }
+
+  attachMonthSwipe();
   attachSwipeNav(calGrid,
     function(){ calNextBtn.click(); }, // 左滑 → 下個月
     function(){ calPrevBtn.click(); }  // 右滑 → 上個月
@@ -8116,17 +8211,16 @@
       }catch(err){ console.error('退出手帳時同步失敗：', err); }
     }
 
+    // 退出後不自動切去清單裡其他手帳，直接回到「創建／加入」那頁
+    // （notebookStartOverlay 的 choice 畫面）；其他手帳的紀錄還在清單裡，
+    // 不受影響，之後要用可以再用密碼加入或從清單挑。
     unregisterNotebook(nbId);
-    const rest = getNotebookList();
-    if(rest.length) setStoredNotebook(rest[0]); else clearStoredNotebook();
+    clearStoredNotebook();
     location.reload();
   }
   navLeave.addEventListener('click', function(){
     if(!NOTEBOOK) return;
-    const willEmpty = columns.every(c => myColumnIds().includes(c.id));
-    const msg = willEmpty
-      ? '退出後，你在這本手帳裡的行程資料會一併消失（不會影響你的其他手帳）。這本手帳目前已經沒有其他人了，退出後整本手帳會一起消失，之後沒辦法再用這組密碼進來。'
-      : '退出後，你在這本手帳裡的行程資料會一併消失，不會影響你的其他手帳。';
+    const msg = '退出後將永久刪除你在這本手帳的行程資料，無法還原。\n此動作不影響其他手帳。\n確定退出？';
     showConfirmDialog(msg, function(){ leaveCurrentNotebook(); }, {okLabel:'退出', danger:true});
   });
   document.getElementById('navNewBook').addEventListener('click', function(){ closeDrawer(); openStartOverlay('create'); });
