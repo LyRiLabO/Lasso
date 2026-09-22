@@ -252,7 +252,7 @@
   .nav-overlay.open{opacity:1; visibility:visible; transition:opacity .25s ease;}
   .nav-drawer{
     position:absolute; top:0; right:0; bottom:0; z-index:66;
-    width:40%; min-width:164px; /* 至少 164px：「匯入舊手帳資料」7 個字要能一行放下，不會掉一個字到下一行 */
+    width:44.4444%; /* 畫面總寬的 4/9 */ min-width:164px; /* 至少 164px：「匯入其他手帳資料」幾個字要能一行放下，不會掉一個字到下一行 */
     background:var(--paper);
     box-shadow:-6px 0 22px rgba(32,38,58,0.28);
     padding:calc(env(safe-area-inset-top, 0px) + 14px) 0 16px;
@@ -282,27 +282,32 @@
     font-family:'Noto Sans TC', sans-serif; color:var(--ink);
   }
   .nav-body[hidden]{display:none;}
+  .nav-code-row{display:flex; align-items:stretch; gap:8px;}
   .nav-code{
-    align-self:flex-start;
+    display:flex; align-items:center;
     font-family:ui-monospace, Menlo, Consolas, monospace;
     font-size:17px; font-weight:700; letter-spacing:.14em;
     padding:5px 6px 5px 10px;
     border:1px dashed var(--btn-brown); border-radius:8px;
     user-select:all; -webkit-user-select:all;
+    box-sizing:border-box;
   }
   .nav-hint{font-size:12px; line-height:1.5; color:var(--ink-faint);}
   .nav-btn{
-    align-self:flex-start;
+    display:flex; align-items:center; justify-content:center;
     border:1.5px solid var(--btn-brown); background:transparent; color:var(--btn-brown);
     font-family:'Noto Sans TC', sans-serif; font-size:13px; font-weight:700;
-    padding:6px 12px; border-radius:9px; cursor:pointer;
+    padding:5px 14px; border-radius:8px; cursor:pointer;
+    box-sizing:border-box;
   }
   .nav-btn:active{opacity:.6;}
   .nav-leave{
-    align-self:flex-start; background:none; border:none; padding:2px 0;
-    color:var(--red); font-family:'Noto Sans TC', sans-serif; font-size:13px;
-    text-decoration:underline; text-align:left; cursor:pointer;
+    align-self:flex-start;
+    border:1.5px solid var(--red); background:transparent; color:var(--red);
+    font-family:'Noto Sans TC', sans-serif; font-size:13px; font-weight:700;
+    padding:6px 14px; border-radius:8px; cursor:pointer;
   }
+  .nav-leave:active{opacity:.6;}
   .nav-leave[hidden]{display:none;}
   .nav-rows{display:flex; flex-direction:column; gap:6px;}
   .nav-row{
@@ -1181,9 +1186,36 @@
     font-size:13px;
   }
 
+  /* 手帳名稱：一整條放在欄位標題列正上方，文字靠左，點擊可以改名
+     （跟欄位名稱的點擊改名是同一套互動邏輯，見 JS 的 renameNotebook）。 */
+  .notebook-name-bar{
+    display:flex;
+    padding:7px 14px 0 58px;
+    background:var(--paper);
+    position:relative;
+    z-index:3;
+  }
+  .notebook-name-text{
+    font-family:'Noto Sans TC', sans-serif;
+    font-weight:700;
+    font-size:13px;
+    color:var(--ink);
+    text-align:left;
+    cursor:pointer;
+    border:1.5px solid var(--gold);
+    border-radius:6px;
+    padding:2px 8px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:100%;
+    touch-action:manipulation;
+  }
+  .notebook-name-text:active{opacity:.6;}
+
   .column-header-row{
     display:flex;
-    padding:10px 14px 8px 58px;
+    padding:6.7px 14px 5.3px 58px; /* 原本 10px/8px 的 2/3，欄位名稱列整體變矮 */
     background:var(--paper);
     border-bottom:1px solid var(--line);
     gap:0;
@@ -2121,6 +2153,8 @@
     <div class="nb-step" data-step="create" hidden>
       <div class="device-user-title">創建新的手帳</div>
       <div class="device-user-hint">建好後會得到一組密碼，可以分享給朋友一起編輯。</div>
+      <div class="nb-field-label">手帳名稱</div>
+      <input type="text" id="nbCreateNotebookName" class="nb-input" autocomplete="off" placeholder="例如：我們的行程表">
       <div class="nb-field-label">你的使用者名稱</div>
       <input type="text" id="nbCreateName" class="nb-input" autocomplete="off">
       <div class="nb-import-box" id="nbCreateImportBox" hidden></div>
@@ -2172,8 +2206,10 @@
 <div id="phone">
 
   <!-- ============ 右側選單 ============
-       從右側往左滑出，寬度約佔畫面 2/5，原本的畫面變暗；裡面是可以下拉／收合的
-       項目（一次展開一個），每個項目最前面都有圖示，圖示和文字靠左對齊。 -->
+       從右側往左滑出，寬度佔畫面 4/9，原本的畫面變暗；裡面是可以下拉／收合的
+       項目，好幾個項目可以同時展開（不會互相收合對方），展開內容太長時
+       整個選單可以上下捲動；選單關掉再打開一律恢復全部收合。每個項目
+       最前面都有圖示，圖示和文字靠左對齊。 -->
   <div id="navOverlay" class="nav-overlay"></div>
   <aside id="navDrawer" class="nav-drawer" aria-hidden="true">
     <div class="nav-item" data-nav="share">
@@ -2190,17 +2226,18 @@
         <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </button>
       <div class="nav-body" hidden>
-        <div class="nav-code" id="navCode"></div>
-        <div class="nav-hint">分享密碼 和朋友們一起安排行程</div>
-        <button type="button" class="nav-btn" id="navCopy">一鍵複製</button>
-        <button type="button" class="nav-leave" id="navLeave">離開這本手帳</button>
+        <div class="nav-code-row">
+          <div class="nav-code" id="navCode"></div>
+          <button type="button" class="nav-btn" id="navCopy">複製</button>
+        </div>
+        <div class="nav-hint">分享密碼<br>和朋友們一起安排行程</div>
       </div>
     </div>
 
     <div class="nav-item" data-nav="import">
       <button type="button" class="nav-head" aria-expanded="false">
         <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        <span class="nav-label">匯入舊手帳資料</span>
+        <span class="nav-label">匯入其他手帳資料</span>
         <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </button>
       <div class="nav-body" hidden>
@@ -2219,6 +2256,26 @@
         <div class="nav-rows" id="navBookList"></div>
         <button type="button" class="nav-btn" id="navNewBook">創建新的手帳</button>
         <button type="button" class="nav-btn" id="navJoinBook">加入其他人的手帳</button>
+      </div>
+    </div>
+
+    <!-- 退出這本手帳：放在整個選單最下面，跟其他項目一樣可以下拉展開。
+         退出＝把自己名下的欄位、行程從這本手帳裡拿掉；如果退出後手帳裡
+         已經沒有任何人，就把手帳跟殘留資料整個刪掉——刻意不另外做一個
+         「刪除手帳」的功能，靠「所有人都退出」自然達成同樣的效果。 -->
+    <div class="nav-item" data-nav="leave">
+      <button type="button" class="nav-head" aria-expanded="false">
+        <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        <span class="nav-label">退出這本手帳</span>
+        <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div class="nav-body" hidden>
+        <div class="nav-hint">退出後，你在這本手帳裡的行程資料會一併消失，不會影響你的其他手帳。如果所有人都退出，這本手帳會整個消失，沒有另外的刪除功能。</div>
+        <button type="button" class="nav-leave" id="navLeave">退出這本手帳</button>
       </div>
     </div>
   </aside>
@@ -2281,7 +2338,7 @@
             </g>
           </svg>
         </button>
-        <!-- 選單（三條橫線）：從右側滑出，裡面有分享手帳密碼、匯入舊手帳資料、我的手帳。 -->
+        <!-- 選單（三條橫線）：從右側滑出，裡面有分享手帳密碼、匯入其他手帳資料、我的手帳。 -->
         <button id="btnMenu" class="month-header-btn notebook-btn" aria-label="選單">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
             <line x1="4" y1="7" x2="20" y2="7"></line>
@@ -2292,6 +2349,9 @@
       </div>
     </header>
 
+    <div class="notebook-name-bar" id="notebookNameBar">
+      <span class="notebook-name-text" id="notebookNameText"></span>
+    </div>
     <div class="column-header-row" id="columnHeaderRow"></div>
     <div class="timeline-scroll" id="timelineScroll">
       <div class="day-slider" id="daySlider">
@@ -2720,11 +2780,20 @@
   }
   function registerNotebook(nb){ // 放到最前面（最近用過的在前）
     const list = getNotebookList().filter(n => n.id !== nb.id);
-    list.unshift({id: nb.id, code: nb.code});
+    list.unshift({id: nb.id, code: nb.code, name: nb.name || ''});
     saveNotebookList(list);
   }
   function unregisterNotebook(id){
     saveNotebookList(getNotebookList().filter(n => n.id !== id));
+  }
+  // 只更新清單裡某一本手帳的名稱／密碼，不改變它在清單裡的排列順序
+  // （registerNotebook 會把它搬到最前面，改名字時不需要這個效果）。
+  function updateNotebookMeta(nb){
+    const list = getNotebookList();
+    const idx = list.findIndex(n => n.id === nb.id);
+    if(idx >= 0) list[idx] = Object.assign({}, list[idx], {code: nb.code, name: nb.name || ''});
+    else list.unshift({id: nb.id, code: nb.code, name: nb.name || ''});
+    saveNotebookList(list);
   }
   function readCachedNotebook(nbId){
     try{
@@ -2732,8 +2801,15 @@
       return raw ? JSON.parse(raw) : null;
     }catch(err){ return null; }
   }
-  // 手帳沒有自己的名字，用「裡面有哪些人」當標籤，看不到內容時退回用密碼。
-  function notebookLabel(nb){
+  // 手帳名稱：使用者自己取的，可能還沒取，退回「未命名手帳」（絕不退回密碼，
+  // 密碼不該在清單裡隨手曝光）。
+  function notebookDisplayName(nb){
+    const n = nb && nb.name ? String(nb.name).trim() : '';
+    return n || '未命名手帳';
+  }
+  // 這本手帳目前看得到的參與者（欄位名稱，含自己）；看不到內容（例如還沒
+  // 快取過的其他手帳）就給個中性提示，一樣不顯示密碼。
+  function participantsLabel(nb){
     let names = [];
     if(NOTEBOOK && nb.id === NOTEBOOK.id){
       names = columns.map(c => c.name);
@@ -2741,7 +2817,7 @@
       const c = readCachedNotebook(nb.id);
       if(c && Array.isArray(c.columns)) names = c.columns.map(x => x.name);
     }
-    return names.length ? names.join('、') : '手帳 ' + formatJoinCode(nb.code);
+    return names.length ? names.join('、') : '（尚無法讀取參與者）';
   }
   function setPendingImport(obj){
     try{ localStorage.setItem(PENDING_IMPORT_KEY, JSON.stringify(obj)); }catch(err){}
@@ -4359,6 +4435,46 @@
     });
   }
 
+  // 手帳名稱：顯示在欄位標題列正上方，點一下可以改名，跟改欄位名稱一樣的操作方式。
+  function renderNotebookNameBar(){
+    const el = document.getElementById('notebookNameText');
+    if(!el || !NOTEBOOK) return;
+    el.textContent = notebookDisplayName(NOTEBOOK);
+  }
+  function renameNotebook(){
+    if(!NOTEBOOK) return;
+    showPromptDialog('修改手帳名稱：', NOTEBOOK.name || '', function(value){
+      const newName = (value || '').trim();
+      if(newName === (NOTEBOOK.name || '')) return;
+      NOTEBOOK.name = newName;
+      setStoredNotebook(NOTEBOOK);
+      updateNotebookMeta(NOTEBOOK);
+      renderNotebookNameBar();
+      if(sb){
+        sb.from('notebooks').update({name: newName || null}).eq('id', NOTEBOOK.id).then(function(res){
+          if(res && res.error) console.error('更新手帳名稱失敗：', res.error);
+        });
+      }
+    });
+  }
+  document.getElementById('notebookNameText').addEventListener('click', renameNotebook);
+  // 名稱有可能是別人在別的裝置上改的：切回分頁、或剛載入手帳時，
+  // 順便跟雲端核對一次，跟其他共編者的裝置改名之後保持一致。
+  async function refreshNotebookName(){
+    if(!sb || !NOTEBOOK) return;
+    try{
+      const { data, error } = await sb.from('notebooks').select('name').eq('id', NOTEBOOK.id).limit(1);
+      if(error || !data || !data.length) return;
+      const remoteName = data[0].name || '';
+      if(remoteName !== (NOTEBOOK.name || '')){
+        NOTEBOOK.name = remoteName;
+        setStoredNotebook(NOTEBOOK);
+        updateNotebookMeta(NOTEBOOK);
+        renderNotebookNameBar();
+      }
+    }catch(err){ /* 離線或讀取失敗：先維持本機原本的名稱，不讓其他功能跟著壞掉 */ }
+  }
+
   /* ---------------- 新增／刪除欄位的動畫（FLIP：先量位置、改資料重繪、再播位移） ----------------
      新增：新欄位從右側擠進來，原本的欄位（標題、行程卡、分隔線）順勢被
      擠窄；刪除：被刪的欄位往右側退出去，剩下的欄位往外撐開補上空位。
@@ -4473,6 +4589,7 @@
 
   function renderColumnHeader(){
     captureUndoCheckpoint();
+    renderNotebookNameBar();
     columnHeaderRow.innerHTML = '';
     columns.forEach((col, idx) => {
       const cell = document.createElement('div');
@@ -7347,6 +7464,7 @@
 
   /* ---------------- 開啟網頁：創建新手帳／加入別人的手帳 ---------------- */
   const nbStartOverlay = document.getElementById('notebookStartOverlay');
+  const nbCreateNotebookName = document.getElementById('nbCreateNotebookName');
   const nbCreateName = document.getElementById('nbCreateName');
   const nbCreateSubmit = document.getElementById('nbCreateSubmit');
   const nbJoinCode = document.getElementById('nbJoinCode');
@@ -7401,7 +7519,7 @@
     selNb.className = 'nb-select';
     srcs.forEach(function(x){
       const o = document.createElement('option');
-      o.textContent = notebookLabel(x.nb);
+      o.textContent = notebookDisplayName(x.nb);
       selNb.appendChild(o);
     });
     const selCol = document.createElement('select');
@@ -7475,6 +7593,7 @@
   // 沒有就從雲端抓；抓不到（離線）就沿用本機快取，不會壞掉。
   async function bootNotebook(seed){
     if(NOTEBOOK) registerNotebook(NOTEBOOK); // 舊版本升上來的裝置，目前這本也要進到手帳清單裡
+    if(!seed) refreshNotebookName(); // 重新打開網頁：手帳名稱有可能是別人剛改的，核對一次
     const remote = seed || await fetchAllFromSupabase();
     if(remote && remote.columns.length){
       columns = remote.columns;
@@ -7514,15 +7633,16 @@
   }
 
   async function submitCreate(){
+    const notebookName = nbCreateNotebookName.value.trim();
     const name = nbCreateName.value.trim();
     if(!name){ setNbError('nbCreateError', '請輸入使用者名稱'); return; }
     nbCreateSubmit.disabled = true;
     try{
       let nb = null;
       for(let i = 0; i < 3 && !nb; i++){
-        const cand = {id: newNotebookId(), code: generateJoinCode()};
+        const cand = {id: newNotebookId(), code: generateJoinCode(), name: notebookName};
         if(!sb){ nb = cand; break; } // 沒接雲端：只在這支裝置上用
-        const { error } = await sb.from('notebooks').insert({id: cand.id, code: cand.code});
+        const { error } = await sb.from('notebooks').insert({id: cand.id, code: cand.code, name: notebookName || null});
         if(!error){ nb = cand; break; }
         if(error.code !== '23505') throw error; // 23505＝密碼剛好跟別本重複，換一組再試
       }
@@ -7543,10 +7663,10 @@
     if(!sb){ setNbError('nbJoinError', '目前連不上雲端，沒辦法加入別人的手帳'); return; }
     nbJoinSubmit.disabled = true;
     try{
-      const { data, error } = await sb.from('notebooks').select('id, code').eq('code', code).limit(1);
+      const { data, error } = await sb.from('notebooks').select('id, code, name').eq('code', code).limit(1);
       if(error) throw error;
       if(!data || data.length === 0){ setNbError('nbJoinError', '找不到這個密碼，請確認後再試'); return; }
-      const nb = {id: data[0].id, code: data[0].code};
+      const nb = {id: data[0].id, code: data[0].code, name: data[0].name || ''};
       const remote = await fetchAllFromSupabase(nb.id);
       if(!remote) throw new Error('讀取手帳內容失敗');
       // 這支裝置在這本手帳已經有欄位（重新加入），或有舊資料裡沒主人的欄位
@@ -7778,7 +7898,7 @@
     }
   }
 
-  // 從選單的「匯入舊手帳資料」挑一本來源手帳：必要時問要匯入哪個欄位、匯入到哪個欄位。
+  // 從選單的「匯入其他手帳資料」挑一本來源手帳：必要時問要匯入哪個欄位、匯入到哪個欄位。
   async function startImportFrom(nb){
     closeDrawer();
     const src = await loadNotebookData(nb.id);
@@ -7809,7 +7929,7 @@
     if(!p || !NOTEBOOK || p.targetNbId !== NOTEBOOK.id) return;
     try{ localStorage.removeItem(PENDING_IMPORT_KEY); }catch(err){}
     const src = await loadNotebookData(p.srcNbId);
-    if(!src){ noticeDialog('讀不到舊手帳的資料，行程沒有匯入。可以稍後從右上角選單的「匯入舊手帳資料」再試一次。'); return; }
+    if(!src){ noticeDialog('讀不到舊手帳的資料，行程沒有匯入。可以稍後從右上角選單的「匯入其他手帳資料」再試一次。'); return; }
     const srcCol = (src.columns || []).find(c => c.id === p.srcColId);
     const tgt = columns.find(c => c.id === p.tgtColId);
     if(!srcCol || !tgt) return;
@@ -7817,9 +7937,10 @@
   }
 
   /* ================= 右側選單 =================
-     右上角三條橫線的鍵按下去，選單從右側往左滑出（約佔畫面 2/5），原本的畫面
-     變暗；點暗掉的地方就收回去。裡面的項目可以點一下展開、再點一下收合，一次
-     只展開一個。 */
+     右上角三條橫線的鍵按下去，選單從右側往左滑出（佔畫面 4/9），原本的畫面
+     變暗；點暗掉的地方就收回去。裡面的項目可以點一下展開、再點一下收合，
+     好幾個項目可以同時展開；展開的內容太長，選單本身（.nav-drawer）就會
+     上下捲動。選單關掉再打開一律重設成全部收合（見 openDrawer）。 */
   const btnMenu = document.getElementById('btnMenu');
   const navOverlay = document.getElementById('navOverlay');
   const navDrawer = document.getElementById('navDrawer');
@@ -7828,7 +7949,6 @@
   const navLeave = document.getElementById('navLeave');
   const navImportList = document.getElementById('navImportList');
   const navBookList = document.getElementById('navBookList');
-  let navLeaveArmed = false;
 
   function fallbackCopy(text){
     try{
@@ -7862,7 +7982,8 @@
     head.addEventListener('click', function(){
       const item = head.parentElement;
       const willOpen = !item.classList.contains('open');
-      collapseNavItems(willOpen ? item : null);
+      // 多個項目可以同時展開，點開一個不會把其他已經展開的收起來
+      // （只有整個選單關掉再打開時才會全部恢復收合，見 openDrawer 裡的 collapseNavItems(null)）。
       item.classList.toggle('open', willOpen);
       item.querySelector('.nav-body').hidden = !willOpen;
       head.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
@@ -7895,11 +8016,9 @@
   function renderDrawerContents(){
     if(!NOTEBOOK) return;
     navCode.textContent = formatJoinCode(NOTEBOOK.code);
-    navCopy.textContent = '一鍵複製';
-    // 手帳裡只剩一個欄位時不能離開：直接把「離開這本手帳」隱藏。
-    navLeave.hidden = columns.length <= 1;
-    navLeaveArmed = false;
-    navLeave.textContent = '離開這本手帳';
+    navCopy.textContent = '複製';
+    // 這支裝置在這本手帳裡名下沒有任何欄位（例如認領被跳過）就沒有身分可以退出。
+    navLeave.hidden = myColumnIds().length === 0;
 
     const all = getNotebookList();
     const others = all.filter(n => n.id !== NOTEBOOK.id);
@@ -7911,7 +8030,7 @@
       navImportList.appendChild(empty);
     }
     others.forEach(function(nb){
-      const row = makeNavRow(notebookLabel(nb), '密碼 ' + formatJoinCode(nb.code), false);
+      const row = makeNavRow(notebookDisplayName(nb), participantsLabel(nb), false);
       row.addEventListener('click', function(){ startImportFrom(nb); });
       navImportList.appendChild(row);
     });
@@ -7919,7 +8038,7 @@
     navBookList.innerHTML = '';
     all.forEach(function(nb){
       const isCurrent = nb.id === NOTEBOOK.id;
-      const row = makeNavRow(notebookLabel(nb), (isCurrent ? '目前這本・' : '') + '密碼 ' + formatJoinCode(nb.code), isCurrent);
+      const row = makeNavRow(notebookDisplayName(nb), (isCurrent ? '當前手帳・' : '') + participantsLabel(nb), isCurrent);
       if(!isCurrent) row.addEventListener('click', function(){ switchToNotebook(nb); });
       navBookList.appendChild(row);
     });
@@ -7945,7 +8064,7 @@
   });
   navOverlay.addEventListener('click', closeDrawer);
 
-  // 一鍵複製：同時複製「手帳密碼」和這個網頁的網址，格式是
+  // 複製：同時複製「手帳密碼」和這個網頁的網址，格式是
   //   手帳密碼：123456
   //   https://…（網址）
   // 網址用不帶 ?參數／#片段 的乾淨版本，並去掉結尾的 index.html。
@@ -7957,20 +8076,58 @@
     const ok = await copyText('手帳密碼：' + formatJoinCode(NOTEBOOK.code) + '\n' + pageUrl);
     navCopy.textContent = ok ? '已複製' : '複製失敗，請長按密碼手動複製';
   });
-  // 離開要按兩次：第一次只是把按鍵變成確認提示，避免手滑。離開只是這支裝置
-  // 不再顯示這本手帳，雲端資料還在；之後用密碼就能回來，自己名下的欄位也還是
-  // 自己的。還有別的手帳的話，離開後直接換到最近用的那一本。
-  navLeave.addEventListener('click', function(){
+  // 退出：把自己名下的欄位、以及只剩自己參與的行程從這本手帳裡真的刪掉
+  // （不是只有這支裝置不再顯示而已）；共同行程只拿掉自己的參與者，行程
+  // 本身留給其他人。退出後如果手帳裡已經沒有任何人，就把手帳跟殘留資料
+  // 整個刪掉——這是唯一會「刪除一整本手帳」的路徑，沒有另外做刪除功能。
+  async function leaveCurrentNotebook(){
     if(!NOTEBOOK) return;
-    if(!navLeaveArmed){
-      navLeaveArmed = true;
-      navLeave.textContent = '再按一次確認離開（之後要輸入密碼才能回來）';
-      return;
+    const myIds = new Set(myColumnIds());
+    if(myIds.size === 0) return;
+    const nbId = NOTEBOOK.id;
+    const willEmpty = columns.every(c => myIds.has(c.id));
+    const beforeEvents = JSON.parse(JSON.stringify(events));
+
+    columns = columns.filter(c => !myIds.has(c.id));
+    events = events.filter(function(ev){
+      ev.participants = (ev.participants||[]).filter(pid => !myIds.has(pid));
+      if(ev.overrides){
+        Object.keys(ev.overrides).forEach(function(d){
+          const ov = ev.overrides[d];
+          if(ov.participants) ov.participants = ov.participants.filter(pid => !myIds.has(pid));
+        });
+      }
+      return ev.participants.length > 0;
+    });
+
+    if(sb){
+      try{
+        if(willEmpty){
+          // 手帳裡已經沒有其他人了：連同殘留資料整本刪掉
+          await sb.from('notifications').delete().eq('notebook_id', nbId);
+          await sb.from('events').delete().eq('notebook_id', nbId);
+          await sb.from('columns').delete().eq('notebook_id', nbId);
+          await sb.from('notebooks').delete().eq('id', nbId);
+        } else {
+          const eventChanges = diffById(beforeEvents, events);
+          await sb.from('columns').delete().in('id', Array.from(myIds));
+          await syncChangesToSupabase('events', eventChanges, ch => ch.after);
+        }
+      }catch(err){ console.error('退出手帳時同步失敗：', err); }
     }
-    unregisterNotebook(NOTEBOOK.id);
+
+    unregisterNotebook(nbId);
     const rest = getNotebookList();
     if(rest.length) setStoredNotebook(rest[0]); else clearStoredNotebook();
     location.reload();
+  }
+  navLeave.addEventListener('click', function(){
+    if(!NOTEBOOK) return;
+    const willEmpty = columns.every(c => myColumnIds().includes(c.id));
+    const msg = willEmpty
+      ? '退出後，你在這本手帳裡的行程資料會一併消失（不會影響你的其他手帳）。這本手帳目前已經沒有其他人了，退出後整本手帳會一起消失，之後沒辦法再用這組密碼進來。'
+      : '退出後，你在這本手帳裡的行程資料會一併消失，不會影響你的其他手帳。';
+    showConfirmDialog(msg, function(){ leaveCurrentNotebook(); }, {okLabel:'退出', danger:true});
   });
   document.getElementById('navNewBook').addEventListener('click', function(){ closeDrawer(); openStartOverlay('create'); });
   document.getElementById('navJoinBook').addEventListener('click', function(){ closeDrawer(); openStartOverlay('join'); });
@@ -7989,6 +8146,7 @@
   // 兩支手機看到彼此在自己沒開著 App 的時候做的更動。
   document.addEventListener('visibilitychange', async function(){
     if(document.visibilityState !== 'visible' || !NOTEBOOK) return;
+    refreshNotebookName();
     const remote = await fetchAllFromSupabase();
     if(!remote || remote.columns.length === 0) return;
     columns = remote.columns;
