@@ -395,7 +395,7 @@
 
   /* ---------- Timeline page ---------- */
   .planner-header{
-    padding:16px 20px 14px 20px;
+    padding:6px 20px 14px 20px; /* 頂端留白縮小，讓這排更貼近上面的手帳名稱 */
     display:flex; flex-direction:column; gap:12px;
     border-bottom:1px solid var(--line);
     background:var(--paper);
@@ -1253,7 +1253,7 @@
     cursor:pointer;
     border:none;
     border-bottom:1.5px solid var(--ink-faint); /* 淺咖啡色底線，取代原本的外框 */
-    padding:1px 2px 1px; /* 底線離文字更近 */
+    padding:1px 2px 0; /* 底線再靠近文字一點 */
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
@@ -1291,7 +1291,7 @@
     border:none;
     border-bottom:1.5px solid var(--ink-faint); /* 淺咖啡色底線，跟手帳名稱同一套改名視覺 */
     border-radius:0;
-    padding:2px 2px 1px; /* 底線離文字更近 */
+    padding:2px 2px 0; /* 底線再靠近文字一點 */
     /* 一定要設，不然手指按著不放的過程中只要有一點點自然的手震，瀏覽器
        就可能把它判定成「使用者想捲動」而觸發原生的捲動接管，接管當下
        會對這個元素丟出 pointercancel，把我們自己計時中的長按判斷整組
@@ -1625,6 +1625,28 @@
     display:grid; grid-template-columns:repeat(7,1fr);
     row-gap:2px;
   }
+  /* 日期選擇器的「連續滑頁」：跟月曆檢視（.month-slider／.month-grid／
+     .month-preview-panel）同一套想法——手勢一開始就先在旁邊把下一頁/
+     上一頁整個畫好，兩塊面板全程一起移動，不會有「先滑走、等內容重新
+     畫好、才滑進來」中間那段空白／延遲。.picker-cal-grid 本身維持一般
+     文件流（不是 position:absolute），這樣 .picker-cal-slider 的高度
+     還是自然由目前月份的實際格子撐出來，不用另外用 JS 鎖高度；預覽
+     面板用絕對定位疊在同一個位置上，滑動時看起來就像兩頁本來就都在
+     那裡。 */
+  .picker-cal-slider{
+    position:relative;
+    overflow:hidden;
+  }
+  .picker-cal-grid, .picker-cal-preview-panel{ will-change:transform; }
+  .picker-cal-preview-panel{
+    position:absolute;
+    top:0; left:0; right:0;
+    pointer-events:none; /* 純預覽用，滑動中不可互動 */
+  }
+  .picker-cal-slider.animating .picker-cal-grid,
+  .picker-cal-slider.animating .picker-cal-preview-panel{
+    transition:transform .22s cubic-bezier(.2,.7,.3,1);
+  }
   .picker-cal-cell{
     aspect-ratio:1;
     display:flex; align-items:center; justify-content:center;
@@ -1889,10 +1911,12 @@
   }
   .month-slider{
     position:relative;
-    overflow:hidden;
+    overflow:hidden; /* 四個角落沿著 border-radius 裁乾淨 */
     margin:0 8px 8px 8px;
     flex:1 1 auto;
     min-height:0;
+    border:1px solid var(--line);
+    border-radius:10px;
   }
   /* 月曆頁的「連續滑頁」：跟時間軸日期切換（.day-slider / .timeline-grid /
      .day-preview-panel）同一套做法——手勢一開始就先在旁邊把下一頁/上一頁
@@ -1901,7 +1925,9 @@
      的面板繼續滑到定位，不會有「先滑走、等內容重新畫好、才滑進來」中間
      那段空白／延遲。真正切換月份（改 monthViewYear/monthViewMonth、呼叫
      renderMonthGrid()）在動畫播完、面板早就定位好、使用者看不出破綻的
-     時候才悄悄發生。 */
+     時候才悄悄發生。外框的 border/border-radius 放在 .month-slider 這一層
+     （不是每塊面板自己畫），這樣拖曳中兩塊面板緊貼在一起時中間不會有雙重
+     邊框疊出來的接縫，放開手指定位後也不會突然多一圈框線「跳」出來。 */
   .month-grid, .month-preview-panel{
     position:absolute;
     top:0; left:0; right:0; bottom:0;
@@ -1919,13 +1945,9 @@
     /* 格線改用「容器背景色 = 格線色 + gap 縫隙露出背景」畫出來，不再讓
        每一格自己畫 border——這樣相鄰格子之間只有一條共用的線，不是兩格
        各自的邊框疊在一起（那樣線會變粗、格子可用的內距也被吃掉兩份）。
-       外框的 border 粗細特意跟 gap 一致，看起來像同一套格線系統的一部分，
-       不是額外疊加上去的外框。 */
+       外框改由 .month-slider 統一畫，這裡不再重複畫一圈。 */
     gap:1px;
     background:var(--line);
-    border:1px solid var(--line);
-    border-radius:10px;
-    overflow:hidden; /* 四個角落沿著 border-radius 裁乾淨，格子本身維持方正 */
   }
   .month-cell{
     width:100%; height:100%;
@@ -2664,7 +2686,9 @@
           <button type="button" class="picker-today-btn month-today-btn" id="calTodayBtn">回到今天</button>
         </div>
         <div class="picker-cal-weekdays" id="calWeekdaysRow"></div>
-        <div class="picker-cal-grid" id="calGrid"></div>
+        <div class="picker-cal-slider" id="calSlider">
+          <div class="picker-cal-grid" id="calGrid"></div>
+        </div>
       </div>
 
       <div class="picker-time" id="pickerTimeView" hidden>
@@ -3462,6 +3486,7 @@
   const calMonthLabel = document.getElementById('calMonthLabel');
   const calWeekdaysRow = document.getElementById('calWeekdaysRow');
   const calGrid = document.getElementById('calGrid');
+  const calSlider = document.getElementById('calSlider');
   const calTodayBtn = document.getElementById('calTodayBtn');
 
   const hourWheel = document.getElementById('hourWheel');
@@ -3511,6 +3536,43 @@
   });
   pickerCancelBtn.addEventListener('click', closePicker);
 
+  // 產生某年某月的日期格子，畫進傳進來的 container——calGrid 本身跟預覽
+  // 面板都靠這個函式畫內容，兩邊長得一模一樣。
+  function buildCalCells(container, year, month){
+    container.innerHTML = '';
+    const firstOfMonth = new Date(year, month, 1);
+    const startOffset = firstOfMonth.getDay(); // 0=日
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const today = todayStr();
+    for(let i=0; i<startOffset; i++){
+      const cell = document.createElement('div');
+      cell.className = 'picker-cal-cell empty';
+      container.appendChild(cell);
+    }
+    for(let day=1; day<=daysInMonth; day++){
+      const dateStr = year+'-'+pad2(month+1)+'-'+pad2(day);
+      const cell = document.createElement('div');
+      cell.className = 'picker-cal-cell';
+      if(dateStr === today) cell.classList.add('today');
+      if(dateStr === calSelectedDate) cell.classList.add('selected');
+      cell.textContent = day;
+      cell.addEventListener('click', function(){
+        calSelectedDate = dateStr;
+        // 先立刻給按鍵反饋（變成跟「選中」一樣的紅底），其他格子的反白拿掉，
+        // 讓使用者確定自己點到了哪一天。
+        container.querySelectorAll('.picker-cal-cell.selected').forEach(el => el.classList.remove('selected'));
+        cell.classList.add('selected');
+        const cb = pickerOnConfirm;
+        // 停留一下讓使用者看清楚反饋，再讓整塊選擇器往下滑走消失，
+        // 消失後才真的套用日期——不要選了馬上跳頁，感覺太突兀。
+        setTimeout(function(){
+          hidePickerSheet(function(){ if(cb) cb(dateStr); });
+        }, 350);
+      });
+      container.appendChild(cell);
+    }
+  }
+
   function renderCalGrid(){
     calYearLabel.textContent = calViewYear + '年';
     calMonthLabel.textContent = (calViewMonth+1) + '月';
@@ -3521,84 +3583,141 @@
         calWeekdaysRow.appendChild(el);
       });
     }
-    calGrid.innerHTML = '';
-    const firstOfMonth = new Date(calViewYear, calViewMonth, 1);
-    const startOffset = firstOfMonth.getDay(); // 0=日
-    const daysInMonth = new Date(calViewYear, calViewMonth+1, 0).getDate();
-    const today = todayStr();
-    for(let i=0; i<startOffset; i++){
-      const cell = document.createElement('div');
-      cell.className = 'picker-cal-cell empty';
-      calGrid.appendChild(cell);
-    }
-    for(let day=1; day<=daysInMonth; day++){
-      const dateStr = calViewYear+'-'+pad2(calViewMonth+1)+'-'+pad2(day);
-      const cell = document.createElement('div');
-      cell.className = 'picker-cal-cell';
-      if(dateStr === today) cell.classList.add('today');
-      if(dateStr === calSelectedDate) cell.classList.add('selected');
-      cell.textContent = day;
-      cell.addEventListener('click', function(){
-        calSelectedDate = dateStr;
-        // 先立刻給按鍵反饋（變成跟「選中」一樣的紅底），其他格子的反白拿掉，
-        // 讓使用者確定自己點到了哪一天。
-        calGrid.querySelectorAll('.picker-cal-cell.selected').forEach(el => el.classList.remove('selected'));
-        cell.classList.add('selected');
-        const cb = pickerOnConfirm;
-        // 停留一下讓使用者看清楚反饋，再讓整塊選擇器往下滑走消失，
-        // 消失後才真的套用日期——不要選了馬上跳頁，感覺太突兀。
-        setTimeout(function(){
-          hidePickerSheet(function(){ if(cb) cb(dateStr); });
-        }, 350);
-      });
-      calGrid.appendChild(cell);
-    }
+    buildCalCells(calGrid, calViewYear, calViewMonth);
   }
 
-  calPrevBtn.addEventListener('click', function(){
-    calViewMonth--;
-    if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
-    renderCalGrid();
-  });
-  calNextBtn.addEventListener('click', function(){
-    calViewMonth++;
-    if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
-    renderCalGrid();
-  });
+  // ---------------- 日期選擇器的「連續滑頁」核心 ----------------
+  // 跟月曆檢視的 ensureMonthPreview/commitMonthSwipe/cancelMonthSwipe 同一套
+  // 想法：把要去的那一頁（下一個月／上一個月）預先整個畫好、放在旁邊，
+  // 兩塊面板全程一起移動，使用者看到的永遠是「兩頁本來就都在那裡」，
+  // 不會有「這頁滑走了、等內容重新畫好、下一頁才滑進來」中間那段空白。
+  let calPreviewPanel = null, calPreviewDir = null;
+  function ensureCalPreview(direction){
+    if(calPreviewPanel && calPreviewDir === direction) return calPreviewPanel;
+    if(calPreviewPanel){ calPreviewPanel.remove(); calPreviewPanel = null; }
+    calPreviewDir = direction;
+    let py = calViewYear, pm = calViewMonth + (direction === 'next' ? 1 : -1);
+    if(pm < 0){ pm = 11; py--; } else if(pm > 11){ pm = 0; py++; }
+    const panel = document.createElement('div');
+    panel.className = 'picker-cal-grid picker-cal-preview-panel';
+    buildCalCells(panel, py, pm);
+    panel.style.transform = 'translateX(' + (direction === 'next' ? '100%' : '-100%') + ')';
+    calSlider.appendChild(panel);
+    calPreviewPanel = panel;
+    return panel;
+  }
+  function clearCalPreview(){
+    if(calPreviewPanel){ calPreviewPanel.remove(); calPreviewPanel = null; }
+    calPreviewDir = null;
+  }
+  // 兩塊面板已經在位（不管是手勢中途、還是按鍵剛建立的），讓它們真的滑到
+  // 定位；動畫播完、面板早就定位好、使用者看不出破綻的時候，才悄悄把
+  // 「滑進來的那塊」內容換成真正的 #calGrid（換月份＋renderCalGrid()）。
+  function commitCalSwipe(direction){
+    const w = calSlider.clientWidth || 300;
+    const panel = ensureCalPreview(direction);
+    const dir = direction === 'next' ? -1 : 1; // -1：往未來翻一頁（滑向左），1：往過去翻一頁（滑向右）
+    calSlider.classList.add('animating');
+    requestAnimationFrame(function(){
+      calGrid.style.transform = 'translateX(' + (dir * w) + 'px)';
+      panel.style.transform = 'translateX(0px)';
+    });
+    return new Promise(function(resolve){
+      setTimeout(function(){
+        calSlider.classList.remove('animating');
+        if(direction === 'next'){ calViewMonth++; if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; } }
+        else { calViewMonth--; if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; } }
+        clearCalPreview();
+        calGrid.style.transform = '';
+        renderCalGrid();
+        resolve();
+      }, 260);
+    });
+  }
+  // 手勢沒拖過門檻：兩塊面板一起彈回原位，不真的換月份。
+  function cancelCalSwipe(){
+    const w = calSlider.clientWidth || 300;
+    calSlider.classList.add('animating');
+    calGrid.style.transform = 'translateX(0px)';
+    if(calPreviewPanel){
+      const base = calPreviewDir === 'next' ? w : -w;
+      calPreviewPanel.style.transform = 'translateX(' + base + 'px)';
+    }
+    setTimeout(function(){
+      calSlider.classList.remove('animating');
+      clearCalPreview();
+      calGrid.style.transform = '';
+    }, 260);
+  }
+  // 手勢版：拖曳中兩塊面板跟著手指一起移動；放開手指看有沒有過門檻，
+  // 分別交給 commitCalSwipe／cancelCalSwipe 接手滑到定位。
+  function attachCalSwipe(){
+    const THRESHOLD = 45;
+    let startX = null, startY = null, axisLocked = null, dragging = false;
 
-  // 日期選擇器的「回到今天」跟月曆檢視那顆想法一樣：不同月份時一頁一頁翻
-  // 過去，而不是直接跳過去。這裡維持原本「先滑出去、換內容、再滑進來」
-  // 的簡單寫法（沒有像月曆檢視那樣做成兩塊面板連續滑），是因為日期選擇器
-  // 本來就是彈出來蓋在最上層的小面板，翻頁次數少、也沒有使用者反應過
-  // 這裡會頓；真的要改，可以參考月曆檢視的 ensureMonthPreview/
-  // commitMonthSwipe 那一套。
-  function animateCalGridStep(dir, applyMonthChange){
-    const w = calGrid.clientWidth || 300;
-    calGrid.style.transition = 'none';
-    calGrid.style.transform = 'translateX(0)';
-    void calGrid.offsetWidth;
-    calGrid.style.transition = 'transform .15s ease';
-    calGrid.style.transform = 'translateX(' + (dir * w) + 'px)';
-    const onSlideOutDone = function(){
-      calGrid.removeEventListener('transitionend', onSlideOutDone);
-      calGrid.style.transition = 'none';
-      calGrid.style.transform = 'translateX(' + (-dir * w) + 'px)';
-      applyMonthChange();
-      void calGrid.offsetWidth;
-      calGrid.style.transition = 'transform .15s ease';
-      calGrid.style.transform = 'translateX(0)';
-    };
-    calGrid.addEventListener('transitionend', onSlideOutDone);
+    calGrid.style.touchAction = 'pan-y';
+
+    calGrid.addEventListener('pointerdown', function(e){
+      if(e.pointerType === 'mouse' && e.buttons !== 1) return;
+      dragging = true; axisLocked = null;
+      startX = e.clientX; startY = e.clientY;
+    });
+
+    calGrid.addEventListener('pointermove', function(e){
+      if(!dragging || startX == null) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if(axisLocked === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)){
+        axisLocked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      }
+      if(axisLocked === 'x'){
+        e.preventDefault();
+        const w = calSlider.clientWidth || 300;
+        const direction = dx < 0 ? 'next' : 'prev';
+        const panel = ensureCalPreview(direction);
+        const clamped = Math.max(-w, Math.min(w, dx));
+        calGrid.style.transform = 'translateX(' + clamped + 'px)';
+        const base = direction === 'next' ? w : -w;
+        panel.style.transform = 'translateX(' + (base + clamped) + 'px)';
+      }
+    });
+
+    function endDrag(e){
+      if(!dragging) return;
+      dragging = false;
+      if(axisLocked !== 'x'){
+        startX = null; axisLocked = null;
+        clearCalPreview();
+        return;
+      }
+      const dx = (e.clientX != null ? e.clientX : startX) - startX;
+      const w = calSlider.clientWidth || 300;
+      const committed = Math.abs(dx) > Math.max(THRESHOLD, w * 0.2);
+      startX = null; axisLocked = null;
+      if(committed && calPreviewDir){
+        commitCalSwipe(calPreviewDir);
+      } else {
+        cancelCalSwipe();
+      }
+    }
+
+    calGrid.addEventListener('pointerup', endDrag);
+    calGrid.addEventListener('pointercancel', endDrag);
   }
 
-  function animateCalGridTo(targetYear, targetMonth){
+  calPrevBtn.addEventListener('click', function(){ commitCalSwipe('prev'); });
+  calNextBtn.addEventListener('click', function(){ commitCalSwipe('next'); });
+
+  // 日期選擇器的「回到今天」跟月曆檢視那顆想法一樣：不同月份時一頁一頁
+  // 翻過去，而不是直接跳過去，翻頁動畫共用上面 commitCalSwipe 那一套
+  // 「連續滑頁」，不會有中間空白／延遲。
+  async function animateCalGridTo(targetYear, targetMonth){
     const MAX_ANIMATED_STEPS = 6;
     const curIdx = calViewYear*12 + calViewMonth;
     const targetIdx = targetYear*12 + targetMonth;
     let diff = targetIdx - curIdx;
     if(diff === 0) return;
 
-    const dir = diff > 0 ? -1 : 1;
+    const direction = diff > 0 ? 'next' : 'prev';
     let stepsLeft = Math.abs(diff);
 
     if(stepsLeft > MAX_ANIMATED_STEPS){
@@ -3610,18 +3729,9 @@
       stepsLeft = MAX_ANIMATED_STEPS;
     }
 
-    function stepOnce(){
-      if(stepsLeft <= 0) return;
-      stepsLeft--;
-      animateCalGridStep(dir, function(){
-        calViewMonth += (dir === -1 ? 1 : -1);
-        if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
-        else if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
-        renderCalGrid();
-      });
-      if(stepsLeft > 0) setTimeout(stepOnce, 150);
+    for(let i=0; i<stepsLeft; i++){
+      await commitCalSwipe(direction);
     }
-    stepOnce();
   }
 
   calTodayBtn.addEventListener('click', function(){
@@ -7226,94 +7336,7 @@
     }
   }
 
-  /* ---------------- 左右滑動翻頁（日期選擇器） ----------------
-     「一個 7 欄的月曆格子容器，上面已經有上一頁／下一頁的箭頭按鍵」，滑動
-     手勢其實就是幫使用者按掉那顆箭頭鍵而已，所以這裡寫成一個共用的小
-     工具：量測水平拖曳，超過門檻就讓格子容器整個滑出去、呼叫對應方向的
-     既有換頁邏輯把內容換掉、再讓新內容從另一側滑回中間。沒超過門檻（或
-     其實是想直向捲動格子內的行程清單）就彈回原位，不做任何事，原本點
-     格子進某一天、格子內清單直向捲動都不受影響。（月曆檢視頁面改用上面
-     專屬的「連續滑頁」寫法，見 attachMonthSwipe，不再共用這個。） */
-  function attachSwipeNav(containerEl, onSwipeLeft, onSwipeRight){
-    const THRESHOLD = 45; // px，拖曳距離超過這個值（或容器寬度的 1/5，取較大者）才算成功翻頁
-    let startX = null, startY = null, axisLocked = null, dragging = false;
-    // scrollTarget：這次手勢的起點如果落在某個 .cell-events（月曆格子裡的
-    // 行程清單）上，記住是哪一個。原本這裡是讓瀏覽器用 touch-action:pan-y
-    // 自己原生處理垂直捲動，但巢狀在這種自己攔水平手勢的容器裡面，原生
-    // 捲動判定在部分手機瀏覽器上不可靠（常常要滑好幾次才會剛好被辨識成
-    // 捲動，而不是被當成一次點擊或什麼都沒發生）。改成跟時間軸主頁
-    // timeline-scroll 一樣的做法：垂直手勢自己用座標差手動改 scrollTop，
-    // 不依賴瀏覽器的手勢仲裁。
-    let scrollTarget = null;
-    let lastY = null;
-
-    containerEl.style.touchAction = 'pan-y'; // 保留這個當作原生的保底行為（例如手勢起點不在任何 cell-events 上的情況），水平方向還是自己攔截
-
-    containerEl.addEventListener('pointerdown', function(e){
-      if(e.pointerType === 'mouse' && e.buttons !== 1) return;
-      dragging = true; axisLocked = null;
-      startX = e.clientX; startY = e.clientY;
-      lastY = e.clientY;
-      scrollTarget = (e.target && e.target.closest) ? e.target.closest('.cell-events') : null;
-      containerEl.style.transition = 'none';
-    });
-
-    containerEl.addEventListener('pointermove', function(e){
-      if(!dragging || startX == null) return;
-      const dx = e.clientX - startX, dy = e.clientY - startY;
-      if(axisLocked === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)){
-        axisLocked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      }
-      if(axisLocked === 'x'){
-        e.preventDefault();
-        containerEl.style.transform = 'translateX(' + dx + 'px)';
-      } else if(axisLocked === 'y' && scrollTarget){
-        // 手動捲動：不call preventDefault 讓瀏覽器原生 touch-action:pan-y
-        // 也同時生效的話，兩邊各自算一次位移，很容易互相打架讓畫面抖動
-        // 或位置跑掉——這裡明確攔下來，只讓這一段手動邏輯決定捲動位置。
-        e.preventDefault();
-        scrollTarget.scrollTop -= (e.clientY - lastY);
-        lastY = e.clientY;
-      }
-    });
-
-    function endDrag(e){
-      if(!dragging) return;
-      dragging = false;
-      scrollTarget = null;
-      if(axisLocked !== 'x'){
-        containerEl.style.transform = '';
-        startX = null; axisLocked = null;
-        return;
-      }
-      const dx = (e.clientX != null ? e.clientX : startX) - startX;
-      const w = containerEl.clientWidth || 300;
-      const committed = Math.abs(dx) > Math.max(THRESHOLD, w * 0.2);
-      containerEl.style.transition = 'transform .22s ease';
-
-      if(committed){
-        const dir = dx < 0 ? -1 : 1; // -1：向左滑（下一個），1：向右滑（上一個）
-        containerEl.style.transform = 'translateX(' + (dir * w) + 'px)';
-        const onSlideOutDone = function(){
-          containerEl.removeEventListener('transitionend', onSlideOutDone);
-          containerEl.style.transition = 'none';
-          containerEl.style.transform = 'translateX(' + (-dir * w) + 'px)';
-          if(dir < 0) onSwipeLeft(); else onSwipeRight(); // 這裡才真的換內容，換完時容器還在畫面外
-          void containerEl.offsetWidth; // 強制 reflow，確保上面那行 transform 先生效，接下來的滑入才有動畫
-          containerEl.style.transition = 'transform .22s ease';
-          containerEl.style.transform = 'translateX(0)';
-        };
-        containerEl.addEventListener('transitionend', onSlideOutDone);
-      } else {
-        containerEl.style.transform = 'translateX(0)';
-      }
-      startX = null; axisLocked = null;
-    }
-
-    containerEl.addEventListener('pointerup', endDrag);
-    containerEl.addEventListener('pointercancel', endDrag);
-  }
-
+  
   // 月曆檢視頁面專屬的滑動手勢：跟按鍵、跟「回到今天」共用同一套
   // ensureMonthPreview/commitMonthSwipe/cancelMonthSwipe，全程「兩塊面板
   // 一起移動」，不會有滑到一半兩頁之間出現空白的問題。
@@ -7378,10 +7401,7 @@
   }
 
   attachMonthSwipe();
-  attachSwipeNav(calGrid,
-    function(){ calNextBtn.click(); }, // 左滑 → 下個月
-    function(){ calPrevBtn.click(); }  // 右滑 → 上個月
-  );
+  attachCalSwipe();
   document.getElementById('btnMonthToday').addEventListener('click', function(){
     const [ty, tm] = todayStr().split('-').map(Number);
     if(monthViewYear === ty && monthViewMonth === tm-1){
@@ -8355,6 +8375,7 @@
   }
   navLeave.addEventListener('click', function(){
     if(!NOTEBOOK) return;
+    closeDrawer(); // 先收起選單，才不會跟退出確認彈窗疊在一起打架
     const msg = '退出後將永久刪除你在這本手帳的行程資料，無法還原。\n此動作不影響其他手帳。\n確定退出？';
     showConfirmDialog(msg, function(){ leaveCurrentNotebook(); }, {okLabel:'退出', danger:true});
   });
