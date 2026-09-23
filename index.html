@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual">
 <title>手帳曆 · 共編行事曆</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1916,6 +1916,35 @@
   .picker-confirm-ok-btn:active{opacity:.7;}
   .picker-confirm-cancel-btn[hidden]{display:none;}
 
+  /* 對話框模式（確認刪除／確認退出／修改名稱／新增欄位）：不再從底部滑出，
+     改成置中的卡片。輸入框落在畫面中段，鍵盤彈出時不會蓋到，
+     iOS 也就不需要為了露出輸入框而把整個畫面往上推。
+     日期／時間選擇器沒有這個 class，維持原本從底部滑出。 */
+  .picker-overlay.dialog-mode{
+    align-items:center;
+    padding:24px;
+    box-sizing:border-box;
+  }
+  .picker-overlay.dialog-mode .picker-sheet{
+    max-width:340px;
+    border-radius:18px;
+    box-shadow:0 12px 36px rgba(32,38,58,0.32);
+    padding:22px 20px 18px 20px;
+    gap:12px;
+    animation:dialog-pop-in .2s ease;
+  }
+  .picker-overlay.dialog-mode .picker-sheet.closing{
+    animation:dialog-pop-out .2s ease forwards;
+  }
+  @keyframes dialog-pop-in{
+    from{ transform:scale(.94); opacity:0; }
+    to{ transform:scale(1); opacity:1; }
+  }
+  @keyframes dialog-pop-out{
+    from{ transform:scale(1); opacity:1; }
+    to{ transform:scale(.94); opacity:0; }
+  }
+
   /* ---------------- 月曆檢視頁面（#page-month） ---------------- */
   .month-back-btn{
     position:absolute;
@@ -2483,9 +2512,10 @@
                不用核可，純粹「讓你知道發生了什麼」。見 JS 的 renderNotificationBadge
                / openNotificationPanel。 -->
           <button id="btnNotifications" class="month-header-btn notif-btn" aria-label="通知">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            <svg width="20" height="20" viewBox="326 328 600 600" fill="none" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M469 660V590C469 500 530 437 626 437C722 437 783 500 783 590V660C783 685 795 700 812 728L835 765C848 786 838 819 812 819L440 819C414 819 404 786 417 765L440 728C457 700 469 685 469 660Z"></path>
+              <path d="M574 437V414A53 53 0 0 1 680 414V437"></path>
+              <path d="M561 819V829A66 66 0 0 0 693 829V819"></path>
             </svg>
             <span class="notif-dot" id="notifDot" hidden></span>
           </button>
@@ -3030,6 +3060,28 @@
     const mine = myColumnIds();
     return (preferIds || []).find(id => mine.includes(id)) || mine[0] || null;
   }
+
+  // 創建者的欄位群：創建欄位本身，加上同一位主人名下的其他欄位
+  function creatorColumnIds(creatorId){
+    const c = columns.find(x => x.id === creatorId);
+    if(!c) return [];
+    return c.ownerId ? columns.filter(x => x.ownerId === c.ownerId).map(x => x.id) : [c.id];
+  }
+  function creatorIsIn(creatorId, participants){
+    const ids = creatorColumnIds(creatorId);
+    return (participants || []).some(id => ids.includes(id));
+  }
+  // 有權「整場刪除」：創建者本人，或是創建者已經把自己移出行程之後的任何參與者
+  function hasDeleteRight(creatorId, participants){
+    if(isInstanceCreator(creatorId, participants)) return true;
+    return isParticipantOf(participants) && !creatorIsIn(creatorId, participants);
+  }
+  // 非創建者想把創建者移出行程（只有創建者本人能把自己移出／移轉）-> true 代表要擋
+  function wouldRemoveCreator(creatorId, oldParticipants, newParticipants){
+    if(isInstanceCreator(creatorId, oldParticipants)) return false;
+    return creatorIsIn(creatorId, oldParticipants) && !creatorIsIn(creatorId, newParticipants);
+  }
+  const CREATOR_LOCK_MSG = '只有建立者本人可以把自己移出行程';
 
   let events = [];
 
@@ -3843,6 +3895,7 @@
     pickerConfirmView.hidden = true;
     pickerCancelBtn.hidden = false;
     renderCalGrid();
+    pickerOverlay.classList.remove('dialog-mode');
     pickerOverlay.hidden = false;
     markOverlayJustOpened();
   }
@@ -3920,6 +3973,7 @@
     pickerTimeView.hidden = false;
     pickerConfirmView.hidden = true;
     pickerCancelBtn.hidden = false;
+    pickerOverlay.classList.remove('dialog-mode');
     pickerOverlay.hidden = false;
     markOverlayJustOpened();
     // 要等 overlay 從 hidden 變成可見、版面量得到高度之後才能量測捲動位置，
@@ -3962,6 +4016,7 @@
     pickerTimeView.hidden = true;
     pickerConfirmView.hidden = false;
     pickerCancelBtn.hidden = true; // 下面自己的取消/確定鍵就夠了，不用再疊一個
+    pickerOverlay.classList.add('dialog-mode');
     pickerOverlay.hidden = false;
     markOverlayJustOpened();
   }
@@ -3978,7 +4033,7 @@
     pickerConfirmInput.value = defaultValue || '';
     runPickerInputValidation();
     requestAnimationFrame(function(){
-      pickerConfirmInput.focus();
+      pickerConfirmInput.focus({preventScroll:true});
       pickerConfirmInput.select();
     });
   }
@@ -4071,15 +4126,40 @@
   // 表面上還留著重複圖示，但其實已經不會再被整個系列的同步編輯影響到，
   // 反而容易讓人誤會。這裡直接把這一次徹底獨立成一個單次、不重複的行程，
   // 系列其餘日期完全不受影響，圖示也會正確地跟著消失。
+  // 拖曳／縮放／搬日期之後通知其他參與者：日期或時間變了 -> 「更新了」；
+  // 被拖進來 / 被拖出去的欄位 -> 「加進了」／「移除了」。
+  function notifyPlacementChange(master, before, homeDate, targetDate, newStart, newEnd, newParticipants){
+    const oldP = before.participants || [];
+    const title = before.title || master.title || '(未命名行程)';
+    const labels = [];
+    if(targetDate !== homeDate) labels.push('日期');
+    if(newStart !== before.start || newEnd !== before.end) labels.push('時間');
+    const who = actingName([master.creatorId].concat(oldP, newParticipants));
+    const notMine = id => !isMine(id);
+    notifyColumns(newParticipants.filter(id => !oldP.includes(id) && notMine(id)), who+' 把你加進了「'+title+'」');
+    notifyColumns(oldP.filter(id => !newParticipants.includes(id) && notMine(id)), who+' 把你從「'+title+'」移除了');
+    if(labels.length){
+      notifyColumns(oldP.filter(id => notMine(id) && newParticipants.includes(id)), who+' 更新了「'+title+'」（'+labels.join('、')+'）');
+    }
+  }
+
   function applyQuickPlacement(masterId, homeDate, targetDate, newStart, newEnd, newParticipants){
     const master = events.find(e => e.id === masterId);
     if(!master) return;
+    const ov0 = (master.recurrence && master.overrides && master.overrides[homeDate]) || {};
+    const before = {
+      title: ov0.title !== undefined ? ov0.title : master.title,
+      start: ov0.start !== undefined ? ov0.start : master.start,
+      end: ov0.end !== undefined ? ov0.end : master.end,
+      participants: (ov0.participants !== undefined ? ov0.participants : master.participants || []).slice()
+    };
 
     if(!master.recurrence){
       master.start = newStart;
       master.end = newEnd;
       master.participants = newParticipants;
       master.date = targetDate;
+      notifyPlacementChange(master, before, homeDate, targetDate, newStart, newEnd, newParticipants);
       return;
     }
 
@@ -4098,6 +4178,7 @@
     master.excluded = master.excluded || [];
     if(master.excluded.indexOf(homeDate) === -1) master.excluded.push(homeDate);
     if(master.overrides) delete master.overrides[homeDate];
+    notifyPlacementChange(master, before, homeDate, targetDate, newStart, newEnd, newParticipants);
   }
 
   // 複製這一次行程：在同一天建立一個內容完全一樣、獨立不重複的新行程
@@ -4225,7 +4306,7 @@
     closeCardMenu();
     const rect = card.getBoundingClientRect();
     const masterId = inst.masterId, instanceDate = inst.instanceDate;
-    const isCreator = isInstanceCreator(inst.creatorId, inst.participants);
+    const isCreator = hasDeleteRight(inst.creatorId, inst.participants);
     const isParticipant = isParticipantOf(inst.participants);
     // 創建者可以整場刪掉；只是參與者（不是創建者）只能退出（把自己從
     // 參與者名單移除）；純粹路過看看、還沒加入的人這裡完全不出現刪除/
@@ -4596,7 +4677,7 @@
         const instanceDate = key.slice(at+1);
         const master = events.find(e => e.id === masterId);
         if(!master) return;
-        const isCreator = isInstanceCreator(master.creatorId, master.participants);
+        const isCreator = hasDeleteRight(master.creatorId, master.participants);
         if(isCreator){
           deleteInstanceQuick(masterId, instanceDate);
         } else {
@@ -5857,6 +5938,13 @@
       return;
     }
 
+    const fdInst = getInstancesForDate(fd.homeDate).find(i => i.masterId === fd.masterId);
+    if(fdInst && wouldRemoveCreator(fdInst.creatorId, fdInst.participants, newParticipants)){
+      showToast(CREATOR_LOCK_MSG, 1800);
+      bounceGhostBack(fd);
+      return;
+    }
+
     fd.ghost.remove();
     floatingDrag = null;
     applyQuickPlacement(fd.masterId, fd.homeDate, currentDate, newStart, newEnd, newParticipants);
@@ -6424,7 +6512,12 @@
           origIds.forEach(id => { if(newIds.indexOf(id)===-1) pset.delete(id); });
           newIds.forEach(id => pset.add(id));
 
-          applyQuickPlacement(inst.masterId, inst.instanceDate, inst.instanceDate, newStart, newEnd, Array.from(pset));
+          const newPs = Array.from(pset);
+          if(wouldRemoveCreator(inst.creatorId, inst.participants, newPs)){
+            showToast(CREATOR_LOCK_MSG, 1800);
+          } else {
+            applyQuickPlacement(inst.masterId, inst.instanceDate, inst.instanceDate, newStart, newEnd, newPs);
+          }
           renderEvents();
         } else if(cancelledByScroll){
           flushTimelineScrollNow();
@@ -6899,6 +6992,8 @@
   // 日期/時間/顏色/重複）：創建者、或已經是參與者之一，才算數；純粹路過
   // 看看、還沒加入的人只能動參與者那一塊（把自己加進去）。
   let editCanEditFields = true;
+  let editHasDeleteRight = true; // 可以整場刪除：創建者，或創建者已移出行程後的參與者
+  let editCreatorId = '';
   let editIsCreator = true; // 是不是這個行程的創建者：只有創建者能整場刪除，其餘參與者只能退出
   let editOriginalSlot = {date:'', start:'', end:''}; // 打開編輯頁當下的日期／時段，儲存時比對有沒有被改過
   let editOriginalParticipants = []; // 打開編輯頁當下的參與者名單，存起來跟儲存時的新名單比對，才知道誰是「新加入的」
@@ -6918,11 +7013,13 @@
     fieldLockHint.hidden = editCanEditFields;
 
     editIsCreator = isInstanceCreator(inst && inst.creatorId, inst && inst.participants);
+    editCreatorId = (inst && inst.creatorId) || '';
+    editHasDeleteRight = hasDeleteRight(editCreatorId, inst && inst.participants);
     const isParticipant = isParticipantOf(inst && inst.participants);
     // 創建者可以整場刪除；只是參與者（不是創建者）改成「退出」（把自己
     // 從參與者名單移除）；純粹路過看看、還沒加入的人這顆鍵直接隱藏，
     // 沒有東西可以讓他刪或退。
-    if(editIsCreator){
+    if(editHasDeleteRight){
       btnDelete.hidden = false;
       btnDelete.textContent = '刪除此行程';
     } else if(isParticipant){
@@ -6981,6 +7078,12 @@
         chip.addEventListener('click', function(){
           const wasSelected = selectedParticipants.has(col.id);
           if(wasSelected){
+            // 只有創建者本人能把自己移出（移轉）；其他人不能把創建者拿掉
+            if(!editIsCreator && editOriginalParticipants.includes(col.id) &&
+               creatorColumnIds(editCreatorId).includes(col.id)){
+              showToast(CREATOR_LOCK_MSG, 1800);
+              return;
+            }
             // 至少保留一位參與者，避免行程變成沒人參加
             if(selectedParticipants.size > 1) selectedParticipants.delete(col.id);
           } else {
@@ -7004,7 +7107,10 @@
             editLockableFields.classList.toggle('locked', !stillIn);
             fieldLockHint.hidden = stillIn;
             btnDelete.hidden = !stillIn;
-            if(stillIn) btnDelete.textContent = '退出此行程';
+            if(stillIn){
+              editHasDeleteRight = !creatorIsIn(editCreatorId, editOriginalParticipants);
+              btnDelete.textContent = editHasDeleteRight ? '刪除此行程' : '退出此行程';
+            }
             renderParticipantChips(Array.from(selectedParticipants));
           }
         });
@@ -7073,7 +7179,12 @@
 
     applyEditPermission({creatorId: master.creatorId, participants: data.participants});
     editOriginalParticipants = (data.participants || []).slice();
-    editOriginalSlot = {date: instanceDate, start: data.start, end: data.end};
+    editOriginalSlot = {
+      date: instanceDate, start: data.start, end: data.end,
+      title: data.title || '', notes: data.notes || '',
+      color: data.color || master.color || DEFAULT_EVENT_COLOR,
+      weekdays: master.recurrence ? master.recurrence.weekdays.slice().sort((a,b)=>a-b).join(',') : ''
+    };
     fillEditForm(data, instanceDate, !!master.recurrence);
     renderWeekdayChips(master.recurrence ? master.recurrence.weekdays : []);
     syncField.style.display = master.recurrence ? 'flex' : 'none';
@@ -7568,6 +7679,16 @@
     const wasRecurring = !!master.recurrence;
     const syncOn = fieldSyncEdit.checked;
 
+    // 這次到底改了什麼（通知其他參與者用）：跟打開編輯頁當下的內容比對
+    const o = editOriginalSlot;
+    const changeLabels = [];
+    if(newTitle !== (o.title || '新行程')) changeLabels.push('標題');
+    if(checkDate !== o.date) changeLabels.push('日期');
+    if(newStart !== o.start || newEnd !== o.end) changeLabels.push('時間');
+    if(newNotes !== (o.notes || '')) changeLabels.push('備註');
+    if(selectedColor !== o.color) changeLabels.push('顏色');
+    if(newWeekdays.join(',') !== o.weekdays) changeLabels.push('重複');
+
     // 顏色是整個行程系列共用的分類標籤，不像時間/備註那樣需要區分「只改這一天」，
     // 一律直接寫回本體，不放進 override。
     master.color = selectedColor;
@@ -7623,10 +7744,10 @@
       notifyColumns(editOriginalParticipants.filter(notMine), who+' 加入了「'+newTitle+'」');
     }
     notifyColumns(removedParticipants, who+' 把你從「'+newTitle+'」移除了');
-    if(!selfJustJoined && editOriginalParticipants.length > 1){
+    if(changeLabels.length){
       notifyColumns(
         editOriginalParticipants.filter(id => notMine(id) && newParticipants.includes(id) && !addedOthers.includes(id)),
-        who+' 更新了「'+newTitle+'」'
+        who+' 更新了「'+newTitle+'」（'+changeLabels.join('、')+'）'
       );
     }
 
@@ -7636,7 +7757,7 @@
 
   document.getElementById('btnDelete').addEventListener('click', function(){
     if(!editingMasterId) return;
-    const isLeaving = !editIsCreator;
+    const isLeaving = !editHasDeleteRight;
     showConfirmDialog(isLeaving ? '確定要退出這個行程嗎？' : '確定刪除？', function(){
       const master = events.find(e => e.id === editingMasterId);
       if(!master) return;
@@ -8442,7 +8563,7 @@
       ? location.href.replace(/[?#].*$/, '')
       : location.origin + location.pathname.replace(/index\.html$/, '');
     const ok = await copyText('手帳密碼：' + formatJoinCode(NOTEBOOK.code) + '\n' + pageUrl);
-    if(ok) showToast('已複製');
+    if(ok) showToast('已複製', 800); // 顯示 0.8 秒後開始淡出
     else navCopy.textContent = '複製失敗，請長按密碼手動複製'; // 成功就維持原樣顯示「複製」，不特別換字
   });
   // 退出：把自己名下的欄位、以及只剩自己參與的行程從這本手帳裡真的刪掉
