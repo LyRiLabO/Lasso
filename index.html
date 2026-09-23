@@ -113,14 +113,41 @@
     align-items:center;
     justify-content:center;
     padding:24px;
+    animation:overlay-fade-in .22s ease;
   }
   .device-user-overlay[hidden]{display:none;}
+  /* 關閉時（見 JS 的 hideOverlay）先讓整個畫面淡出，淡完才真的加上
+     [hidden]，這樣跟「Lasso-手帳曆」那頁相關的畫面切換（選裝置、創建／
+     加入手帳、進到手帳本身）就都有銜接動畫，不會整片畫面忽然跳掉。 */
+  .device-user-overlay.overlay-closing{
+    animation:overlay-fade-out .2s ease forwards;
+  }
+  @keyframes overlay-fade-in{
+    from{ opacity:0; }
+    to{ opacity:1; }
+  }
+  @keyframes overlay-fade-out{
+    from{ opacity:1; }
+    to{ opacity:0; }
+  }
   .device-user-card{
     width:100%;
     max-width:340px;
     display:flex;
     flex-direction:column;
     gap:8px;
+    animation:overlay-card-in .24s ease;
+  }
+  .device-user-overlay.overlay-closing .device-user-card{
+    animation:overlay-card-out .2s ease forwards;
+  }
+  @keyframes overlay-card-in{
+    from{ transform:translateY(14px); opacity:0; }
+    to{ transform:translateY(0); opacity:1; }
+  }
+  @keyframes overlay-card-out{
+    from{ transform:translateY(0); opacity:1; }
+    to{ transform:translateY(10px); opacity:0; }
   }
   .device-user-title{
     font-family:'Noto Serif TC', serif;
@@ -183,8 +210,12 @@
   .device-user-action:disabled{opacity:.4; cursor:default;}
 
   /* 開啟時的「創建／加入手帳」畫面、以及手帳密碼面板共用的樣式 */
-  .nb-step{display:flex; flex-direction:column; gap:8px;}
+  .nb-step{display:flex; flex-direction:column; gap:8px; animation:nb-step-in .2s ease;}
   .nb-step[hidden]{display:none;}
+  @keyframes nb-step-in{
+    from{ transform:translateY(8px); opacity:0; }
+    to{ transform:translateY(0); opacity:1; }
+  }
   .nb-field-label{
     font-family:'Noto Sans TC', sans-serif;
     font-size:13px;
@@ -998,6 +1029,51 @@
     z-index:1000;
     width:min(280px, 84vw);
     max-height:60vh;
+    animation:notif-panel-in .18s cubic-bezier(.2,.7,.3,1);
+    transform-origin:top center;
+  }
+  @keyframes notif-panel-in{
+    from{ opacity:0; transform:translateY(-6px) scale(.96); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  .notif-panel.notif-panel-closing{
+    animation:notif-panel-out .16s ease forwards;
+  }
+  @keyframes notif-panel-out{
+    from{ opacity:1; transform:translateY(0) scale(1); }
+    to{ opacity:0; transform:translateY(-4px) scale(.97); }
+  }
+  /* 畫面中央的小提示卡（例如複製密碼後的「已複製」）：只是讓使用者
+     確認「剛剛那個動作成功了」，看一眼就好，不用按按鍵關掉，卡片
+     大小只包住文字，不強行撐大。見 JS 的 showToast。 */
+  .toast{
+    position:fixed;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(.92);
+    background:var(--btn-coffee);
+    color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13.5px;
+    font-weight:700;
+    padding:10px 18px;
+    border-radius:11px;
+    box-shadow:0 10px 24px rgba(32,38,58,0.4);
+    z-index:1200;
+    opacity:0;
+    pointer-events:none;
+    white-space:nowrap;
+    animation:toast-in .18s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  @keyframes toast-in{
+    from{ opacity:0; transform:translate(-50%,-50%) scale(.92); }
+    to{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  }
+  .toast.toast-out{
+    animation:toast-out .25s ease forwards;
+  }
+  @keyframes toast-out{
+    from{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    to{ opacity:0; transform:translate(-50%,-50%) scale(.96); }
   }
   .notif-panel-title{
     color:var(--paper);
@@ -4322,7 +4398,11 @@
   }
 
   function closeNotificationPanel(){
-    if(notifPanelEl){ notifPanelEl.remove(); notifPanelEl = null; }
+    if(!notifPanelEl) return;
+    const el = notifPanelEl;
+    notifPanelEl = null;
+    el.classList.add('notif-panel-closing');
+    setTimeout(function(){ el.remove(); }, 160); // 跟 CSS 的 notif-panel-out 動畫時間一致
   }
 
   // 「多久之前」的粗略中文說法，跟通知這種不用精準到分秒的場合比較搭。
@@ -7674,6 +7754,21 @@
   let createImport = null, joinImport = null; // 「匯入舊手帳的行程」選項（有舊手帳可匯入時才有）
   const nbAddCancel = document.getElementById('nbAddCancel');
 
+  // 關閉開始畫面：先讓整個畫面（跟裡面的卡片）淡出，動畫播完才真的加上
+  // [hidden]，跟開啟時的 overlay-fade-in／overlay-card-in 前後呼應，
+  // 「Lasso-手帳曆」那頁相關的畫面切換才會有銜接動畫，不會忽然跳掉。
+  function hideOverlay(){
+    return new Promise(function(resolve){
+      if(nbStartOverlay.hidden){ resolve(); return; }
+      nbStartOverlay.classList.add('overlay-closing');
+      setTimeout(function(){
+        nbStartOverlay.hidden = true;
+        nbStartOverlay.classList.remove('overlay-closing');
+        resolve();
+      }, 200); // 跟 CSS 的 overlay-fade-out / overlay-card-out 動畫時間一致
+    });
+  }
+
   function showNbStep(step){
     nbStartOverlay.querySelectorAll('.nb-step').forEach(el => { el.hidden = el.dataset.step !== step; });
     nbStartOverlay.querySelectorAll('.nb-error').forEach(el => { el.textContent = ''; });
@@ -7686,6 +7781,7 @@
   function openStartOverlay(step){
     pendingJoin = null;
     nbAddCancel.hidden = !NOTEBOOK;
+    nbStartOverlay.classList.remove('overlay-closing');
     nbStartOverlay.hidden = false;
     showNbStep(step || 'choice');
   }
@@ -7784,7 +7880,7 @@
     if(newColumn){
       await syncChangesToSupabase('columns', [{id:newColumn.id, after:newColumn}], ch => ch.after);
     }
-    nbStartOverlay.hidden = true;
+    await hideOverlay();
     await bootNotebook(data);
   }
 
@@ -7933,7 +8029,7 @@
       const isCurrent = NOTEBOOK && nb.id === NOTEBOOK.id;
       const row = makeNavRow(notebookDisplayName(nb), (isCurrent ? '當前手帳・' : '') + participantsLabel(nb), isCurrent);
       row.addEventListener('click', function(){
-        if(isCurrent){ nbStartOverlay.hidden = true; return; } // 本來就在這本，直接關掉開始畫面就好
+        if(isCurrent){ hideOverlay(); return; } // 本來就在這本，直接關掉開始畫面就好
         switchToNotebook(nb);
       });
       listEl.appendChild(row);
@@ -8197,6 +8293,28 @@
     return fallbackCopy(text);
   }
 
+  // 畫面中央的小提示卡：顯示 duration 毫秒後自動淡出、移除，不用使用者按掉。
+  // 同一時間只留一張，新的一張跳出來就把還沒消失的舊卡直接換掉。
+  let toastEl = null, toastTimer = null, toastRemoveTimer = null;
+  function showToast(message, duration){
+    duration = duration || 1400;
+    if(toastRemoveTimer){ clearTimeout(toastRemoveTimer); toastRemoveTimer = null; }
+    if(toastTimer){ clearTimeout(toastTimer); toastTimer = null; }
+    if(toastEl){ toastEl.remove(); toastEl = null; }
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = message;
+    document.body.appendChild(el);
+    toastEl = el;
+    toastTimer = setTimeout(function(){
+      el.classList.add('toast-out');
+      toastRemoveTimer = setTimeout(function(){
+        el.remove();
+        if(toastEl === el) toastEl = null;
+      }, 250); // 跟 CSS 的 toast-out 動畫時間一致
+    }, duration);
+  }
+
   // 手風琴展開/收合動畫：max-height 沒辦法直接轉場到 auto，所以展開時
   // 用 JS 量出 .nav-body-inner 的真實高度（scrollHeight，含 padding），
   // 設成明確的像素值再讓 CSS transition 跑；收合則轉回 0。
@@ -8324,7 +8442,8 @@
       ? location.href.replace(/[?#].*$/, '')
       : location.origin + location.pathname.replace(/index\.html$/, '');
     const ok = await copyText('手帳密碼：' + formatJoinCode(NOTEBOOK.code) + '\n' + pageUrl);
-    if(!ok) navCopy.textContent = '複製失敗，請長按密碼手動複製'; // 成功就維持原樣顯示「複製」，不特別換字
+    if(ok) showToast('已複製');
+    else navCopy.textContent = '複製失敗，請長按密碼手動複製'; // 成功就維持原樣顯示「複製」，不特別換字
   });
   // 退出：把自己名下的欄位、以及只剩自己參與的行程從這本手帳裡真的刪掉
   // （不是只有這支裝置不再顯示而已）；共同行程只拿掉自己的參與者，行程
@@ -8379,7 +8498,7 @@
     const msg = '退出後將永久刪除你在這本手帳的行程資料，無法還原。\n此動作不影響其他手帳。\n確定退出？';
     showConfirmDialog(msg, function(){ leaveCurrentNotebook(); }, {okLabel:'退出', danger:true});
   });
-  nbAddCancel.addEventListener('click', function(){ nbStartOverlay.hidden = true; });
+  nbAddCancel.addEventListener('click', function(){ hideOverlay(); });
 
   // 開啟網頁：已經有手帳就直接載入；沒有就先問「創建」還是「加入」。
   if(NOTEBOOK){
