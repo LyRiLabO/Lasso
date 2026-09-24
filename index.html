@@ -355,8 +355,7 @@
      壓痕」的畫法）。 */
   .nav-row{
     position:relative;
-    /* 不能用 overflow:hidden：左邊的線圈要凸出手帳左緣（橫線是背景，本來就會
-       被圓角裁掉；圓孔那條 ::before 自己帶圓角） */
+    overflow:hidden; /* 橫線、圓孔都不能超出圓角範圍 */
     display:flex; flex-direction:column; align-items:flex-start; gap:1px;
     width:100%; text-align:left;
     padding:8px 10px 8px 30px;
@@ -371,28 +370,14 @@
     position:absolute;
     left:0; top:0; bottom:0;
     width:22px;
-    border-radius:8px 0 0 8px;
     border-right:1px dashed var(--ink-faint); /* 裝訂邊的虛線 */
     background-image:
       radial-gradient(circle, var(--paper) 2.6px, transparent 2.7px),
       radial-gradient(circle, var(--ink-faint) 3.6px, transparent 3.7px);
     background-size:22px 16px, 22px 16px;
-    background-position:center 0, center 0; /* 第一個圓孔中心落在 y=8，不會被上緣切掉一半 */
+    background-position:center 8px, center 8px;
     background-repeat:repeat-y, repeat-y;
     opacity:.55;
-  }
-  /* 線圈：每個圓孔配一小段金屬線，從手帳左緣外面橫著穿進圓孔，就像線圈筆記本。
-     圖樣週期跟圓孔一樣是 16px，圓孔中心在圖樣內 (18, 8)。 */
-  .nav-row::after{
-    content:'';
-    position:absolute;
-    left:-7px; top:0; bottom:0;
-    width:28px;
-    pointer-events:none;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='16' viewBox='0 0 28 16'%3E%3Cpath d='M2 9.3 H18' fill='none' stroke='%23000' stroke-opacity='.14' stroke-width='3.8' stroke-linecap='round'/%3E%3Cpath d='M2 8 H18' fill='none' stroke='%236b5f52' stroke-width='3.8' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-size:28px 16px;
-    background-repeat:repeat-y;
-    background-position:0 0;
   }
   .nav-row:active{background:
       repeating-linear-gradient(to bottom, transparent 0 13px, var(--line-soft) 13px 14px),
@@ -875,6 +860,8 @@
   .event-card.select-picked .ecard-notes{
     color:#4B5066;
   }
+  .event-card.select-picked .ecard-donebtn{ border-right-color:#9497A8; }
+  .event-card.select-picked .ecard-donebtn.done{ background:#9497A8; color:#2F3345; }
   .event-card.select-locked{
     opacity:.4;
     cursor:not-allowed;
@@ -1163,6 +1150,8 @@
   .cluster-menu button.selected{
     background:#CBCDD4 !important;
     color:#4B5066;
+    --dn-bg:#9497A8; /* 被選取變灰時，「已完成」小按鈕也跟著變灰 */
+    --dn-fg:#2F3345;
   }
   .cluster-menu button.selected span.cluster-time{
     color:#6B7086;
