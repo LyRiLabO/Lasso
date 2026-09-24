@@ -1183,94 +1183,77 @@
     margin:0;
   }
 
-  /* 行程左側的「完成」打勾圓圈：圓圈跟標題文字同高同色，右邊用一條比行程
-     底色深一點的鉛垂線跟文字隔開，文字整體往右退。卡片太矮放不下圓圈時
-     （見 JS 的 has-check 判斷），圓圈改放在長按選單／N 項清單的名稱前面。 */
+  /* 行程左側整條是「待完成 / 已完成」按鈕（直書）：點一下切換。已完成時
+     底色變成跟旁邊那條分隔線同一個（比行程底色深一點的）顏色。卡片太矮放不下
+     直書的字時，改成在長按選單／N 項清單的名稱前面放一顆小按鈕。 */
   .event-card.has-check, .event-card.compact.has-check{
-    --chk-d:12.5px;
-    padding-left:28px;
-    padding-right:8px;
+    padding-left:26px;
   }
-  .event-card .ecard-check{
+  .event-card .ecard-donebtn{
     position:absolute;
-    left:5px;
-    width:var(--chk-d, 12.5px);
-    height:var(--chk-d, 12.5px);
+    left:0; top:0; bottom:0;
+    width:18px;
     box-sizing:border-box;
-    border:1.5px solid var(--ecard-text, var(--ink));
-    border-radius:50%;
-    color:var(--ecard-text, var(--ink));
     display:flex;
     align-items:center;
     justify-content:center;
+    writing-mode:vertical-rl;
+    text-orientation:upright;
+    font-size:10px;
+    line-height:1;
+    letter-spacing:1px;
+    white-space:nowrap;
+    color:var(--ecard-text, var(--ink));
+    background:transparent;
+    border-right:1.5px solid var(--ecard-sep, rgba(0,0,0,0.25));
     cursor:pointer;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
     z-index:2;
   }
-  .event-card .ecard-check::before{ /* 放大點擊範圍，圓圈本身很小不好按 */
-    content:'';
-    position:absolute;
-    inset:-8px -5px -8px -5px;
-  }
-  .event-card .ecard-check-sep{
-    position:absolute;
-    top:4px;
-    bottom:4px;
-    width:1.5px;
-    border-radius:1px;
+  .event-card .ecard-donebtn.done{
     background:var(--ecard-sep, rgba(0,0,0,0.25));
-    pointer-events:none;
+    color:var(--ecard-sep-text, #fff);
   }
-  .event-card .ecard-check.done{ background:var(--ecard-text, var(--ink)); }
-  .event-card .ecard-check svg{ --chk-bg:var(--ecard-color, var(--card)); }
-  .event-card.select-mode .ecard-check{ pointer-events:none; }
-  .ecard-check svg, .menu-check svg{
-    display:none;
-    width:72%;
-    height:72%;
-    fill:none;
-    stroke:var(--chk-bg, #fff);
-    stroke-width:2.2;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-  }
-  .ecard-check.done svg, .menu-check.done svg{ display:block; }
-  .ecard-check.locked, .menu-check.locked{ pointer-events:none; }
-  /* 長按選單 / N 項清單裡的圓圈：大小跟旁邊文字的字級一樣（1em） */
-  .menu-check{
+  .event-card .ecard-donebtn.locked{ pointer-events:none; }
+  .event-card.select-mode .ecard-donebtn{ pointer-events:none; }
+  /* 左側整條都是按鈕，左邊兩個角落的縮放把手往右挪，不跟按鈕的觸控範圍疊在一起 */
+  .event-card.has-check .resize-handle.rh-tl,
+  .event-card.has-check .resize-handle.rh-bl{ left:18px; width:28px; }
+
+  .menu-donebtn{
     flex:0 0 auto;
     align-self:center;
     position:relative;
-    box-sizing:border-box;
-    width:1em;
-    height:1em;
+    font-size:.82em;
+    line-height:1;
+    padding:3px 7px;
     border:1.5px solid currentColor;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    border-radius:999px;
+    white-space:nowrap;
     cursor:pointer;
   }
-  .menu-check::before{
+  .menu-donebtn::before{
     content:'';
     position:absolute;
-    inset:-10px -6px -10px -8px;
+    inset:-8px -4px;
   }
-  .menu-check.done{ background:currentColor; }
-  .menu-sep{
-    flex:0 0 auto;
-    align-self:stretch;
-    width:1.5px;
-    border-radius:1px;
-    background:var(--item-sep, rgba(246,241,228,0.35));
+  .menu-donebtn.done{
+    background:var(--dn-bg, currentColor);
+    border-color:var(--dn-bg, currentColor);
+    color:var(--dn-fg, #fff);
   }
+  .menu-donebtn.locked{ pointer-events:none; }
   .card-menu-title-row.has-chk{
     display:flex;
     align-items:center;
     gap:8px;
-    --chk-bg:var(--btn-coffee);
+    --dn-bg:var(--paper);
+    --dn-fg:var(--btn-coffee);
   }
-  .cluster-menu button{ --chk-bg:var(--item-bg, var(--ink)); }
-  .cluster-menu button.select-mode .menu-check{ pointer-events:none; }
+  .cluster-menu button{ --dn-bg:var(--item-sep, #555); --dn-fg:var(--item-sep-text, #fff); }
+  .cluster-menu button.select-mode .menu-donebtn{ pointer-events:none; }
 
   /* 好幾個緊挨在一起、疊到快分不清的行程，合併顯示成一個「N 項行程」
      浮動提示，點下去才展開完整清單，點清單裡的項目就直接跳去那個行程的
@@ -3215,15 +3198,18 @@
     master.overrides = Object.keys(ovs).length ? ovs : null;
     return !!cur.done;
   }
-  function makeCheckCircle(done, editable, cls){
+  function makeDoneBtn(done, editable, cls){
     const el = document.createElement('span');
     el.className = cls + (done ? ' done' : '') + (editable ? '' : ' locked');
-    el.setAttribute('role', 'checkbox');
-    el.setAttribute('aria-checked', done ? 'true' : 'false');
-    el.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true"><polyline points="2.6 6.3 5 8.6 9.4 3.6"></polyline></svg>';
+    el.setAttribute('role', 'button');
+    el.textContent = done ? '已完成' : '待完成';
     return el;
   }
-  // 圓圈自己處理點擊：不讓事件冒泡到卡片／清單項目（不然會被當成點卡片開編輯頁、長按等）
+  function setDoneBtnState(el, done){
+    el.classList.toggle('done', done);
+    el.textContent = done ? '已完成' : '待完成';
+  }
+  // 選單／清單裡的小按鈕：自己處理點擊，不讓事件冒泡到選單項目
   function bindCheckTap(el, onTap){
     let down = false, sx = 0, sy = 0;
     el.addEventListener('pointerdown', function(e){
@@ -3242,26 +3228,47 @@
     el.addEventListener('pointercancel', function(){ down = false; });
     el.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault(); });
   }
-  // 卡片夠高、文字也沒被縮小時，在卡片左側放圓圈＋鉛垂線
+  // 卡片左側的整條按鈕：短按（沒移動）= 切換；如果手指其實是在上下滑動，
+  // 就幫忙捲動時間軸（卡片本身是 touch-action:none，不會自己捲動）。
+  function bindStripTap(el, onTap){
+    let down = false, moved = false, sx = 0, sy = 0, lastY = 0;
+    el.addEventListener('pointerdown', function(e){
+      if(pinchActive) return;
+      e.stopPropagation();
+      down = true; moved = false;
+      sx = e.clientX; sy = e.clientY; lastY = e.clientY;
+    });
+    el.addEventListener('pointermove', function(e){
+      if(!down) return;
+      if(!moved && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) moved = true;
+      if(moved){
+        scheduleTimelineScroll(e.clientY - lastY);
+      }
+      lastY = e.clientY;
+    });
+    el.addEventListener('pointerup', function(e){
+      e.stopPropagation();
+      const wasTap = down && !moved;
+      down = false;
+      if(wasTap){
+        e.preventDefault();
+        onTap();
+      }
+    });
+    el.addEventListener('pointercancel', function(){ down = false; });
+    el.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault(); });
+  }
+  // 卡片夠高、文字也沒被縮小時，左側放整條「待完成 / 已完成」按鈕
   function addCardCheck(card, inst){
-    const t = card.querySelector('.ecard-title');
-    if(!t) return false;
-    const d = parseFloat(getComputedStyle(t).fontSize) || 12.5;
-    card.style.setProperty('--chk-d', d + 'px');
-    const sep = document.createElement('span');
-    sep.className = 'ecard-check-sep';
-    sep.style.left = (5 + d + 4.5) + 'px';
-    const circle = makeCheckCircle(!!inst.done, canEditInstance(inst), 'ecard-check');
-    circle.style.top = (t.offsetTop + (t.offsetHeight - d) / 2) + 'px';
-    bindCheckTap(circle, function(){
+    const btn = makeDoneBtn(!!inst.done, canEditInstance(inst), 'ecard-donebtn');
+    bindStripTap(btn, function(){
       toggleInstanceDone(inst.masterId, inst.instanceDate);
       renderEvents();
     });
-    card.appendChild(sep);
-    card.appendChild(circle);
+    card.appendChild(btn);
     return true;
   }
-  const CHECK_MIN_CARD_PX = 22; // 卡片矮於這個高度，圓圈放不下，改放到長按選單 / N 項清單
+  const CHECK_MIN_CARD_PX = 38; // 卡片矮於這個高度，直書的「待完成」放不下，改放到長按選單 / N 項清單
   const CREATOR_LOCK_MSG = '只有建立者本人可以把自己移出行程';
   const MOVE_CONFLICT_MSG = '該日該時段已有行程';
 
@@ -3696,6 +3703,7 @@
     card.style.setProperty('--ecard-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
     card.style.setProperty('--ecard-handle-color', darkenHex(c.hex, 0.22));
     card.style.setProperty('--ecard-sep', darkenHex(c.hex, 0.28));
+    card.style.setProperty('--ecard-sep-text', isLightColor(darkenHex(c.hex, 0.28)) ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
   }
 
   function colIndex(colId){
@@ -4483,6 +4491,7 @@
 
   /* ---------------- 長按卡片（不拖動）跳出的「複製／刪除」快捷選單 ---------------- */
   let cardMenuEl = null;
+  let cardMenuKeep = false; // 在長按選單裡打勾會重繪時間軸，這時選單不要被關掉
 
   function closeCardMenu(){
     if(cardMenuEl){ cardMenuEl.remove(); cardMenuEl = null; }
@@ -4513,15 +4522,16 @@
       row.textContent = '';
       if(withCheck){
         row.classList.add('has-chk');
-        const chk = makeCheckCircle(!!inst.done, canEditInstance(inst), 'menu-check');
+        const chk = makeDoneBtn(!!inst.done, canEditInstance(inst), 'menu-donebtn');
         bindCheckTap(chk, function(){
-          toggleInstanceDone(masterId, instanceDate);
-          renderEvents(); // 會順便把選單收起來
+          cardMenuKeep = true;
+          const nowDone = toggleInstanceDone(masterId, instanceDate);
+          renderEvents();
+          cardMenuKeep = false;
+          inst.done = nowDone;
+          setDoneBtnState(chk, nowDone);
         });
-        const sep = document.createElement('span');
-        sep.className = 'menu-sep';
         row.appendChild(chk);
-        row.appendChild(sep);
       }
       const txt = document.createElement('span');
       txt.textContent = shrunkTitle;
@@ -4611,24 +4621,21 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.innerHTML = '<span class="cluster-title"></span><span class="cluster-time"></span>';
-      const rowChk = makeCheckCircle(!!item.done, canEditInstance(item), 'menu-check');
-      const rowSep = document.createElement('span');
-      rowSep.className = 'menu-sep';
+      const rowChk = makeDoneBtn(!!item.done, canEditInstance(item), 'menu-donebtn');
       bindCheckTap(rowChk, function(){
         clusterMenuKeep = true;
         const nowDone = toggleInstanceDone(item.masterId, item.instanceDate);
         renderEvents();
         clusterMenuKeep = false;
         item.done = nowDone;
-        rowChk.classList.toggle('done', nowDone);
-        rowChk.setAttribute('aria-checked', nowDone ? 'true' : 'false');
+        setDoneBtnState(rowChk, nowDone);
       });
-      btn.insertBefore(rowSep, btn.firstChild);
-      btn.insertBefore(rowChk, rowSep);
+      btn.insertBefore(rowChk, btn.firstChild);
       const colorInfo = eventColorById(item.color);
       const light = isLightColor(colorInfo.hex);
       btn.style.setProperty('--item-bg', colorInfo.hex);
       btn.style.setProperty('--item-sep', darkenHex(colorInfo.hex, 0.28));
+      btn.style.setProperty('--item-sep-text', isLightColor(darkenHex(colorInfo.hex, 0.28)) ? '#1e1a16' : '#ffffff');
       btn.style.setProperty('--item-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
       btn.style.setProperty('--item-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
       btn.querySelector('.cluster-title').textContent = item.title;
@@ -5393,7 +5400,7 @@
     captureUndoCheckpoint();
     scheduleSaveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來（debounce，避免同步阻塞）
     updateMoveButtonVisibility(); // 勾選狀態常常伴隨重繪一起變動，這裡統一同步一次
-    closeCardMenu(); // 畫面要重繪了，任何還開著的快捷選單先收起來，避免指到舊卡片
+    if(!cardMenuKeep) closeCardMenu(); // 畫面要重繪了，任何還開著的快捷選單先收起來，避免指到舊卡片（在選單裡打勾除外）
     if(!clusterMenuKeep) closeClusterMenu();
     eventsLayer.innerHTML = '';
     renderColumnDividers();
