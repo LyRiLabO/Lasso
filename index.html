@@ -1218,9 +1218,6 @@
   }
   .event-card .ecard-donebtn.locked{ pointer-events:none; }
   .event-card.select-mode .ecard-donebtn{ pointer-events:none; }
-  /* 左側整條都是按鈕，左邊兩個角落的縮放把手往右挪，不跟按鈕的觸控範圍疊在一起 */
-  .event-card.has-check .resize-handle.rh-tl,
-  .event-card.has-check .resize-handle.rh-bl{ left:18px; width:28px; }
 
   .menu-donebtn{
     flex:0 0 auto;
@@ -5663,14 +5660,12 @@
 
     function flushCluster(cluster){
       if(cluster.length === 1){
-        // 縮到最小字體還是放不下的極端情況：直接用最小字體顯示，
-        // 放不下的部分交給 CSS 的刪節號處理，不再另外跳出提示。
+        // 小到連最小可讀字體都放不下、旁邊也沒有其他行程可以合併成「N 項行程」：
+        // 卡片上的字直接消失，變成純色塊，要看名稱就長按（長按選單最上面會顯示）。
         const only = cluster[0];
-        only.card.classList.remove('label-floated');
-        only.card.classList.add('title-only');
-        only.card.innerHTML = '<div class="ecard-title">'+only.recurMark+only.title+'</div>';
-        only.card.querySelector('.ecard-title').style.fontSize = '8px';
-        only.card.dataset.shrunk = '1';
+        only.card.classList.add('label-floated');
+        only.card.innerHTML = '';
+        only.card.dataset.textHidden = '1';
         return;
       }
       const anchor = cluster[0]; // 群組一律貼在最上面（同高度則最左）那一個項目的位置
@@ -5725,7 +5720,7 @@
 
     if(fits()) return true;
 
-    const MIN_FONT = 8;
+    const MIN_FONT = 10; // 縮到這個大小還放不下，就寧可整段字拿掉（長按看名稱），也不要顯示看不清楚的小字
     let size = 12.5;
     while(size > MIN_FONT){
       size -= 0.5;
@@ -6593,6 +6588,30 @@
     let startScrollTop = 0;
     let finalHeight = 0, finalWidthPx = 0;
     let cancelledByScroll = false, lastY = 0, lastMoveTime = 0, scrollVelocity = 0;
+
+    // 左側「待完成／已完成」按鈕的上下兩端，跟左邊角落把手的觸控範圍重疊
+    // （把手蓋在按鈕上面）。用「短按 vs 長按」區分：還沒到 400ms（進入縮放）
+    // 就放開、而且落點在按鈕上 = 切換完成狀態；長按照舊是調整時長。
+    let chkTap = null;
+    handle.addEventListener('pointerdown', function(e){
+      chkTap = null;
+      const strip = card.querySelector('.ecard-donebtn');
+      if(!strip || strip.classList.contains('locked')) return;
+      const r = strip.getBoundingClientRect();
+      if(e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom){
+        chkTap = {x: e.clientX, y: e.clientY, t: performance.now()};
+      }
+    });
+    handle.addEventListener('pointerup', function(e){
+      if(!chkTap) return;
+      const tap = chkTap;
+      chkTap = null;
+      if(performance.now() - tap.t < 380 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 10){
+        toggleInstanceDone(inst.masterId, inst.instanceDate);
+        renderEvents();
+      }
+    });
+    handle.addEventListener('pointercancel', function(){ chkTap = null; });
 
     handle.addEventListener('pointerdown', function(e){
       if(pinchActive) return; // 雙指縮放進行中，單指手勢一律不啟動
