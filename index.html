@@ -355,7 +355,8 @@
      壓痕」的畫法）。 */
   .nav-row{
     position:relative;
-    overflow:hidden; /* 橫線、圓孔都不能超出圓角範圍 */
+    /* 不能用 overflow:hidden：左邊的線圈要凸出手帳左緣（橫線是背景，本來就會
+       被圓角裁掉；圓孔那條 ::before 自己帶圓角） */
     display:flex; flex-direction:column; align-items:flex-start; gap:1px;
     width:100%; text-align:left;
     padding:8px 10px 8px 30px;
@@ -370,14 +371,28 @@
     position:absolute;
     left:0; top:0; bottom:0;
     width:22px;
+    border-radius:8px 0 0 8px;
     border-right:1px dashed var(--ink-faint); /* 裝訂邊的虛線 */
     background-image:
       radial-gradient(circle, var(--paper) 2.6px, transparent 2.7px),
       radial-gradient(circle, var(--ink-faint) 3.6px, transparent 3.7px);
     background-size:22px 16px, 22px 16px;
-    background-position:center 8px, center 8px;
+    background-position:center 0, center 0; /* 第一個圓孔中心落在 y=8，不會被上緣切掉一半 */
     background-repeat:repeat-y, repeat-y;
     opacity:.55;
+  }
+  /* 線圈：每個圓孔配一小段金屬線，從手帳左緣外面斜斜地穿進圓孔，就像線圈筆記本。
+     圖樣週期跟圓孔一樣是 16px，圓孔中心在圖樣內 (18, 8)。 */
+  .nav-row::after{
+    content:'';
+    position:absolute;
+    left:-7px; top:0; bottom:0;
+    width:28px;
+    pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='16' viewBox='0 0 28 16'%3E%3Cpath d='M1.6 12.6 C7 9.6 12.5 8 17.6 8.4' fill='none' stroke='%23000' stroke-opacity='.16' stroke-width='2.8' stroke-linecap='round'/%3E%3Cpath d='M1.6 11.4 C7 8.4 12.5 6.8 17.6 7.2' fill='none' stroke='%236b5f52' stroke-width='2.6' stroke-linecap='round'/%3E%3Cpath d='M2.2 10.6 C7 7.8 12.5 6.2 17.2 6.5' fill='none' stroke='%23e2d7c5' stroke-width='.9' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-size:28px 16px;
+    background-repeat:repeat-y;
+    background-position:0 0;
   }
   .nav-row:active{background:
       repeating-linear-gradient(to bottom, transparent 0 13px, var(--line-soft) 13px 14px),
@@ -812,9 +827,9 @@
     font-size:12.5px;
     color:var(--ecard-text, var(--ink));
     line-height:1.25;
-    white-space:nowrap;
+    white-space:normal;        /* 名稱太長就換行，換行後還是塞不下才會整段拿掉 */
+    overflow-wrap:anywhere;
     overflow:hidden;
-    text-overflow:ellipsis;
   }
   .event-card .ecard-time{
     font-family:'JetBrains Mono', monospace;
@@ -841,6 +856,8 @@
   .event-card.title-only{
     display:flex;
     align-items:center;
+    padding-top:2px;    /* 只剩標題時上下內距縮小，讓矮卡片也放得下一行 */
+    padding-bottom:2px;
   }
   .event-card.title-only .ecard-title{
     width:100%;
@@ -1163,7 +1180,7 @@
   }
   .event-card.compact .ecard-row{
     display:flex;
-    align-items:baseline;
+    align-items:flex-start;
     gap:6px;
     min-width:0;
     width:100%;
@@ -1175,8 +1192,8 @@
     min-width:0;
     margin:0;
     overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
+    white-space:normal;
+    overflow-wrap:anywhere;
   }
   .event-card.compact .ecard-row .ecard-time{
     flex:0 0 auto;
@@ -1193,6 +1210,8 @@
     position:absolute;
     left:0; top:0; bottom:0;
     width:18px;
+    border-top-left-radius:inherit;    /* 卡片的左上／左下圓角：卡片 overflow:visible 時（N 項行程、純色塊）不會替按鈕裁角 */
+    border-bottom-left-radius:inherit;
     box-sizing:border-box;
     display:flex;
     align-items:center;
@@ -2554,7 +2573,6 @@
       </button>
       <div class="nav-body">
         <div class="nav-body-inner">
-          <div class="nav-hint">選一本手帳，把你在那裡的行程複製過來（原本那本不會變）。</div>
           <div class="nav-rows" id="navImportList"></div>
         </div>
       </div>
@@ -5733,9 +5751,18 @@
     card.innerHTML = '<div class="ecard-title">'+recurMark+title+'</div>';
     const titleEl = card.querySelector('.ecard-title');
 
+    // 名稱會換行：卡片高度放得下幾行就顯示幾行，放不下的行數用刪節號截掉；
+    // 連一行都放不下才回傳 false（整段字拿掉）。
     function fits(){
-      return (card.scrollHeight - card.clientHeight <= 1) &&
-             (titleEl.scrollWidth - titleEl.clientWidth <= 1);
+      const cs = getComputedStyle(card);
+      const inner = card.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const lh = parseFloat(getComputedStyle(titleEl).lineHeight) || 15.6;
+      const lines = Math.floor((inner + 1) / lh);
+      if(lines < 1) return false;
+      titleEl.style.display = '-webkit-box';
+      titleEl.style.webkitBoxOrient = 'vertical';
+      titleEl.style.webkitLineClamp = String(lines);
+      return true;
     }
 
     // 字體大小永遠不縮小：只剩標題一行還是放不下，就回傳 false，
