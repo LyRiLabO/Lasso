@@ -1216,6 +1216,7 @@
     background:var(--ecard-sep, rgba(0,0,0,0.25));
     color:var(--ecard-sep-text, #fff);
   }
+  .event-card .ecard-donebtn.short{ font-size:0; letter-spacing:0; }
   .event-card .ecard-donebtn.locked{ pointer-events:none; }
   .event-card.select-mode .ecard-donebtn{ pointer-events:none; }
 
@@ -3228,15 +3229,16 @@
   // 卡片左側的整條按鈕：短按（沒移動）= 切換；如果手指其實是在上下滑動，
   // 就幫忙捲動時間軸（卡片本身是 touch-action:none，不會自己捲動）。
   function bindStripTap(el, onTap){
-    let down = false, moved = false, sx = 0, sy = 0, lastY = 0;
+    let down = false, moved = false, sx = 0, sy = 0, lastY = 0, gen = 0;
     el.addEventListener('pointerdown', function(e){
       if(pinchActive) return;
       e.stopPropagation();
-      down = true; moved = false;
+      down = true; moved = false; gen = pinchGen;
       sx = e.clientX; sy = e.clientY; lastY = e.clientY;
     });
     el.addEventListener('pointermove', function(e){
       if(!down) return;
+      if(pinchActive || gen !== pinchGen){ down = false; return; } // 另一根手指按下、變成雙指縮放了：這一下不算點擊，也不要幫忙捲動
       if(!moved && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) moved = true;
       if(moved){
         scheduleTimelineScroll(e.clientY - lastY);
@@ -3245,7 +3247,7 @@
     });
     el.addEventListener('pointerup', function(e){
       e.stopPropagation();
-      const wasTap = down && !moved;
+      const wasTap = down && !moved && gen === pinchGen;
       down = false;
       if(wasTap){
         e.preventDefault();
@@ -3256,8 +3258,9 @@
     el.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault(); });
   }
   // 卡片夠高、文字也沒被縮小時，左側放整條「待完成 / 已完成」按鈕
-  function addCardCheck(card, inst){
+  function addCardCheck(card, inst, cardHeight){
     const btn = makeDoneBtn(!!inst.done, canEditInstance(inst), 'ecard-donebtn');
+    if(cardHeight < CHECK_MIN_CARD_PX) btn.classList.add('short'); // 太矮放不下字：字拿掉，按鈕本身（空間、線、顏色）還在
     bindStripTap(btn, function(){
       toggleInstanceDone(inst.masterId, inst.instanceDate);
       renderEvents();
@@ -4522,9 +4525,11 @@
         const chk = makeDoneBtn(!!inst.done, canEditInstance(inst), 'menu-donebtn');
         bindCheckTap(chk, function(){
           cardMenuKeep = true;
-          const nowDone = toggleInstanceDone(masterId, instanceDate);
-          renderEvents();
-          cardMenuKeep = false;
+          let nowDone;
+          try{
+            nowDone = toggleInstanceDone(masterId, instanceDate);
+            renderEvents();
+          }finally{ cardMenuKeep = false; }
           inst.done = nowDone;
           setDoneBtnState(chk, nowDone);
         });
@@ -4621,9 +4626,11 @@
       const rowChk = makeDoneBtn(!!item.done, canEditInstance(item), 'menu-donebtn');
       bindCheckTap(rowChk, function(){
         clusterMenuKeep = true;
-        const nowDone = toggleInstanceDone(item.masterId, item.instanceDate);
-        renderEvents();
-        clusterMenuKeep = false;
+        let nowDone;
+        try{
+          nowDone = toggleInstanceDone(item.masterId, item.instanceDate);
+          renderEvents();
+        }finally{ clusterMenuKeep = false; }
         item.done = nowDone;
         setDoneBtnState(rowChk, nowDone);
       });
@@ -4810,6 +4817,9 @@
   // 相容性陷阱），必須跟 CSS 裡 .day-slider 的 220px（=2*110）常數維持一致，改這裡記得
   // CSS 那邊也要一起改。
   const TIMELINE_BUFFER_PX = 110;
+  let zoomFastMode = false;   // 雙指縮放進行中的每一影格：卡片只更新位置和大小，不排版文字（很吃效能）
+  let pinchNeedsFullRender = false; // 縮放結束後要補一次完整重繪（把文字、按鈕、N 項行程排回來）
+  let pinchGen = 0; // 每次雙指縮放開始 +1，讓單指的點擊判斷知道「這一下其實是縮放的一部分」
   let pinchActive = false; // 雙指縮放進行中時，讓其他單指手勢（拖曳/調整時長/長按新增）全部按兵不動
   const datePicker = document.getElementById('datePicker');
   const dateDisplayBtn = document.getElementById('dateDisplayBtn');
@@ -5446,7 +5456,7 @@
         // 甚至變成浮動標籤，就把這張卡片砍掉重做一次「不帶圓圈」的版本，
         // 圓圈改放到長按選單 / N 項清單裡。
         for(let attempt = 0; attempt < 2; attempt++){
-        const wantCheck = attempt === 0 && height >= CHECK_MIN_CARD_PX;
+        const wantCheck = attempt === 0; // 左側按鈕的位置永遠保留，卡片再小也一樣
         const card = document.createElement('div');
         card.className = 'event-card';
         applyEventColor(card, inst.color);
@@ -5456,6 +5466,14 @@
         card.style.width = 'calc(' + widthPct + '% - 6px)';
         card.dataset.masterId = inst.masterId;
         card.dataset.date = inst.instanceDate;
+
+        if(zoomFastMode){
+          // 縮放中每一影格都要把所有卡片重畫，逐張量測文字有沒有塞得下
+          // （overflowCheck）會一直強迫瀏覽器重新排版，手機上一影格要幾百毫秒，
+          // 反覆縮放就會卡到整個網頁沒反應。縮放中先只畫色塊，放手後再補一次完整重繪。
+          eventsLayer.appendChild(card);
+          break;
+        }
 
         if(selectMode){
           card.classList.add('select-mode');
@@ -5530,16 +5548,12 @@
           }
         }
 
-        if(wantCheck && (card.classList.contains('label-floated') || card.dataset.shrunk === '1')){
-          card.remove();
-          const ci = floatCandidates.findIndex(c => c.card === card);
-          if(ci >= 0) floatCandidates.splice(ci, 1);
-          continue; // 用不帶圓圈的版本重做
-        }
-        if(wantCheck){
-          addCardCheck(card, inst);
-        } else {
-          card.dataset.chkMenu = '1'; // 這張卡片上沒有圓圈：長按選單裡要多一行「圓圈＋名稱」
+        // 左側「待完成／已完成」按鈕：空間、分隔線、顏色永遠保留，卡片再小也一樣，
+        // 文字不會往左擠進按鈕的位置。太矮放不下直書的字時，只有按鈕上的字拿掉，
+        // 這時長按選單裡會多一顆小按鈕（顯示目前狀態）。
+        addCardCheck(card, inst, height);
+        if(height < CHECK_MIN_CARD_PX || card.classList.contains('label-floated')){
+          card.dataset.chkMenu = '1';
         }
 
         attachCardInteractions(card, inst, runMin, runMax);
@@ -5658,13 +5672,20 @@
       flushCluster(cluster);
     });
 
+    // 只清掉卡片上的文字；左側「待完成／已完成」按鈕跟縮放把手要留著
+    function clearCardText(card){
+      Array.from(card.children).forEach(ch => {
+        if(!ch.classList.contains('ecard-donebtn') && !ch.classList.contains('resize-handle')) ch.remove();
+      });
+    }
+
     function flushCluster(cluster){
       if(cluster.length === 1){
         // 小到連最小可讀字體都放不下、旁邊也沒有其他行程可以合併成「N 項行程」：
         // 卡片上的字直接消失，變成純色塊，要看名稱就長按（長按選單最上面會顯示）。
         const only = cluster[0];
         only.card.classList.add('label-floated');
-        only.card.innerHTML = '';
+        clearCardText(only.card);
         only.card.dataset.textHidden = '1';
         return;
       }
@@ -5673,7 +5694,7 @@
       // 內容都要清掉，改成單純的色塊（只有 anchor 上面會貼那個提示）。
       cluster.forEach(c => {
         c.card.classList.add('label-floated');
-        c.card.innerHTML = '';
+        clearCardText(c.card);
       });
       const label = document.createElement('span');
       label.className = 'ecard-solo ecard-cluster';
@@ -5701,9 +5722,8 @@
   }
 
   // 格子裝不下「標題＋時間＋備註」時的退讓順序：先拿掉備註，再拿掉時間、
-  // 只留標題（字體大小不變）；標題單獨顯示還是放不下的話，才開始一路
-  // 縮小字體，直到整段文字剛好塞進格子裡，或縮到最小可讀大小為止。
-  // 回傳 true 表示最後有塞進去；false 表示縮到最小還是放不下（極端情況）。
+  // 只留標題（字體大小不變，永遠不縮小）。
+  // 回傳 true 表示標題塞得進去；false 表示連標題單獨顯示都放不下。
   function fitTitleOnly(card, recurMark, title){
     card.classList.remove('compact');
     // 只剩標題這一行時，讓它在格子裡「垂直置中、水平靠左」：錨點是最
@@ -5718,20 +5738,9 @@
              (titleEl.scrollWidth - titleEl.clientWidth <= 1);
     }
 
-    if(fits()) return true;
-
-    const MIN_FONT = 10; // 縮到這個大小還放不下，就寧可整段字拿掉（長按看名稱），也不要顯示看不清楚的小字
-    let size = 12.5;
-    while(size > MIN_FONT){
-      size -= 0.5;
-      titleEl.style.fontSize = size + 'px';
-      if(fits()){
-        card.dataset.shrunk = '1'; // 字體被縮小過：長按時額外顯示完整名稱
-        return true;
-      }
-    }
-    card.dataset.shrunk = '1';
-    return false;
+    // 字體大小永遠不縮小：只剩標題一行還是放不下，就回傳 false，
+    // 交給後面處理（旁邊有緊鄰行程就合併成「N 項行程」，否則整段字拿掉、長按看名稱）。
+    return fits();
   }
 
   function escapeHtml(s){
@@ -6599,14 +6608,14 @@
       if(!strip || strip.classList.contains('locked')) return;
       const r = strip.getBoundingClientRect();
       if(e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom){
-        chkTap = {x: e.clientX, y: e.clientY, t: performance.now()};
+        chkTap = {x: e.clientX, y: e.clientY, t: performance.now(), gen: pinchGen};
       }
     });
     handle.addEventListener('pointerup', function(e){
       if(!chkTap) return;
       const tap = chkTap;
       chkTap = null;
-      if(performance.now() - tap.t < 380 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 10){
+      if(!pinchActive && tap.gen === pinchGen && performance.now() - tap.t < 380 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 10){
         toggleInstanceDone(inst.masterId, inst.instanceDate);
         renderEvents();
       }
@@ -9006,6 +9015,7 @@
       if(activePointers.size === 2){
         const [p1, p2] = currentTwoPoints();
         pinchActive = true;
+        pinchGen++;
         pinchStartDist = dist(p1, p2) || 1;
         pinchStartHourPx = hourPx;
         closeCardMenu();
@@ -9018,12 +9028,35 @@
     // 完全沒有節流的話，手指移動快時可能一秒觸發幾十次「整個重繪＋存檔」。這裡
     // 改成只記錄最新目標值，用 requestAnimationFrame 節流成每影格只真正呼叫一次。
     let pinchZoomRAF = null, pendingPinchTarget = null, pendingPinchMidY = null;
+    function applyPinchZoomFrame(target, midY){ // 縮放中的單一影格：快速模式（只畫色塊）
+      zoomFastMode = true;
+      try{
+        setHourPx(target, midY);
+        pinchNeedsFullRender = true;
+      }catch(err){
+        console.error('縮放重繪失敗：', err);
+      }finally{
+        zoomFastMode = false;
+      }
+    }
+    function finishPinchRender(){ // 縮放結束：補一次完整重繪（帶文字、按鈕、N 項行程）
+      if(!pinchNeedsFullRender) return;
+      pinchNeedsFullRender = false;
+      try{ renderEvents(); }catch(err){ console.error('縮放後重繪失敗：', err); }
+    }
     function flushPinchZoom(){ // 手指放開/取消時要立刻套用最新目標值，確保縮放最終結果準確
       if(pinchZoomRAF){ cancelAnimationFrame(pinchZoomRAF); pinchZoomRAF = null; }
-      if(pendingPinchTarget != null){ setHourPx(pendingPinchTarget, pendingPinchMidY); pendingPinchTarget = null; }
+      if(pendingPinchTarget != null){
+        const t = pendingPinchTarget, m = pendingPinchMidY;
+        pendingPinchTarget = null;
+        const before = hourPx;
+        try{ setHourPx(t, m); }catch(err){ console.error('縮放失敗：', err); }
+        if(hourPx !== before) pinchNeedsFullRender = false; // setHourPx 剛剛已經完整重繪過了
+      }
+      finishPinchRender();
     }
 
-    timelineScroll.addEventListener('pointermove', function(e){
+    window.addEventListener('pointermove', function(e){
       if(!activePointers.has(e.pointerId)) return;
       activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
       if(!pinchActive || activePointers.size < 2) return;
@@ -9035,19 +9068,64 @@
       if(pinchZoomRAF) return;
       pinchZoomRAF = requestAnimationFrame(function(){
         pinchZoomRAF = null;
-        if(pendingPinchTarget != null){ setHourPx(pendingPinchTarget, pendingPinchMidY); pendingPinchTarget = null; }
+        if(pendingPinchTarget != null){
+          const t = pendingPinchTarget, m = pendingPinchMidY;
+          pendingPinchTarget = null;
+          applyPinchZoomFrame(t, m);
+        }
       });
     }, true);
 
-    timelineScroll.addEventListener('pointerup', function(e){
+    window.addEventListener('pointerup', function(e){
       activePointers.delete(e.pointerId);
       if(activePointers.size < 2){ pinchActive = false; flushPinchZoom(); }
     }, true);
 
-    timelineScroll.addEventListener('pointercancel', function(e){
+    window.addEventListener('pointercancel', function(e){
       activePointers.delete(e.pointerId);
       if(activePointers.size < 2){ pinchActive = false; flushPinchZoom(); }
     }, true);
+
+    // ---- 防止「縮放卡死」：手指紀錄殘留 ----
+    // 縮放時每一影格都會把所有行程卡片整個重繪（舊的 DOM 元素被丟掉），手指原本
+    // 按著的元素一旦被移除，瀏覽器（尤其是 iOS）有時不會再送 pointerup／
+    // pointercancel 給我們。少了那一筆，activePointers 裡就會殘留一根「幽靈手指」：
+    //   - 下次只用一根手指按，就被當成兩指（一按就進入縮放，單指手勢全部被略過）
+    //   - 幽靈手指累積到 3 個以上，size === 2 永遠不成立，縮放再也啟動不了
+    //   - pinchActive 一直是 true，卡片上的按鈕、拖曳、長按全部沒反應
+    // 解法：只要有「第一根手指」按下（isPrimary，代表此刻螢幕上沒有其他手指），
+    // 就把之前殘留的紀錄和縮放狀態全部歸零；手指全部離開、視窗失焦時也一樣。
+    function resetPinchState(){
+      activePointers.clear();
+      if(pinchZoomRAF){ cancelAnimationFrame(pinchZoomRAF); pinchZoomRAF = null; }
+      const hadPending = pendingPinchTarget != null;
+      const wasActive = pinchActive;
+      pinchActive = false;
+      if(hadPending){
+        const t = pendingPinchTarget, m = pendingPinchMidY;
+        pendingPinchTarget = null;
+        const before = hourPx;
+        try{ setHourPx(t, m); }catch(err){ console.error('縮放失敗：', err); }
+        if(hourPx !== before) pinchNeedsFullRender = false;
+      }
+      finishPinchRender();
+      return wasActive;
+    }
+    window.addEventListener('pointerdown', function(e){
+      if(e.isPrimary){
+        activePointers.clear();
+        pinchActive = false;
+        pendingPinchTarget = null;
+        if(pinchZoomRAF){ cancelAnimationFrame(pinchZoomRAF); pinchZoomRAF = null; }
+      }
+    }, true);
+    function onAllTouchesGone(e){
+      if(e.touches && e.touches.length === 0 && (activePointers.size > 0 || pinchActive)) resetPinchState();
+    }
+    window.addEventListener('touchend', onAllTouchesGone, true);
+    window.addEventListener('touchcancel', onAllTouchesGone, true);
+    window.addEventListener('blur', resetPinchState);
+    document.addEventListener('visibilitychange', function(){ if(document.hidden) resetPinchState(); });
   })();
 
   // 開場自動捲到「現在時間線」的位置，讓那條線落在可視範圍由上往下 1/3
