@@ -1183,6 +1183,95 @@
     margin:0;
   }
 
+  /* 行程左側的「完成」打勾圓圈：圓圈跟標題文字同高同色，右邊用一條比行程
+     底色深一點的鉛垂線跟文字隔開，文字整體往右退。卡片太矮放不下圓圈時
+     （見 JS 的 has-check 判斷），圓圈改放在長按選單／N 項清單的名稱前面。 */
+  .event-card.has-check, .event-card.compact.has-check{
+    --chk-d:12.5px;
+    padding-left:28px;
+    padding-right:8px;
+  }
+  .event-card .ecard-check{
+    position:absolute;
+    left:5px;
+    width:var(--chk-d, 12.5px);
+    height:var(--chk-d, 12.5px);
+    box-sizing:border-box;
+    border:1.5px solid var(--ecard-text, var(--ink));
+    border-radius:50%;
+    color:var(--ecard-text, var(--ink));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:2;
+  }
+  .event-card .ecard-check::before{ /* 放大點擊範圍，圓圈本身很小不好按 */
+    content:'';
+    position:absolute;
+    inset:-8px -5px -8px -5px;
+  }
+  .event-card .ecard-check-sep{
+    position:absolute;
+    top:4px;
+    bottom:4px;
+    width:1.5px;
+    border-radius:1px;
+    background:var(--ecard-sep, rgba(0,0,0,0.25));
+    pointer-events:none;
+  }
+  .event-card .ecard-check.done{ background:var(--ecard-text, var(--ink)); }
+  .event-card .ecard-check svg{ --chk-bg:var(--ecard-color, var(--card)); }
+  .event-card.select-mode .ecard-check{ pointer-events:none; }
+  .ecard-check svg, .menu-check svg{
+    display:none;
+    width:72%;
+    height:72%;
+    fill:none;
+    stroke:var(--chk-bg, #fff);
+    stroke-width:2.2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .ecard-check.done svg, .menu-check.done svg{ display:block; }
+  .ecard-check.locked, .menu-check.locked{ pointer-events:none; }
+  /* 長按選單 / N 項清單裡的圓圈：大小跟旁邊文字的字級一樣（1em） */
+  .menu-check{
+    flex:0 0 auto;
+    align-self:center;
+    position:relative;
+    box-sizing:border-box;
+    width:1em;
+    height:1em;
+    border:1.5px solid currentColor;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+  .menu-check::before{
+    content:'';
+    position:absolute;
+    inset:-10px -6px -10px -8px;
+  }
+  .menu-check.done{ background:currentColor; }
+  .menu-sep{
+    flex:0 0 auto;
+    align-self:stretch;
+    width:1.5px;
+    border-radius:1px;
+    background:var(--item-sep, rgba(246,241,228,0.35));
+  }
+  .card-menu-title-row.has-chk{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    --chk-bg:var(--btn-coffee);
+  }
+  .cluster-menu button{ --chk-bg:var(--item-bg, var(--ink)); }
+  .cluster-menu button.select-mode .menu-check{ pointer-events:none; }
+
   /* 好幾個緊挨在一起、疊到快分不清的行程，合併顯示成一個「N 項行程」
      浮動提示，點下去才展開完整清單，點清單裡的項目就直接跳去那個行程的
      編輯頁（跟平常點行程卡片一樣）。格子本身留一條乾淨的色塊當作這段
@@ -3107,6 +3196,72 @@
     if(isInstanceCreator(creatorId, oldParticipants)) return false;
     return creatorIsIn(creatorId, oldParticipants) && !creatorIsIn(creatorId, newParticipants);
   }
+  // 行程「已完成」打勾狀態：存在 overrides 裡（不用改資料表）。重複行程每一天
+  // 各自一筆（key 是日期）；單次行程用固定的 '_' 當 key，這樣搬到別天也不用搬資料。
+  function doneKeyFor(master, dateStr){ return master.recurrence ? dateStr : '_'; }
+  function isInstanceDone(master, dateStr){
+    const ov = master.overrides && master.overrides[doneKeyFor(master, dateStr)];
+    return !!(ov && ov.done);
+  }
+  // 切換完成狀態，回傳切換後是不是「已完成」。呼叫端要自己負責重繪（重繪會順便存檔、記錄復原點）。
+  function toggleInstanceDone(masterId, dateStr){
+    const master = events.find(e => e.id === masterId);
+    if(!master) return false;
+    const key = doneKeyFor(master, dateStr);
+    const ovs = master.overrides || {};
+    const cur = Object.assign({}, ovs[key] || {});
+    if(cur.done) delete cur.done; else cur.done = true;
+    if(Object.keys(cur).length) ovs[key] = cur; else delete ovs[key];
+    master.overrides = Object.keys(ovs).length ? ovs : null;
+    return !!cur.done;
+  }
+  function makeCheckCircle(done, editable, cls){
+    const el = document.createElement('span');
+    el.className = cls + (done ? ' done' : '') + (editable ? '' : ' locked');
+    el.setAttribute('role', 'checkbox');
+    el.setAttribute('aria-checked', done ? 'true' : 'false');
+    el.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true"><polyline points="2.6 6.3 5 8.6 9.4 3.6"></polyline></svg>';
+    return el;
+  }
+  // 圓圈自己處理點擊：不讓事件冒泡到卡片／清單項目（不然會被當成點卡片開編輯頁、長按等）
+  function bindCheckTap(el, onTap){
+    let down = false, sx = 0, sy = 0;
+    el.addEventListener('pointerdown', function(e){
+      e.stopPropagation();
+      down = true; sx = e.clientX; sy = e.clientY;
+    });
+    el.addEventListener('pointerup', function(e){
+      e.stopPropagation();
+      if(!down) return;
+      down = false;
+      if(Math.hypot(e.clientX - sx, e.clientY - sy) < 10){
+        e.preventDefault();
+        onTap();
+      }
+    });
+    el.addEventListener('pointercancel', function(){ down = false; });
+    el.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault(); });
+  }
+  // 卡片夠高、文字也沒被縮小時，在卡片左側放圓圈＋鉛垂線
+  function addCardCheck(card, inst){
+    const t = card.querySelector('.ecard-title');
+    if(!t) return false;
+    const d = parseFloat(getComputedStyle(t).fontSize) || 12.5;
+    card.style.setProperty('--chk-d', d + 'px');
+    const sep = document.createElement('span');
+    sep.className = 'ecard-check-sep';
+    sep.style.left = (5 + d + 4.5) + 'px';
+    const circle = makeCheckCircle(!!inst.done, canEditInstance(inst), 'ecard-check');
+    circle.style.top = (t.offsetTop + (t.offsetHeight - d) / 2) + 'px';
+    bindCheckTap(circle, function(){
+      toggleInstanceDone(inst.masterId, inst.instanceDate);
+      renderEvents();
+    });
+    card.appendChild(sep);
+    card.appendChild(circle);
+    return true;
+  }
+  const CHECK_MIN_CARD_PX = 22; // 卡片矮於這個高度，圓圈放不下，改放到長按選單 / N 項清單
   const CREATOR_LOCK_MSG = '只有建立者本人可以把自己移出行程';
   const MOVE_CONFLICT_MSG = '該日該時段已有行程';
 
@@ -3540,6 +3695,7 @@
     card.style.setProperty('--ecard-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
     card.style.setProperty('--ecard-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
     card.style.setProperty('--ecard-handle-color', darkenHex(c.hex, 0.22));
+    card.style.setProperty('--ecard-sep', darkenHex(c.hex, 0.28));
   }
 
   function colIndex(colId){
@@ -4116,6 +4272,7 @@
             color: ev.color || DEFAULT_EVENT_COLOR,
             creatorId: creatorId,
             isRecurring: true,
+            done: isInstanceDone(ev, dateStr),
             hasOverride: !!(ev.overrides && ev.overrides[dateStr])
           });
         }
@@ -4127,6 +4284,7 @@
           notes: ev.notes, participants: ev.participants,
           color: ev.color || DEFAULT_EVENT_COLOR,
           creatorId: creatorId,
+          done: isInstanceDone(ev, dateStr),
           isRecurring: false, hasOverride: false
         });
       }
@@ -4200,7 +4358,8 @@
       notes: ov.notes !== undefined ? ov.notes : master.notes,
       participants: newParticipants,
       creatorId: master.creatorId,
-      recurrence: null
+      recurrence: null,
+      overrides: ov.done ? {'_': {done: true}} : null
     });
     master.excluded = master.excluded || [];
     if(master.excluded.indexOf(homeDate) === -1) master.excluded.push(homeDate);
@@ -4329,7 +4488,7 @@
     if(cardMenuEl){ cardMenuEl.remove(); cardMenuEl = null; }
   }
 
-  function openCardMenu(card, inst, shrunkTitle){
+  function openCardMenu(card, inst, shrunkTitle, withCheck){
     closeCardMenu();
     const rect = card.getBoundingClientRect();
     const masterId = inst.masterId, instanceDate = inst.instanceDate;
@@ -4349,7 +4508,25 @@
         '<button type="button" data-action="dup">複製</button>' +
         (dangerAction ? '<button type="button" data-action="'+dangerAction+'" class="danger">'+dangerLabel+'</button>' : '') +
       '</div>';
-    if(shrunkTitle) menu.querySelector('.card-menu-title-row').textContent = shrunkTitle;
+    if(shrunkTitle){
+      const row = menu.querySelector('.card-menu-title-row');
+      row.textContent = '';
+      if(withCheck){
+        row.classList.add('has-chk');
+        const chk = makeCheckCircle(!!inst.done, canEditInstance(inst), 'menu-check');
+        bindCheckTap(chk, function(){
+          toggleInstanceDone(masterId, instanceDate);
+          renderEvents(); // 會順便把選單收起來
+        });
+        const sep = document.createElement('span');
+        sep.className = 'menu-sep';
+        row.appendChild(chk);
+        row.appendChild(sep);
+      }
+      const txt = document.createElement('span');
+      txt.textContent = shrunkTitle;
+      row.appendChild(txt);
+    }
     document.body.appendChild(menu);
 
     const menuRect = menu.getBoundingClientRect();
@@ -4416,6 +4593,7 @@
      提示，點下去才展開完整清單，點清單裡的項目就直接跳去那個行程的
      編輯頁（跟平常點行程卡片一樣）。 */
   let clusterMenuEl = null;
+  let clusterMenuKeep = false; // 在 N 項清單裡打勾會重繪時間軸，這時清單不要被關掉
 
   function closeClusterMenu(){
     if(clusterMenuEl){ clusterMenuEl.remove(); clusterMenuEl = null; }
@@ -4433,9 +4611,24 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.innerHTML = '<span class="cluster-title"></span><span class="cluster-time"></span>';
+      const rowChk = makeCheckCircle(!!item.done, canEditInstance(item), 'menu-check');
+      const rowSep = document.createElement('span');
+      rowSep.className = 'menu-sep';
+      bindCheckTap(rowChk, function(){
+        clusterMenuKeep = true;
+        const nowDone = toggleInstanceDone(item.masterId, item.instanceDate);
+        renderEvents();
+        clusterMenuKeep = false;
+        item.done = nowDone;
+        rowChk.classList.toggle('done', nowDone);
+        rowChk.setAttribute('aria-checked', nowDone ? 'true' : 'false');
+      });
+      btn.insertBefore(rowSep, btn.firstChild);
+      btn.insertBefore(rowChk, rowSep);
       const colorInfo = eventColorById(item.color);
       const light = isLightColor(colorInfo.hex);
       btn.style.setProperty('--item-bg', colorInfo.hex);
+      btn.style.setProperty('--item-sep', darkenHex(colorInfo.hex, 0.28));
       btn.style.setProperty('--item-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
       btn.style.setProperty('--item-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
       btn.querySelector('.cluster-title').textContent = item.title;
@@ -5201,7 +5394,7 @@
     scheduleSaveToStorage(); // 每次重繪代表資料可能剛異動過，順便存起來（debounce，避免同步阻塞）
     updateMoveButtonVisibility(); // 勾選狀態常常伴隨重繪一起變動，這裡統一同步一次
     closeCardMenu(); // 畫面要重繪了，任何還開著的快捷選單先收起來，避免指到舊卡片
-    closeClusterMenu();
+    if(!clusterMenuKeep) closeClusterMenu();
     eventsLayer.innerHTML = '';
     renderColumnDividers();
     const insts = getInstancesForDate(currentDate).filter(inst =>
@@ -5245,6 +5438,11 @@
         const leftPct = (runMin/n*100);
         const widthPct = ((runMax-runMin+1)/n*100);
 
+        // 先嘗試「帶圓圈」的版本；如果因為多出來的左側空間害文字被迫縮小、
+        // 甚至變成浮動標籤，就把這張卡片砍掉重做一次「不帶圓圈」的版本，
+        // 圓圈改放到長按選單 / N 項清單裡。
+        for(let attempt = 0; attempt < 2; attempt++){
+        const wantCheck = attempt === 0 && height >= CHECK_MIN_CARD_PX;
         const card = document.createElement('div');
         card.className = 'event-card';
         applyEventColor(card, inst.color);
@@ -5284,6 +5482,7 @@
             (notesHtml ? '<div class="ecard-notes">'+notesHtml+'</div>' : '');
         }
 
+        if(wantCheck) card.classList.add('has-check');
         eventsLayer.appendChild(card); // 先掛進 DOM 才能量出實際渲染尺寸
 
         // 量測剛剛這個排版是否真的裝得下（不管是被高度夾住，還是文字
@@ -5320,10 +5519,23 @@
               rawTitle: inst.title || '(未命名行程)',
               isRecurring: !!inst.isRecurring,
               creatorId: inst.creatorId, participants: inst.participants,
+              done: inst.done,
               color: inst.color,
               masterId: inst.masterId, instanceDate: inst.instanceDate
             });
           }
+        }
+
+        if(wantCheck && (card.classList.contains('label-floated') || card.dataset.shrunk === '1')){
+          card.remove();
+          const ci = floatCandidates.findIndex(c => c.card === card);
+          if(ci >= 0) floatCandidates.splice(ci, 1);
+          continue; // 用不帶圓圈的版本重做
+        }
+        if(wantCheck){
+          addCardCheck(card, inst);
+        } else {
+          card.dataset.chkMenu = '1'; // 這張卡片上沒有圓圈：長按選單裡要多一行「圓圈＋名稱」
         }
 
         attachCardInteractions(card, inst, runMin, runMax);
@@ -5351,6 +5563,8 @@
             card.removeEventListener('transitionend', onUnfurlDone);
           });
         }
+        break;
+        } // for attempt
       });
 
       if(isJustCreated) justCreatedEventId = null; // 動畫已經套用上去了，清掉旗標避免之後的重繪重跑一次
@@ -5475,6 +5689,7 @@
           instanceDate: c.instanceDate,
           creatorId: c.creatorId,
           participants: c.participants,
+          done: c.done,
           color: c.color
         })));
       });
@@ -6279,8 +6494,9 @@
         if(pinchActive){ pinchTouched = true; return; } // 計時器觸發當下才是真正該檢查雙指縮放的時機
         phase = 'menu';
         if(navigator.vibrate) navigator.vibrate(15);
-        const shrunkTitle = card.dataset.shrunk === '1' ? (inst.title || '(未命名行程)') : null;
-        openCardMenu(card, inst, shrunkTitle);
+        const noChkOnCard = card.dataset.chkMenu === '1';
+        const shrunkTitle = (card.dataset.shrunk === '1' || noChkOnCard) ? (inst.title || '(未命名行程)') : null;
+        openCardMenu(card, inst, shrunkTitle, noChkOnCard);
       }, 400);
 
       const onMove = function(ev2){
@@ -7785,13 +8001,18 @@
       master.start = newStart; master.end = newEnd;
       master.notes = newNotes; master.participants = newParticipants;
       // 這一天如果原本有獨立編輯過的內容，順便清掉，讓它跟系列同步一致
-      if(master.overrides) delete master.overrides[editingInstanceDate];
+      if(master.overrides){
+        const wasDone = !!(master.overrides[editingInstanceDate] && master.overrides[editingInstanceDate].done);
+        delete master.overrides[editingInstanceDate];
+        if(wasDone) master.overrides[editingInstanceDate] = {done: true}; // 完成狀態不受「同步編輯」影響
+      }
     } else {
       // 沒開同步編輯：只改這一天，寫入 override，系列其他日期不受影響
       master.overrides = master.overrides || {};
-      master.overrides[editingInstanceDate] = {
+      const prevOv = master.overrides[editingInstanceDate] || {};
+      master.overrides[editingInstanceDate] = Object.assign({
         title:newTitle, start:newStart, end:newEnd, notes:newNotes, participants:newParticipants
-      };
+      }, prevOv.done ? {done: true} : {});
     }
 
     currentDate = master.recurrence ? editingInstanceDate : master.date;
