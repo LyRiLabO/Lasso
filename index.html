@@ -398,11 +398,17 @@
   #page-edit.active{transform:translateY(0);}
   #page-month{transform:translateY(-100%);}
   #page-month.active{transform:translateY(0);}
+  /* 匯入頁：跟編輯頁/月曆頁不同方向，用「從右邊滑進來」的橫向位移，
+     呼應「選單裡點進去、看清單、選一本」這種平常在手機上比較熟悉的
+     鑽入（drill-down）動作。 */
+  #page-import{transform:translateX(100%);}
+  #page-import.active{transform:translateX(0);}
   /* 進編輯頁跟進月曆頁時，時間軸頁都只需要微微變暗當背景，不用再跟著
      橫向推移——編輯頁從下面蓋上來、月曆頁從上面掉下來，兩個都是直向
      的蓋層手感，橫向位移的視差效果對不上，拿掉比較乾淨。 */
   #page-timeline.pushed{filter:brightness(0.9);}
   #page-timeline.pushed-by-month{filter:brightness(0.9);}
+  #page-timeline.pushed-by-import{filter:brightness(0.9);}
   #page-timeline.circle-revealing{
     /* 「圓形遮罩」轉場專用：實際的 clip-path 半徑跟圓心座標是每次點的
        格子位置不一樣，沒辦法寫死在 CSS 裡，一律由 JS 用 inline style
@@ -520,6 +526,15 @@
      優先權不夠高蓋不過去，要自己補一條規則，[hidden] 才會真的讓按鍵消失
      （這裡踩到跟 .select-delete-btn/.select-move-btn 一樣的坑，做法一致）。 */
   .add-col-btn[hidden]{display:none;}
+  /* 達到 4 人上限時：按鍵不隱藏，改成顏色變淡（看起來像不能按），
+     但還是能點——點下去會跳提示小卡片說明原因（見 showToast 呼叫處）。 */
+  .add-col-btn.is-maxed{opacity:0.4;}
+  .add-col-btn.is-maxed:active{
+    /* 保留一樣的視覺，不要有「按下去」的凹陷回饋，減少誤以為真的加成功的感覺 */
+    transform:translateY(-50%);
+    background:var(--btn-face);
+    box-shadow:var(--btn-relief);
+  }
   /* 「選取」鍵本身已經搬到畫面最下面那一橫排懸浮鍵去了（見
      .bottom-action-bar），這裡不再需要頭部列版本的容器定位。 */
   .select-toggle-btn{
@@ -777,6 +792,47 @@
     cursor:pointer;
     transition:transform .15s ease, box-shadow .15s ease;
     user-select:none;
+  }
+  /* 點通知跳過去之後，讓那張卡片輕輕晃一下，跟使用者「就是這張」——
+     純粹左右擺動，跟卡片本身用 top/left 定位互不干擾，動畫跑完類別會
+     自動被拿掉（見 JS 的 animationend 監聽），不會維持在偏移的位置上。 */
+  @keyframes notif-jump-shake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-5px);}
+    40%{transform:translateX(5px);}
+    60%{transform:translateX(-3px);}
+    80%{transform:translateX(3px);}
+  }
+  .event-card.notif-jump-shake{
+    animation:notif-jump-shake .4s ease;
+  }
+  /* 拉炮彩帶特效：左右下角各一束固定定位的小色塊，飛出去的軌跡跟顏色
+     由 JS 用 CSS 變數逐一指定（--pc-dx/--pc-dy/--pc-rot/--pc-delay/
+     --pc-color），這裡只負責共同的動畫曲線跟起始樣式。*/
+  .confetti-burst{
+    position:fixed;
+    bottom:0;
+    width:1px; height:1px;
+    z-index:70;
+    pointer-events:none;
+  }
+  .confetti-burst.left{ left:14px; }
+  .confetti-burst.right{ right:14px; }
+  .confetti-piece{
+    position:absolute;
+    left:0; top:0;
+    width:5px; height:10px;
+    border-radius:1px;
+    background:var(--pc-color, var(--red));
+    opacity:0;
+    transform-origin:center;
+    animation:confetti-fly .95s cubic-bezier(.18,.7,.32,1) forwards;
+    animation-delay:var(--pc-delay, 0s);
+  }
+  @keyframes confetti-fly{
+    0%{ opacity:1; transform:translate(0,0) rotate(0deg); }
+    65%{ opacity:1; }
+    100%{ opacity:0; transform:translate(var(--pc-dx), var(--pc-dy)) rotate(var(--pc-rot)); }
   }
   /* 新建立的行程卡片：像捲軸攤開一樣，頂部邊緣固定不動，可見範圍從 0
      長到完整高度。這裡故意用 clip-path 而不是真的去改 height——真正的
@@ -1065,7 +1121,8 @@
     z-index:1200;
     opacity:0;
     pointer-events:none;
-    white-space:nowrap;
+    white-space:pre-line; /* 訊息裡的 \n 會真的換行（例如「沒有可用欄位」提示的兩行文字） */
+    text-align:center;
     animation:toast-in .18s cubic-bezier(.2,.7,.3,1) forwards;
   }
   @keyframes toast-in{
@@ -1098,6 +1155,11 @@
     font-family:'Noto Sans TC', sans-serif;
     color:var(--paper);
   }
+  /* 這則通知有明確指向的行程，點了會跳過去（見 jumpToNotificationTarget）；
+     沒有這個 class 的（例如比較舊、儲存時還沒有這個欄位的通知）維持
+     原本不能點的樣子，不給假的可點提示。 */
+  .notif-panel-item.clickable{cursor:pointer;}
+  .notif-panel-item.clickable:active{background:rgba(246,241,228,0.1);}
   .notif-panel-item .notif-msg{
     font-size:13px;
     line-height:1.5;
@@ -2554,19 +2616,6 @@
       </div>
     </div>
 
-    <div class="nav-item" data-nav="import">
-      <button type="button" class="nav-head" aria-expanded="false">
-        <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        <span class="nav-label">匯入其他手帳資料</span>
-        <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </button>
-      <div class="nav-body">
-        <div class="nav-body-inner">
-          <div class="nav-rows" id="navImportList"></div>
-        </div>
-      </div>
-    </div>
-
     <div class="nav-item" data-nav="books">
       <button type="button" class="nav-head" aria-expanded="false">
         <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
@@ -2576,6 +2625,7 @@
       <div class="nav-body">
         <div class="nav-body-inner">
           <div class="nav-rows" id="navBookList"></div>
+          <button type="button" class="nav-btn" id="navImport">匯入其他手帳資料</button>
           <button type="button" class="nav-btn nav-leave" id="navLeave">退出這本手帳</button>
         </div>
       </div>
@@ -2864,6 +2914,22 @@
     <div class="month-weekdays" id="monthWeekdaysRow"></div>
     <div class="month-slider" id="monthSlider">
       <div class="month-grid" id="monthGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ 頁面四：匯入其他手帳資料（選擇來源手帳） ============
+       從「我的手帳」裡的「匯入其他手帳資料」按鍵進來，橫向從右邊滑入，
+       跟編輯頁/月曆頁一樣是蓋在時間軸頁上面的獨立頁面。清單本身跟
+       選單「我的手帳」清單共用同一顆 makeNavRow()，只是資料換成「除了
+       目前這本以外的其他手帳」，見 JS openImportPage()。 -->
+  <section id="page-import" class="page">
+    <header class="edit-header">
+      <button type="button" id="btnImportBack" class="text-btn">返回</button>
+      <span class="edit-title-label">匯入其他手帳資料</span>
+      <span class="text-btn" aria-hidden="true" style="visibility:hidden;">返回</span>
+    </header>
+    <div class="edit-body">
+      <div class="nav-rows" id="importPageList"></div>
     </div>
   </section>
 
@@ -3203,6 +3269,61 @@
     master.overrides = Object.keys(ovs).length ? ovs : null;
     return !!cur.done;
   }
+  // 某個欄位在某一天「所有」被排進的行程是不是都已完成——沒有任何行程
+  // 排進這個欄位的話不算（不要無中生有噴彩帶慶祝一個空的一天）。
+  function isColumnAllDoneForDate(colId, dateStr){
+    const insts = getInstancesForDate(dateStr).filter(i => (i.participants||[]).includes(colId));
+    if(!insts.length) return false;
+    return insts.every(i => i.done);
+  }
+  // 每次打勾之後呼叫一次：檢查這一下是不是剛好讓「自己名下」某個欄位
+  // 當天的行程全部變成已完成，是的話放一次拉炮動畫慶祝。只看「打勾」
+  // 這個動作（nowDone 為 true），取消勾選不用管；也只在打勾當下那一天
+  // 剛好就是畫面正在顯示的那一天才放——不然彩帶會噴在使用者根本沒在
+  // 看的那一天上，畫面上卻毫無反應，會覺得莫名其妙。
+  function maybeCelebrateColumnDone(masterId, instanceDate, nowDone){
+    if(!nowDone || instanceDate !== currentDate) return;
+    const inst = getInstancesForDate(instanceDate).find(i => i.masterId === masterId);
+    const parts = (inst && inst.participants) || [];
+    const finishedOwnColumn = parts.some(colId => {
+      const col = columns.find(c => c.id === colId);
+      return col && col.ownerId === DEVICE_ID && isColumnAllDoneForDate(colId, instanceDate);
+    });
+    if(finishedOwnColumn) playConfettiCelebration();
+  }
+  // 拉炮彩帶特效：畫面左下角、右下角各放一束，色調沿用行程卡片的配色，
+  // 呼應整本手帳紙感、不要太螢光的視覺。純 CSS transform+opacity 動畫，
+  // 放完自動移除，不會留在 DOM 裡越積越多。
+  const CONFETTI_COLORS = ['#F4B8AA', '#E1C68B', '#9DC98F', '#8FB6D9', '#C9A6E0', '#F2CB6B'];
+  function spawnConfettiBurst(side){
+    const burst = document.createElement('div');
+    burst.className = 'confetti-burst ' + side;
+    const count = 18;
+    for(let i=0; i<count; i++){
+      const piece = document.createElement('span');
+      piece.className = 'confetti-piece';
+      const angleDeg = 40 + Math.random()*40; // 從正下方量起的夾角，噴發範圍集中在「往內上方」
+      const dist = 90 + Math.random()*120;
+      const rad = angleDeg * Math.PI/180;
+      let dx = Math.sin(rad) * dist;
+      const dy = -Math.cos(rad) * dist;
+      if(side === 'right') dx = -dx; // 右下角鏡射過去，兩束才會往畫面中間匯聚
+      piece.style.setProperty('--pc-dx', dx.toFixed(1)+'px');
+      piece.style.setProperty('--pc-dy', dy.toFixed(1)+'px');
+      piece.style.setProperty('--pc-rot', (Math.random()*520 - 260).toFixed(0)+'deg');
+      piece.style.setProperty('--pc-delay', (Math.random()*0.12).toFixed(2)+'s');
+      piece.style.setProperty('--pc-color', CONFETTI_COLORS[i % CONFETTI_COLORS.length]);
+      piece.style.width = (Math.random() < 0.5 ? '5px' : '4px') ;
+      piece.style.height = (6 + Math.random()*9).toFixed(0) + 'px';
+      burst.appendChild(piece);
+    }
+    document.body.appendChild(burst);
+    setTimeout(() => burst.remove(), 1100);
+  }
+  function playConfettiCelebration(){
+    spawnConfettiBurst('left');
+    spawnConfettiBurst('right');
+  }
   function makeDoneBtn(done, editable, cls){
     const el = document.createElement('span');
     el.className = cls + (done ? ' done' : '') + (editable ? '' : ' locked');
@@ -3269,8 +3390,9 @@
     const btn = makeDoneBtn(!!inst.done, canEditInstance(inst), 'ecard-donebtn');
     if(cardHeight < CHECK_MIN_CARD_PX) btn.classList.add('short'); // 太矮放不下字：字拿掉，按鈕本身（空間、線、顏色）還在
     bindStripTap(btn, function(){
-      toggleInstanceDone(inst.masterId, inst.instanceDate);
+      const nowDone = toggleInstanceDone(inst.masterId, inst.instanceDate);
       renderEvents();
+      maybeCelebrateColumnDone(inst.masterId, inst.instanceDate, nowDone);
     });
     card.appendChild(btn);
     return true;
@@ -3331,10 +3453,10 @@
     };
   }
   function notificationToRow(n){
-    return { id: n.id, recipient_id: n.recipientId, message: n.message, created_at: n.createdAt, read: n.read, notebook_id: NOTEBOOK ? NOTEBOOK.id : null };
+    return { id: n.id, recipient_id: n.recipientId, message: n.message, event_master_id: n.masterId || null, event_date: n.instanceDate || null, created_at: n.createdAt, read: n.read, notebook_id: NOTEBOOK ? NOTEBOOK.id : null };
   }
   function rowToNotification(row){
-    return { id: row.id, recipientId: row.recipient_id, message: row.message, createdAt: row.created_at, read: row.read };
+    return { id: row.id, recipientId: row.recipient_id, message: row.message, masterId: row.event_master_id || null, instanceDate: row.event_date || null, createdAt: row.created_at, read: row.read };
   }
 
   // 把一批 {id, before, after} 的變動（跟復原/重做用的是同一份 diff）
@@ -3410,11 +3532,13 @@
     }
   }
 
-  function queueNotification(recipientId, message){
+  function queueNotification(recipientId, message, masterId, instanceDate){
     if(!recipientId || isMine(recipientId)) return; // 不用通知自己（名下任何欄位都算自己）
     const n = {
       id: 'n' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
       recipientId, message,
+      masterId: masterId || null,       // 這則通知指向哪一場行程，點通知跳過去用
+      instanceDate: instanceDate || null, // 指向系列中的哪一天（非重複行程就是它唯一的日期）
       createdAt: new Date().toISOString(),
       read: false
     };
@@ -3436,8 +3560,10 @@
     return actingName([master.creatorId].concat(master.participants || []));
   }
   // 一次通知一批欄位：自己名下的不通知；同一位主人名下有好幾個欄位都被
-  // 牽涉到，只通知一次，不會收到重複的訊息。
-  function notifyColumns(recipientIds, message){
+  // 牽涉到，只通知一次，不會收到重複的訊息。masterId/instanceDate 是這批
+  // 通知共同指向的那一場行程／那一天，點通知面板裡的項目跳過去用（見
+  // jumpToNotificationTarget）；不是每種通知都有明確對象（目前都有）。
+  function notifyColumns(recipientIds, message, masterId, instanceDate){
     const seenOwners = new Set();
     (recipientIds || []).forEach(id => {
       const col = columns.find(c => c.id === id);
@@ -3446,18 +3572,15 @@
         if(seenOwners.has(col.ownerId)) return;
         seenOwners.add(col.ownerId);
       }
-      queueNotification(id, message);
+      queueNotification(id, message, masterId, instanceDate);
     });
   }
-  // 這支裝置名下沒有任何欄位就沒有「身分」可以新增行程，引導他先新增欄位。
+  // 這支裝置名下沒有任何欄位就沒有「身分」可以新增行程（或匯入行程），
+  // 跳個小卡片提醒，不強行跳出對話框打斷操作——使用者自己知道要去按
+  // 「新增欄位」（欄位已滿 4 個的話，那顆鍵本身也會用同一套小卡片提示
+  // 「已達欄位上限」，兩邊的提示是一致的）。
   function promptNeedOwnColumn(){
-    if(columns.length >= 4){
-      showConfirmDialog('欄位已經滿 4 個，這支裝置名下又還沒有欄位。可以點沒有主人的欄位名稱來認領，或請其他人刪掉一個欄位。', function(){}, {okLabel:'知道了'});
-      return;
-    }
-    showConfirmDialog('要先有一個屬於你的欄位，才能新增行程。現在新增一個嗎？', function(){
-      document.getElementById('btnAddColumn').click();
-    }, {okLabel:'新增欄位'});
+    showToast('目前沒有可用欄位\n請先建立屬於自己的欄位', 1800);
   }
 
   /* ---------------- 本機儲存（重新整理、關掉分頁再打開，資料還在） ----------------
@@ -4328,7 +4451,11 @@
   // 系列其餘日期完全不受影響，圖示也會正確地跟著消失。
   // 拖曳／縮放／搬日期之後通知其他參與者：日期或時間變了 -> 「更新了」；
   // 被拖進來 / 被拖出去的欄位 -> 「加進了」／「移除了」。
-  function notifyPlacementChange(master, before, homeDate, targetDate, newStart, newEnd, newParticipants){
+  // resultMasterId/resultInstanceDate：搬移完成之後，這一場行程實際會用哪個
+  // id、落在哪一天被找到——重複行程搬移會拆成一筆獨立新行程（見下方
+  // applyQuickPlacement），這時通知要指向那筆新行程，不是原本的系列本體，
+  // 不然點通知跳轉會找錯地方。
+  function notifyPlacementChange(resultMasterId, resultInstanceDate, master, before, homeDate, targetDate, newStart, newEnd, newParticipants){
     const oldP = before.participants || [];
     const title = before.title || master.title || '(未命名行程)';
     const labels = [];
@@ -4336,10 +4463,10 @@
     if(newStart !== before.start || newEnd !== before.end) labels.push('時間');
     const who = actingName([master.creatorId].concat(oldP, newParticipants));
     const notMine = id => !isMine(id);
-    notifyColumns(newParticipants.filter(id => !oldP.includes(id) && notMine(id)), who+' 把你加進了「'+title+'」');
-    notifyColumns(oldP.filter(id => !newParticipants.includes(id) && notMine(id)), who+' 把你從「'+title+'」移除了');
+    notifyColumns(newParticipants.filter(id => !oldP.includes(id) && notMine(id)), who+' 把你加進了「'+title+'」', resultMasterId, resultInstanceDate);
+    notifyColumns(oldP.filter(id => !newParticipants.includes(id) && notMine(id)), who+' 把你從「'+title+'」移除了', resultMasterId, resultInstanceDate);
     if(labels.length){
-      notifyColumns(oldP.filter(id => notMine(id) && newParticipants.includes(id)), who+' 更新了「'+title+'」（'+labels.join('、')+'）');
+      notifyColumns(oldP.filter(id => notMine(id) && newParticipants.includes(id)), who+' 更新了「'+title+'」（'+labels.join('、')+'）', resultMasterId, resultInstanceDate);
     }
   }
 
@@ -4359,13 +4486,14 @@
       master.end = newEnd;
       master.participants = newParticipants;
       master.date = targetDate;
-      notifyPlacementChange(master, before, homeDate, targetDate, newStart, newEnd, newParticipants);
+      notifyPlacementChange(master.id, targetDate, master, before, homeDate, targetDate, newStart, newEnd, newParticipants);
       return;
     }
 
     const ov = (master.overrides && master.overrides[homeDate]) || {};
+    const splitId = 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
     events.push({
-      id: 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+      id: splitId,
       title: ov.title !== undefined ? ov.title : master.title,
       date: targetDate,
       start: newStart,
@@ -4379,7 +4507,7 @@
     master.excluded = master.excluded || [];
     if(master.excluded.indexOf(homeDate) === -1) master.excluded.push(homeDate);
     if(master.overrides) delete master.overrides[homeDate];
-    notifyPlacementChange(master, before, homeDate, targetDate, newStart, newEnd, newParticipants);
+    notifyPlacementChange(splitId, targetDate, master, before, homeDate, targetDate, newStart, newEnd, newParticipants);
   }
 
   // 複製這一次行程：在同一天建立一個內容完全一樣、獨立不重複的新行程
@@ -4411,7 +4539,7 @@
     if(!master) return;
     const title = master.title || '(未命名行程)';
     const notifyOthers = () => {
-      notifyColumns(master.participants, actingNameFor(master)+' 刪除了「'+title+'」');
+      notifyColumns(master.participants, actingNameFor(master)+' 刪除了「'+title+'」', masterId, instanceDate);
     };
     if(!master.recurrence){
       notifyOthers();
@@ -4437,7 +4565,7 @@
     if(!master.recurrence){
       const remaining = (master.participants||[]).filter(notMine);
       master.participants = remaining;
-      notifyColumns(remaining, who+' 退出了「'+title+'」');
+      notifyColumns(remaining, who+' 退出了「'+title+'」', masterId, instanceDate);
       if(master.participants.length === 0){
         events = events.filter(e => e !== master);
       }
@@ -4447,7 +4575,7 @@
     const base = master.overrides[instanceDate] || {};
     const baseParticipants = base.participants || master.participants || [];
     const newParticipants = baseParticipants.filter(notMine);
-    notifyColumns(newParticipants, who+' 退出了「'+title+'」');
+    notifyColumns(newParticipants, who+' 退出了「'+title+'」', masterId, instanceDate);
     if(newParticipants.length === 0){
       master.excluded = master.excluded || [];
       if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
@@ -4539,6 +4667,7 @@
           }finally{ cardMenuKeep = false; }
           inst.done = nowDone;
           setDoneBtnState(chk, nowDone);
+          maybeCelebrateColumnDone(masterId, instanceDate, nowDone);
         });
         row.appendChild(chk);
       }
@@ -4587,6 +4716,42 @@
         }, {danger:true});
       });
     }
+
+    cardMenuEl = menu;
+  }
+
+  // 長按欄位名稱：跳出跟長按行程卡片一樣語彙的小框框，先只顯示「刪除」，
+  // 按下去才跳二次確認彈窗，不要一長按就直接跳彈窗打斷操作。
+  // 共用 cardMenuEl／closeCardMenu 那一套狀態，點選單以外的地方一樣會自動關閉。
+  function openColMenu(nameEl, col){
+    closeCardMenu();
+    closeClusterMenu();
+    const rect = nameEl.getBoundingClientRect();
+    const menu = document.createElement('div');
+    menu.className = 'card-menu';
+    menu.innerHTML =
+      '<div class="card-menu-actions">' +
+        '<button type="button" data-action="del" class="danger">刪除</button>' +
+      '</div>';
+    document.body.appendChild(menu);
+
+    const menuRect = menu.getBoundingClientRect();
+    let left = rect.left + rect.width/2 - menuRect.width/2;
+    left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8));
+    let top = rect.top - menuRect.height - 10;
+    let arrowDown = true;
+    if(top < 8){ top = rect.bottom + 10; arrowDown = false; } // 名稱太靠畫面上緣就改顯示在下方
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    menu.classList.add(arrowDown ? 'arrow-down' : 'arrow-up');
+
+    menu.querySelector('[data-action="del"]').addEventListener('click', function(ev){
+      ev.stopPropagation();
+      closeCardMenu();
+      showConfirmDialog('確定刪除此欄位？', function(){
+        deleteColumnsById(new Set([col.id]));
+      }, {danger:true});
+    });
 
     cardMenuEl = menu;
   }
@@ -4640,6 +4805,7 @@
         }finally{ clusterMenuKeep = false; }
         item.done = nowDone;
         setDoneBtnState(rowChk, nowDone);
+        maybeCelebrateColumnDone(item.masterId, item.instanceDate, nowDone);
       });
       btn.insertBefore(rowChk, btn.firstChild);
       const colorInfo = eventColorById(item.color);
@@ -4758,6 +4924,12 @@
         item.innerHTML = '<span class="notif-msg"></span><span class="notif-time"></span>';
         item.querySelector('.notif-msg').textContent = n.message;
         item.querySelector('.notif-time').textContent = formatRelativeTime(n.createdAt);
+        // 舊通知（存的時候還沒有這兩個欄位）沒有明確指向的行程，維持
+        // 不能點的樣子，不要給一個點了沒反應的假按鈕。
+        if(n.masterId){
+          item.classList.add('clickable');
+          item.addEventListener('click', function(){ jumpToNotificationTarget(n.masterId, n.instanceDate); });
+        }
         list.appendChild(item);
       });
     }
@@ -4785,6 +4957,51 @@
       renderNotificationBadge();
       markNotificationsReadOnSupabase(justReadIds);
     }
+  }
+
+  // 點通知面板裡的項目：跳到那則通知指向的行程。同一天只需要垂直捲動
+  // 定位；不同天則沿用「拖曳到畫面邊緣自動切日」那一套左右翻頁動畫，
+  // 一次到位（不會真的一天一天翻過去）。到位之後讓那張卡片輕輕晃一下，
+  // 讓使用者知道「就是這一場」。
+  function jumpToNotificationTarget(masterId, instanceDate){
+    closeNotificationPanel();
+    if(!masterId || !instanceDate) return; // 舊通知沒有這兩個欄位，理論上不會被點到（見 openNotificationPanel）
+    const master = events.find(e => e.id === masterId);
+    const inst = master ? getInstancesForDate(instanceDate).find(i => i.masterId === masterId) : null;
+    if(!inst){
+      // 行程可能已經被刪除、或這一天的實例已經被排除掉了——通知本身
+      // 還留著給使用者看「發生過什麼事」，但沒有地方可以跳過去。
+      showToast('這個行程已經不存在', 1500);
+      return;
+    }
+    function afterArrived(){ scrollToAndShakeInstance(masterId, instanceDate, inst); }
+    if(instanceDate === currentDate) afterArrived();
+    else animateJumpToDate(instanceDate, afterArrived);
+  }
+
+  // 捲動時間軸到這個行程的位置（跟「開場捲到現在時間線」用同一套「落在
+  // 可視範圍上方 1/3 處」手感），卡片找得到的話順便讓它輕輕晃一下。
+  function scrollToAndShakeInstance(masterId, instanceDate, inst){
+    const startMin = timeToMinutes(inst.start);
+    const cardTopPx = TIMELINE_BUFFER_PX + startMin/60*hourPx;
+    const visibleHeight = timelineScroll.clientHeight;
+    let target = cardTopPx - visibleHeight/3;
+    const maxScroll = Math.max(0, timelineScroll.scrollHeight - timelineScroll.clientHeight);
+    target = Math.max(0, Math.min(maxScroll, target));
+    timelineScroll.scrollTo({top: target, behavior:'smooth'});
+
+    const card = Array.from(eventsLayer.children).find(el =>
+      el.classList.contains('event-card') && el.dataset.masterId === masterId && el.dataset.date === instanceDate
+    );
+    if(!card) return; // 理論上找得到 inst 就找得到對應卡片，這裡只是保險
+    // 稍微等捲動先跑一小段，晃動感覺才像是「捲到了才晃」，不是兩個動作疊在一起分不清。
+    setTimeout(function(){
+      card.classList.add('notif-jump-shake');
+      card.addEventListener('animationend', function handler(){
+        card.classList.remove('notif-jump-shake');
+        card.removeEventListener('animationend', handler);
+      });
+    }, 260);
   }
 
   btnNotifications.addEventListener('click', function(e){
@@ -4850,7 +5067,10 @@
 
   // 欄位只有主人能刪除（owner-only）。同一位主人名下的多個欄位都算數。
   function canSelectColumn(col){
-    if(columns.length <= 1) return false; // 僅剩一個欄位，不可刪除
+    // 屬於自己的欄位一律可以選取／刪除，就算是這本手帳裡自己名下
+    // 最後一個欄位也不擋——刪光了之後使用者名下沒有欄位，之後想再
+    // 新增行程時，會被 promptNeedOwnColumn() 的小卡片擋下來、引導
+    // 他先建立新欄位，而不是在這裡就先禁止刪除。
     return col.ownerId === DEVICE_ID;
   }
 
@@ -5249,8 +5469,8 @@
       } else {
         // 非選取狀態下，點擊欄位上方的姓名可以直接修改欄位名稱
         // （包含一開始就有的「我」，以及後來透過「新增共編者」加入的人）。
-        // 長按同一個姓名則是快速刪除的捷徑，等同選取模式裡勾選這個欄位
-        // 再按刪除，省得為了刪一個人特地切進選取模式。
+        // 長按同一個姓名會先跳出跟行程卡片一樣的小框框（只有「刪除」），
+        // 按下去才跳二次確認彈窗，省得為了刪一個人特地切進選取模式。
         const nameEl = cell.querySelector('.col-name');
         nameEl.classList.add('col-name-editable');
 
@@ -5264,10 +5484,8 @@
           clearTimeout(longPressTimer);
           longPressTimer = setTimeout(function(){
             longPressFired = true;
-            if(!canSelectColumn(col)) return; // 僅剩一位使用者時不給刪
-            showConfirmDialog('確定刪除此欄位？', function(){
-              deleteColumnsById(new Set([col.id]));
-            }, {danger:true});
+            if(!canSelectColumn(col)) return; // 不是自己的欄位不給刪
+            openColMenu(nameEl, col);
           }, 500);
         });
         nameEl.addEventListener('pointermove', function(e){
@@ -5286,11 +5504,11 @@
 
       columnHeaderRow.appendChild(cell);
     });
-    // 達到 4 人上限時，「新增欄位」按鍵直接整個隱藏，不留提示、
-    // 不跳說明——這個共編行事曆本來就是設計給小圈子（2-4人）用的並排
-    // 欄位排版，超過就沒有再加人的入口；欄位刪到低於 4 人時按鍵自動
-    // 恢復顯示。
-    document.getElementById('btnAddColumn').hidden = columns.length >= 4;
+    // 達到 4 人上限時，「新增欄位」按鍵不隱藏，改成顏色變淡（看起來
+    // 不能按，但其實還是能點）——點下去會跳提示小卡片說「已達欄位上限」。
+    // 這個共編行事曆本來就是設計給小圈子（2-4人）用的並排欄位排版，
+    // 欄位刪到低於 4 人時按鍵自動恢復原本顏色。
+    document.getElementById('btnAddColumn').classList.toggle('is-maxed', columns.length >= 4);
   }
 
   function renderColumnDividers(){
@@ -5801,6 +6019,12 @@
     const panel = document.createElement('div');
     panel.className = 'timeline-grid day-preview-panel';
 
+    // 跟真正的時間軸一樣，先放這條裝飾用的左側紅色格線（原本這個面板漏掉
+    // 這個元素，滑動預覽時就會看起來「缺一條線」，放手重繪之後才突然冒出來）。
+    const marginRule = document.createElement('div');
+    marginRule.className = 'margin-rule';
+    panel.appendChild(marginRule);
+
     for(let h=0; h<24; h++){
       const row = document.createElement('div');
       row.className = 'hour-row';
@@ -5848,7 +6072,7 @@
 
       runs.forEach(([runMin, runMax]) => {
         const card = document.createElement('div');
-        card.className = 'event-card';
+        card.className = 'event-card has-check';
         applyEventColor(card, inst.color);
         card.style.top = top+'px';
         card.style.height = height+'px';
@@ -5860,6 +6084,13 @@
         } else {
           card.innerHTML = '<div class="ecard-title">'+title+'</div><div class="ecard-time">'+timeStr+'</div>';
         }
+        // 左側「待完成／已完成」按鈕：純視覺呈現（面板本身 pointer-events:none，
+        // 不需要真的綁點擊），位置、狀態要跟真正的時間軸一致，不然滑動中
+        // 會看起來像這個按鍵整個消失了，放開手指重繪才又冒出來。
+        const donebtn = document.createElement('span');
+        donebtn.className = 'ecard-donebtn' + (inst.done ? ' done' : '') + (height < CHECK_MIN_CARD_PX ? ' short' : '');
+        donebtn.textContent = inst.done ? '已完成' : '待完成';
+        card.appendChild(donebtn);
         layer.appendChild(card);
       });
     });
@@ -5867,12 +6098,15 @@
     return panel;
   }
 
-  function ensurePreviewPanel(direction){
-    if(previewPanel && previewDirection === direction) return previewPanel;
+  // explicitDate：跳到「不一定是相鄰一天」的目標日期時用（見 animateJumpToDate），
+  // 不傳就沿用原本「往前/往後一天」的手勢滑動邏輯。
+  function ensurePreviewPanel(direction, explicitDate){
+    const targetDate = explicitDate || dateByOffset(currentDate, direction === 'next' ? 1 : -1);
+    if(previewPanel && previewDirection === direction && previewPanel.dataset.date === targetDate) return previewPanel;
     if(previewPanel){ previewPanel.remove(); previewPanel = null; }
     previewDirection = direction;
-    const targetDate = dateByOffset(currentDate, direction === 'next' ? 1 : -1);
     const panel = buildStaticDayPanel(targetDate);
+    panel.dataset.date = targetDate;
     panel.style.transform = 'translateX(' + (direction === 'next' ? '100%' : '-100%') + ')';
     daySlider.appendChild(panel);
     previewPanel = panel;
@@ -5940,15 +6174,16 @@
   let dateScreenPreviewEl = null;
   let dateScreenPreviewDir = null;
 
-  function ensureDateScreenPreview(direction){
-    if(dateScreenPreviewEl && dateScreenPreviewDir === direction) return dateScreenPreviewEl;
+  function ensureDateScreenPreview(direction, explicitDate){
+    const targetDate = explicitDate || dateByOffset(currentDate, direction === 'next' ? 1 : -1);
+    if(dateScreenPreviewEl && dateScreenPreviewDir === direction && dateScreenPreviewEl.dataset.date === targetDate) return dateScreenPreviewEl;
     if(dateScreenPreviewEl){ dateScreenPreviewEl.remove(); dateScreenPreviewEl = null; }
     dateScreenPreviewDir = direction;
-    const targetDate = dateByOffset(currentDate, direction === 'next' ? 1 : -1);
     const [y,m,d] = targetDate.split('-').map(Number);
     const dt = new Date(y, m-1, d);
     const el = document.createElement('div');
     el.className = 'date-content-preview';
+    el.dataset.date = targetDate;
     el.innerHTML =
       '<span class="weekday">' + y + '年</span>' +
       '<span class="date-num">' + m + '月' + d + '日 · ' + WEEKDAYS[dt.getDay()] + '</span>';
@@ -5993,26 +6228,31 @@
     }, 300);
   }
 
-  // 立即觸發完成一次日期切換的滑動動畫（給「拖曳行程到畫面邊緣」用，
-  // 不是使用者手動滑出來的位移，是碰到邊緣就自動觸發一次完整轉場）。
-  function animateCommitDaySlide(direction, onDone){
+  // 跳到「不一定相鄰」的指定日期，套用跟拖曳到畫面邊緣自動切日同一套
+  // 左右翻頁動畫：往未來翻用「next」的滑法（往左滑），往過去翻用「prev」
+  // 的滑法（往右滑），跟今天是不是相鄰無關，永遠只翻這一次、不會真的
+  // 一天一天翻過去。見 jumpToNotificationTarget（點通知跳到不同天的
+  // 行程）；animateCommitDaySlide（拖曳到畫面邊緣）現在也改共用這一個。
+  function animateJumpToDate(targetDate, onDone){
+    if(targetDate === currentDate){ if(onDone) onDone(); return; }
+    const direction = targetDate > currentDate ? 'next' : 'prev'; // 'YYYY-MM-DD' 字串可以直接比大小
     hintEmpty.hidden = true; // 跟手動滑動一樣，轉場一開始就先藏起來，不要等 300ms 動畫跑完才消失
     const w = daySlider.clientWidth || 1;
-    ensurePreviewPanel(direction);
-    const dateScreenPreview = ensureDateScreenPreview(direction);
+    const panel = ensurePreviewPanel(direction, targetDate);
+    const dateScreenPreview = ensureDateScreenPreview(direction, targetDate);
     const screenW = dateDisplayBtn.clientWidth || 1;
     daySlider.classList.add('animating');
     dateDisplayBtn.classList.add('animating');
     requestAnimationFrame(function(){
       timelineGrid.style.transform = 'translateX(' + (direction === 'next' ? -w : w) + 'px)';
-      previewPanel.style.transform = 'translateX(0px)';
+      panel.style.transform = 'translateX(0px)';
       dateContentCurrent.style.transform = 'translateX(' + (direction === 'next' ? -screenW : screenW) + 'px)';
       dateScreenPreview.style.transform = 'translateX(0px)';
     });
     setTimeout(function(){
       daySlider.classList.remove('animating');
       dateDisplayBtn.classList.remove('animating');
-      currentDate = dateByOffset(currentDate, direction === 'next' ? 1 : -1);
+      currentDate = targetDate;
       if(previewPanel){ previewPanel.remove(); previewPanel = null; }
       if(dateScreenPreviewEl){ dateScreenPreviewEl.remove(); dateScreenPreviewEl = null; dateScreenPreviewDir = null; }
       timelineGrid.style.transform = '';
@@ -6020,6 +6260,12 @@
       renderTimeline();
       if(onDone) onDone();
     }, 300);
+  }
+
+  // 立即觸發完成一次日期切換的滑動動畫（給「拖曳行程到畫面邊緣」用，
+  // 不是使用者手動滑出來的位移，是碰到邊緣就自動觸發一次完整轉場）。
+  function animateCommitDaySlide(direction, onDone){
+    animateJumpToDate(dateByOffset(currentDate, direction === 'next' ? 1 : -1), onDone);
   }
 
   /* ---------------- 浮動拖曳（可連續跨欄、跨日移動） ----------------
@@ -6632,8 +6878,9 @@
       const tap = chkTap;
       chkTap = null;
       if(!pinchActive && tap.gen === pinchGen && performance.now() - tap.t < 380 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 10){
-        toggleInstanceDone(inst.masterId, inst.instanceDate);
+        const nowDone = toggleInstanceDone(inst.masterId, inst.instanceDate);
         renderEvents();
+        maybeCelebrateColumnDone(inst.masterId, inst.instanceDate, nowDone);
       }
     });
     handle.addEventListener('pointercancel', function(){ chkTap = null; });
@@ -7191,7 +7438,7 @@
     events.push(ev);
     // 建立當下如果就跨到了別人的欄位，等於直接把對方加進參與者，
     // 要通知對方（跟事後才把別人加進來的規則一致）。
-    notifyColumns(participantIds, columnName(creatorId)+' 把你加進了「'+ev.title+'」');
+    notifyColumns(participantIds, columnName(creatorId)+' 把你加進了「'+ev.title+'」', ev.id, ev.date);
     justCreatedEventId = id; // 讓下一次 renderEvents() 幫這張新卡片跑「捲軸攤開」進場動畫
     renderEvents();
     return id;
@@ -7235,7 +7482,7 @@
 
   document.getElementById('btnAddColumn').addEventListener('click', function(){
     if(selectMode) return;
-    if(columns.length >= 4) return; // 保險：按鍵這時候本來就該是隱藏的，理論上按不到
+    if(columns.length >= 4){ showToast('已達欄位上限', 1400); return; } // 按鍵這時候是淡色但還是按得到，跳提示卡片說明
     showPromptDialog('新增欄位', '', function(value){
       const name = (value || '').trim();
       if(!name) return;
@@ -7272,6 +7519,7 @@
   const zoomInner = document.getElementById('zoomInner');
   const pageEdit = document.getElementById('page-edit');
   const pageMonth = document.getElementById('page-month');
+  const pageImport = document.getElementById('page-import');
   const fieldTitle = document.getElementById('fieldTitle');
   // 新建立的行程預設標題是「新行程」：點進標題欄位準備輸入時，
   // 如果還是這個預設值，直接幫使用者清空，不用自己手動刪除。
@@ -7836,6 +8084,7 @@
 
   document.getElementById('btnOpenMonth').addEventListener('click', openMonthView);
   document.getElementById('btnMonthBack').addEventListener('click', goBackToTimeline);
+  document.getElementById('btnImportBack').addEventListener('click', goBackToTimeline);
   document.getElementById('monthPrevBtn').addEventListener('click', function(){ commitMonthSwipe('prev'); });
   document.getElementById('monthNextBtn').addEventListener('click', function(){ commitMonthSwipe('next'); });
 
@@ -7947,8 +8196,10 @@
   function showPage(name){
     pageEdit.classList.toggle('active', name === 'edit');
     pageMonth.classList.toggle('active', name === 'month');
+    pageImport.classList.toggle('active', name === 'import');
     pageTimeline.classList.toggle('pushed', name === 'edit');
     pageTimeline.classList.toggle('pushed-by-month', name === 'month');
+    pageTimeline.classList.toggle('pushed-by-import', name === 'import');
     if(name !== 'edit'){
       editingMasterId = null;
       editingInstanceDate = null;
@@ -8082,15 +8333,16 @@
     const addedOthers = addedParticipants.filter(notMine);
     const who = actingName([master.creatorId].concat(newParticipants));
 
-    notifyColumns(addedOthers, who+' 把你加進了「'+newTitle+'」');
+    notifyColumns(addedOthers, who+' 把你加進了「'+newTitle+'」', editingMasterId, currentDate);
     if(selfJustJoined){
-      notifyColumns(editOriginalParticipants.filter(notMine), who+' 加入了「'+newTitle+'」');
+      notifyColumns(editOriginalParticipants.filter(notMine), who+' 加入了「'+newTitle+'」', editingMasterId, currentDate);
     }
-    notifyColumns(removedParticipants, who+' 把你從「'+newTitle+'」移除了');
+    notifyColumns(removedParticipants, who+' 把你從「'+newTitle+'」移除了', editingMasterId, currentDate);
     if(changeLabels.length){
       notifyColumns(
         editOriginalParticipants.filter(id => notMine(id) && newParticipants.includes(id) && !addedOthers.includes(id)),
-        who+' 更新了「'+newTitle+'」（'+changeLabels.join('、')+'）'
+        who+' 更新了「'+newTitle+'」（'+changeLabels.join('、')+'）',
+        editingMasterId, currentDate
       );
     }
 
@@ -8109,7 +8361,7 @@
       if(!isLeaving){
         // 創建者：原本的整場/單日刪除邏輯不變，順便通知其他參與者
         const title = master.title || '(未命名行程)';
-        notifyColumns(master.participants, actingNameFor(master)+' 刪除了「'+title+'」');
+        notifyColumns(master.participants, actingNameFor(master)+' 刪除了「'+title+'」', editingMasterId, editingInstanceDate);
         if(!master.recurrence){
           events = events.filter(e => e !== master);
         } else if(syncOn){
@@ -8127,7 +8379,7 @@
         const who = actingNameFor(master); // 先取名字，退出後名下欄位就不在參與者裡了
         const remaining = (master.participants||[]).filter(id => !isMine(id));
         master.participants = remaining;
-        notifyColumns(remaining, who+' 退出了「'+title+'」');
+        notifyColumns(remaining, who+' 退出了「'+title+'」', editingMasterId, editingInstanceDate);
         if(master.overrides){
           Object.keys(master.overrides).forEach(d => {
             const ov = master.overrides[d];
@@ -8657,7 +8909,7 @@
           E.overrides[cf.date] = Object.assign({}, E.overrides[cf.date] || {}, {participants: remaining});
         }
       }
-      if(remaining.length) notifyColumns(remaining, actor + ' 退出了「' + (cf.title || '') + '」');
+      if(remaining.length) notifyColumns(remaining, actor + ' 退出了「' + (cf.title || '') + '」', cf.masterId, cf.date);
     });
     events = events.filter(e => !plan.importedIds.has(e.id)); // 上次匯入過的同一批先拿掉，換成這次的
     plan.copies.forEach(function(c){ events.push(c); });
@@ -8685,9 +8937,12 @@
     }
   }
 
-  // 從選單的「匯入其他手帳資料」挑一本來源手帳：必要時問要匯入哪個欄位、匯入到哪個欄位。
+  // 從「匯入其他手帳資料」頁挑一本來源手帳：必要時問要匯入哪個欄位、匯入到哪個欄位。
   async function startImportFrom(nb){
-    closeDrawer();
+    // 這本手帳裡沒有自己的欄位，不管選哪個來源都沒有地方可以匯入進去，
+    // 一開始就檔掉，不用白跑一趟去抓來源手帳的資料。
+    const mineHere = myColumnIds();
+    if(!mineHere.length){ promptNeedOwnColumn(); return; }
     const src = await loadNotebookData(nb.id);
     if(!src){ noticeDialog('讀不到那本手帳的資料，請確認網路連線後再試一次。'); return; }
     const mineSrc = (src.columns || []).filter(c => c.ownerId === DEVICE_ID);
@@ -8698,8 +8953,6 @@
       if(i < 0) return;
       srcCol = mineSrc[i];
     }
-    const mineHere = myColumnIds();
-    if(!mineHere.length){ noticeDialog('你在這本手帳裡還沒有自己的欄位，請先新增一個欄位再匯入。'); return; }
     let tgtId = mineHere[0];
     if(mineHere.length > 1){
       const i = await chooseOption('要匯入到哪個欄位？', mineHere.map(id => columnName(id)));
@@ -8734,8 +8987,36 @@
   const navCode = document.getElementById('navCode');
   const navCopy = document.getElementById('navCopy');
   const navLeave = document.getElementById('navLeave');
-  const navImportList = document.getElementById('navImportList');
+  const navImport = document.getElementById('navImport');
   const navBookList = document.getElementById('navBookList');
+  const importPageList = document.getElementById('importPageList');
+
+  // 按下「匯入其他手帳資料」：沒有別的手帳可選的話，直接跳小卡片提醒，
+  // 不用跳頁——跳過去也只會看到一片空白。有的話才真的翻到匯入頁，
+  // 把「除了目前這本以外的其他手帳」列出來讓使用者選要從哪一本匯入。
+  function openImportPage(){
+    const others = getNotebookList().filter(n => n.id !== NOTEBOOK.id);
+    if(!others.length){ showToast('目前沒有其他手帳', 1600); return; }
+    importPageList.innerHTML = '';
+    others.forEach(function(nb){
+      const row = makeNavRow(notebookDisplayName(nb), participantsLabel(nb), false);
+      row.addEventListener('click', function(){
+        // 選完來源手帳後先翻回時間軸主頁，後面「要匯入哪個欄位／到哪個
+        // 欄位」那幾個對話框才是疊在主頁面上，跟原本（從選單直接點）
+        // 的觀感一致，不會卡在匯入頁上面看對話框。
+        goBackToTimeline();
+        startImportFrom(nb);
+      });
+      importPageList.appendChild(row);
+    });
+    closeDrawer();
+    if(usingRealHistory){
+      try{ history.pushState({page:'import'}, '', '#import'); }
+      catch(err){ usingRealHistory = false; }
+    }
+    showPage('import');
+  }
+  navImport.addEventListener('click', openImportPage);
 
   function fallbackCopy(text){
     try{
@@ -8805,6 +9086,23 @@
       setNavBodyOpen(it, false);
     });
   }
+  // 選單「打開瞬間」用這個，不是收合動畫用那個 setNavBodyOpen：直接把
+  // 上次沒收合的項目瞬間夾回 0，不要有轉場——不然選單一打開，使用者會先
+  // 看到上次還開著的項目「當場收合」的動畫，看起來像抽屜打開時手動關掉它。
+  // 做法：暫時關掉 max-height 的 transition，套用完 0px 再還原，
+  // 這樣使用者看到的一開始就已經是收好的狀態。
+  function collapseNavItemsInstant(){
+    navDrawer.querySelectorAll('.nav-item').forEach(function(it){
+      const body = it.querySelector('.nav-body');
+      const head = it.querySelector('.nav-head');
+      it.classList.remove('open');
+      head.setAttribute('aria-expanded', 'false');
+      body.style.transition = 'none';
+      body.style.maxHeight = '0px';
+      void body.offsetHeight; // 強制 reflow，讓上面這行在還原 transition 前就先生效
+      body.style.transition = '';
+    });
+  }
   navDrawer.querySelectorAll('.nav-item').forEach(function(item){
     const body = item.querySelector('.nav-body');
     body.addEventListener('transitionend', function(ev){
@@ -8844,7 +9142,7 @@
     setStoredNotebook(nb);
     location.reload();
   }
-  // 每次打開選單都重新整理裡面的內容（密碼、手帳清單、可匯入的手帳）
+  // 每次打開選單都重新整理裡面的內容（密碼、手帳清單）
   function renderDrawerContents(){
     if(!NOTEBOOK) return;
     navCode.textContent = formatJoinCode(NOTEBOOK.code);
@@ -8853,20 +9151,6 @@
     navLeave.hidden = myColumnIds().length === 0;
 
     const all = getNotebookList();
-    const others = all.filter(n => n.id !== NOTEBOOK.id);
-    navImportList.innerHTML = '';
-    if(!others.length){
-      const empty = document.createElement('div');
-      empty.className = 'nav-hint';
-      empty.textContent = '還沒有其他手帳可以匯入。';
-      navImportList.appendChild(empty);
-    }
-    others.forEach(function(nb){
-      const row = makeNavRow(notebookDisplayName(nb), participantsLabel(nb), false);
-      row.addEventListener('click', function(){ startImportFrom(nb); });
-      navImportList.appendChild(row);
-    });
-
     navBookList.innerHTML = '';
     all.forEach(function(nb){
       const isCurrent = nb.id === NOTEBOOK.id;
@@ -8880,7 +9164,7 @@
     closeCardMenu();
     closeClusterMenu();
     renderDrawerContents();
-    collapseNavItems(null);
+    collapseNavItemsInstant();
     navOverlay.classList.add('open');
     navDrawer.classList.add('open');
     navDrawer.setAttribute('aria-hidden', 'false');
