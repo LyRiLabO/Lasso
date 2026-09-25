@@ -62,6 +62,64 @@
     --dusk:#4A6785;
     --blush:#C97B72;
   }
+  /* 「美式復古」主題的質感細節：紙張顆粒、票根缺口、縫線邊框、格紋——
+     只在切到這個主題時才出現，不影響經典主題原本的樣子。每一條都只
+     疊加新的視覺屬性（background-image、額外的邊框/偽元素），不動任何
+     跟版面尺寸、手勢判斷座標有關的屬性。 */
+
+  /* 紙張顆粒感：極細的雙層小圓點疊在頁面／選單底色上，營造牛皮紙微微
+     粗糙的觸感，尺寸夠小、透明度夠低，不會干擾閱讀。 */
+  [data-theme="vintage"] .page,
+  [data-theme="vintage"] .nav-drawer{
+    background-image:
+      radial-gradient(rgba(74,52,35,.06) 1px, transparent 1px),
+      radial-gradient(rgba(74,52,35,.04) 1px, transparent 1px);
+    background-size:3px 3px, 5px 5px;
+    background-position:0 0, 2px 2px;
+  }
+
+  /* 日期切換鍵改成車票的樣子：底色換成偏乳白的卡片色，內緣加一圈虛線
+     裁切線；左右邊緣各用一顆跟頁首同色的實心圓「咬」出半圓缺口——圓心
+     剛好落在按鍵的左／右邊界上，外側那一半會被按鍵本身的 overflow:hidden
+     裁掉，看起來就像車票兩側撕開的圓弧缺口。今天那一天維持原本的紅框
+     提示，只是虛線改實線，不跟「今天」的強調色搶戲。 */
+  [data-theme="vintage"] .date-display{
+    background:var(--card);
+    border-style:dashed;
+    border-width:1.5px;
+    border-color:rgba(74,52,35,.35);
+  }
+  [data-theme="vintage"] .date-display.is-today{
+    border-color:var(--red);
+    border-style:solid;
+  }
+  [data-theme="vintage"] .date-display::before,
+  [data-theme="vintage"] .date-display::after{
+    content:"";
+    position:absolute;
+    top:50%; transform:translateY(-50%);
+    width:12px; height:12px;
+    border-radius:50%;
+    background:var(--paper); /* 跟頁首底色同色，挖洞露出後面 */
+    z-index:1;
+  }
+  [data-theme="vintage"] .date-display::before{ left:-6px; }
+  [data-theme="vintage"] .date-display::after{ right:-6px; }
+
+  /* 行程卡片邊框改成縫線感：半透明米白虛線內縮一圈，疊在卡片本身的
+     顏色背景上，不管卡片底色深淺都看得出來，像是手工縫過的邊。 */
+  [data-theme="vintage"] .event-card{
+    border:1.5px dashed rgba(255,255,255,.55);
+  }
+
+  /* 「已完成」待辦按鍵：純色改成細格紋（gingham），呼應素材裡紅白格紋
+     緞帶的視覺，只在打勾之後才出現，平常「待完成」狀態維持素面不搶眼。 */
+  [data-theme="vintage"] .event-card .ecard-donebtn.done{
+    background-image:
+      repeating-linear-gradient(45deg, rgba(255,255,255,.4) 0 3px, transparent 3px 6px),
+      repeating-linear-gradient(-45deg, rgba(255,255,255,.4) 0 3px, transparent 3px 6px);
+    background-color:var(--ecard-sep, rgba(0,0,0,0.25));
+  }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   /* 按下去的反饋（變暗/變色）統一補上漸變時間，不要瞬間切換。快速點一下
      的話，沒有 transition 的話變化常常只閃過一兩個 frame，很容易感覺不到；
