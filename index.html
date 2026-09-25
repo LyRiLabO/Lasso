@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
+    --body-bg:#DDD5C0;
     --paper:#F6F1E4;
     --paper-deep:#EFE8D6;
     --line:#DBD0B4;
@@ -36,6 +37,30 @@
     --blush:#C77B6C;
     --hour-px:50; /* 每小時的高度（px，不含單位），縮放時由 JS 更新這個變數，
                      所有跟每小時高度成比例的地方（格線、卡片容器）都跟著變 */
+  }
+  /* 「個人化」主題：美式復古（旅行貼紙／車票／郵戳風），從選單裡切換
+     （見 JS applyTheme()）。整組變數沿用同一套名字覆蓋過去，其他所有
+     用到 var(--xxx) 的地方完全不用改，換膚只靠這裡一個區塊。*/
+  :root[data-theme="vintage"]{
+    --body-bg:#C9A876;
+    --paper:#F5ECD9;
+    --paper-deep:#EFE1C5;
+    --line:#D9C6A0;
+    --line-soft:#E8DAB9;
+    --ink:#4A3423;
+    --ink-soft:#6B5240;
+    --ink-faint:#A68A5D;
+    --btn-brown:#4A3423;
+    --btn-relief:0 2px 6px rgba(139,58,52,.28), 0 1px 2px rgba(74,52,35,.26);
+    --btn-relief-pressed:inset 0 1px 3px rgba(139,58,52,.30), 0 0 0 rgba(0,0,0,0);
+    --red:#A63D34;
+    --red-deep:#8B2E23;
+    --card:#FBF3E1;
+    --shadow:rgba(74,52,35,0.22);
+    --gold:#B8860B;
+    --sage:#7A8B5C;
+    --dusk:#4A6785;
+    --blush:#C97B72;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   /* 按下去的反饋（變暗/變色）統一補上漸變時間，不要瞬間切換。快速點一下
@@ -69,7 +94,7 @@
   html,body{height:100%; overflow:hidden;}
   body{
     margin:0;
-    background:#DDD5C0;
+    background:var(--body-bg);
     font-family:'Noto Sans TC', sans-serif;
     color:var(--ink);
     display:flex;
@@ -323,6 +348,24 @@
     font-family:'Noto Sans TC', sans-serif; color:var(--ink);
   }
   .nav-code-row{display:flex; align-items:stretch; gap:4px;}
+  /* 「個人化」選單裡的主題色票：一顆圓形分成三色（該主題的卡片底色／
+     主色／強調金色），底下配文字標籤。選到的那個用外框圈起來，跟
+     .nav-row.current 用同一套「選到了就描邊」語彙。 */
+  .theme-swatch-row{display:flex; flex-wrap:wrap; gap:14px; padding:2px 0;}
+  .theme-swatch{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    background:none; border:none; padding:2px; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; font-size:11.5px; color:var(--ink-soft);
+  }
+  .theme-swatch-dot{
+    width:42px; height:42px; border-radius:50%;
+    border:2px solid transparent;
+    box-shadow:0 2px 5px rgba(0,0,0,.2);
+    background:conic-gradient(from -30deg, var(--sw-c1) 0 34%, var(--sw-c2) 34% 67%, var(--sw-c3) 67% 100%);
+  }
+  .theme-swatch.selected{color:var(--ink); font-weight:700;}
+  .theme-swatch.selected .theme-swatch-dot{border-color:var(--btn-brown);}
+  .theme-swatch:active .theme-swatch-dot{opacity:.7;}
   .nav-code{
     display:flex; align-items:center;
     font-family:ui-monospace, Menlo, Consolas, monospace;
@@ -2459,6 +2502,17 @@
     .event-card{transition:none;}
   }
 </style>
+<!-- 一進頁面就先套用使用者上次選的介面主題（存在 localStorage），趕在畫面
+     真的畫出來之前設定好 <html data-theme>，才不會先閃一下預設配色、
+     再跳成使用者選的主題。跟下面主程式共用同一個 THEME_STORAGE_KEY。 -->
+<script>
+  (function(){
+    try{
+      const saved = localStorage.getItem('plannerTheme');
+      if(saved && saved !== 'default') document.documentElement.setAttribute('data-theme', saved);
+    }catch(err){}
+  })();
+</script>
 <!-- Supabase 官方 CDN 版 JS client，載入後會掛在 window.supabase 上
      （createClient 方法）。跟後面主要的 JS 區塊分開放，純粹是因為這是
      外部函式庫，不是這個 App 自己寫的程式碼。 -->
@@ -2627,6 +2681,19 @@
           <div class="nav-rows" id="navBookList"></div>
           <button type="button" class="nav-btn" id="navImport">匯入其他手帳資料</button>
           <button type="button" class="nav-btn nav-leave" id="navLeave">退出這本手帳</button>
+        </div>
+      </div>
+    </div>
+    <div class="nav-item" data-nav="theme">
+      <button type="button" class="nav-head" aria-expanded="false">
+        <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"></path><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>
+        <span class="nav-label">個人化</span>
+        <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div class="nav-body">
+        <div class="nav-body-inner">
+          <div class="nav-hint">選一種介面色彩搭配，只有你自己看到的畫面會變，不影響其他共編者。</div>
+          <div class="theme-swatch-row" id="themeSwatchRow"></div>
         </div>
       </div>
     </div>
@@ -9018,6 +9085,57 @@
   }
   navImport.addEventListener('click', openImportPage);
 
+  // ============ 個人化：介面色彩主題 ============
+  // 存在這支裝置的 localStorage 裡，是「這個瀏覽器/裝置」的個人偏好，
+  // 不隨手帳資料同步、不影響其他共編者看到的畫面（跟 DEVICE_ID 一樣是
+  // 純本機的東西）。<head> 裡有一小段提早執行的 script 會在畫面畫出來
+  // 之前先套用一次，這裡的 applyTheme() 負責之後使用者手動切換時用。
+  const THEME_STORAGE_KEY = 'plannerTheme';
+  const THEMES = [
+    { id: 'default', name: '經典', colors: ['#EFE8D6', '#B23A2F', '#C08A2E'] },
+    { id: 'vintage', name: '美式復古', colors: ['#EFE1C5', '#A63D34', '#B8860B'] }
+  ];
+  let currentTheme = 'default';
+  (function initTheme(){
+    let saved = 'default';
+    try{ saved = localStorage.getItem(THEME_STORAGE_KEY) || 'default'; }catch(err){}
+    if(!THEMES.some(t => t.id === saved)) saved = 'default'; // 存的值不是現在支援的主題就退回經典，不要整頁跑不出樣式
+    currentTheme = saved;
+    // data-theme 屬性本身 <head> 那段小 script 已經先設好了（避免閃一下），
+    // 這裡不用重設，只需要讓 currentTheme 這個變數跟畫面實際狀態同步。
+  })();
+  function applyTheme(themeId){
+    currentTheme = themeId;
+    if(themeId === 'default') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', themeId);
+    try{ localStorage.setItem(THEME_STORAGE_KEY, themeId); }catch(err){}
+  }
+  function renderThemeSwatches(){
+    const row = document.getElementById('themeSwatchRow');
+    if(!row) return;
+    row.innerHTML = '';
+    THEMES.forEach(function(t){
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'theme-swatch' + (currentTheme === t.id ? ' selected' : '');
+      const dot = document.createElement('span');
+      dot.className = 'theme-swatch-dot';
+      dot.style.setProperty('--sw-c1', t.colors[0]);
+      dot.style.setProperty('--sw-c2', t.colors[1]);
+      dot.style.setProperty('--sw-c3', t.colors[2]);
+      const label = document.createElement('span');
+      label.textContent = t.name;
+      btn.appendChild(dot);
+      btn.appendChild(label);
+      btn.addEventListener('click', function(){
+        if(currentTheme === t.id) return;
+        applyTheme(t.id);
+        renderThemeSwatches(); // 重繪才能把選取框移到新選的這一顆上
+      });
+      row.appendChild(btn);
+    });
+  }
+
   function fallbackCopy(text){
     try{
       const ta = document.createElement('textarea');
@@ -9144,6 +9262,7 @@
   }
   // 每次打開選單都重新整理裡面的內容（密碼、手帳清單）
   function renderDrawerContents(){
+    renderThemeSwatches(); // 跟通知面板無關的個人設定，不用等 NOTEBOOK 載入也能顯示
     if(!NOTEBOOK) return;
     navCode.textContent = formatJoinCode(NOTEBOOK.code);
     navCopy.textContent = '複製';
