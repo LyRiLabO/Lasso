@@ -71,42 +71,42 @@
     --sage:#748760;
     --dusk:#56607E;
     --blush:#BD7A64;
-    /* 兩份「郵票打孔」鋸齒邊的 mask 圖形：--stamp-mask 給寬扁形狀用
-       （事件卡片、日期徽章、選取／移動／刪除長條鍵——上下各一排 8 個
-       小圓弧、左右各一排 3 個大圓弧，比例配合長方形）；--stamp-mask-sq
-       給接近正方形的圖示鍵用（頭部四顆圓角方鍵、底部上一步/下一步/
-       鉛筆鍵——四邊各一排 6 個等大的圓弧）。用 mask-size:100% 100% 依
-       各元件實際尺寸等比例縮放，不用為每種尺寸各刻一份圖。 */
-    --stamp-mask:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSItMTcuNjY3IC0xNy42NjcgMTM1LjMzMyAxMzUuMzMzIj48cGF0aCBkPSJNMCwwIEE2LjI1LDYuMjUgMCAwIDEgMTIuNSwwIEE2LjI1LDYuMjUgMCAwIDEgMjUsMCBBNi4yNSw2LjI1IDAgMCAxIDM3LjUsMCBBNi4yNSw2LjI1IDAgMCAxIDUwLDAgQTYuMjUsNi4yNSAwIDAgMSA2Mi41LDAgQTYuMjUsNi4yNSAwIDAgMSA3NSwwIEE2LjI1LDYuMjUgMCAwIDEgODcuNSwwIEE2LjI1LDYuMjUgMCAwIDEgMTAwLDAgQTE2LjY2NywxNi42NjcgMCAwIDEgMTAwLDMzLjMzMyBBMTYuNjY3LDE2LjY2NyAwIDAgMSAxMDAsNjYuNjY3IEExNi42NjcsMTYuNjY3IDAgMCAxIDEwMCwxMDAgQTYuMjUsNi4yNSAwIDAgMSA4Ny41LDEwMCBBNi4yNSw2LjI1IDAgMCAxIDc1LDEwMCBBNi4yNSw2LjI1IDAgMCAxIDYyLjUsMTAwIEE2LjI1LDYuMjUgMCAwIDEgNTAsMTAwIEE2LjI1LDYuMjUgMCAwIDEgMzcuNSwxMDAgQTYuMjUsNi4yNSAwIDAgMSAyNSwxMDAgQTYuMjUsNi4yNSAwIDAgMSAxMi41LDEwMCBBNi4yNSw2LjI1IDAgMCAxIDAsMTAwIEExNi42NjcsMTYuNjY3IDAgMCAxIDAsNjYuNjY3IEExNi42NjcsMTYuNjY3IDAgMCAxIDAsMzMuMzMzIEExNi42NjcsMTYuNjY3IDAgMCAxIDAsMCBaIiBmaWxsPSIjZmZmIi8+PC9zdmc+");
+    /* 郵票鋸齒邊 mask（只用在尺寸固定、接近正方形的圖示鍵上——長寬比
+       會變的卡片/日期徽章/長條鍵改用別的做法，見下方說明）：四邊各一排
+       6 個等大的圓弧，用 mask-size:100% 100% 依按鍵實際尺寸縮放。 */
     --stamp-mask-sq:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSItOS4zMzMgLTkuMzMzIDExOC42NjcgMTE4LjY2NyI+PHBhdGggZD0iTTAsMCBBOC4zMzMsOC4zMzMgMCAwIDEgMTYuNjY3LDAgQTguMzMzLDguMzMzIDAgMCAxIDMzLjMzMywwIEE4LjMzMyw4LjMzMyAwIDAgMSA1MCwwIEE4LjMzMyw4LjMzMyAwIDAgMSA2Ni42NjcsMCBBOC4zMzMsOC4zMzMgMCAwIDEgODMuMzMzLDAgQTguMzMzLDguMzMzIDAgMCAxIDEwMCwwIEE4LjMzMyw4LjMzMyAwIDAgMSAxMDAsMTYuNjY3IEE4LjMzMyw4LjMzMyAwIDAgMSAxMDAsMzMuMzMzIEE4LjMzMyw4LjMzMyAwIDAgMSAxMDAsNTAgQTguMzMzLDguMzMzIDAgMCAxIDEwMCw2Ni42NjcgQTguMzMzLDguMzMzIDAgMCAxIDEwMCw4My4zMzMgQTguMzMzLDguMzMzIDAgMCAxIDEwMCwxMDAgQTguMzMzLDguMzMzIDAgMCAxIDgzLjMzMywxMDAgQTguMzMzLDguMzMzIDAgMCAxIDY2LjY2NywxMDAgQTguMzMzLDguMzMzIDAgMCAxIDUwLDEwMCBBOC4zMzMsOC4zMzMgMCAwIDEgMzMuMzMzLDEwMCBBOC4zMzMsOC4zMzMgMCAwIDEgMTYuNjY3LDEwMCBBOC4zMzMsOC4zMzMgMCAwIDEgMCwxMDAgQTguMzMzLDguMzMzIDAgMCAxIDAsODMuMzMzIEE4LjMzMyw4LjMzMyAwIDAgMSAwLDY2LjY2NyBBOC4zMzMsOC4zMzMgMCAwIDEgMCw1MCBBOC4zMzMsOC4zMzMgMCAwIDEgMCwzMy4zMzMgQTguMzMzLDguMzMzIDAgMCAxIDAsMTYuNjY3IEE4LjMzMyw4LjMzMyAwIDAgMSAwLDAgWiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==");
   }
-  /* 套用鋸齒 mask 的元件：事件卡片、日期徽章、選取/移動/刪除長條鍵用
-     寬扁那份；頭部圖示鍵、底部上一步/下一步/鉛筆鍵用正方形那份。套了
-     mask 之後形狀由圖形本身決定，原本的 border-radius/box-shadow 關掉，
-     陰影改用 filter:drop-shadow——只有 drop-shadow 才會沿著 mask 裁切
-     後的鋸齒外形走，box-shadow 還是照著沒被裁切的矩形畫，會看起來卡在
-     鋸齒後面一整片方形陰影，不服貼。 */
-  [data-theme="american-vintage"] .event-card{
-    -webkit-mask-image:var(--stamp-mask); mask-image:var(--stamp-mask);
-    -webkit-mask-size:100% 100%; mask-size:100% 100%;
-    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-    border-radius:0;
-    box-shadow:none;
-    filter:drop-shadow(0 2px 3px var(--shadow));
-  }
-  [data-theme="american-vintage"] .event-card.dragging,
-  [data-theme="american-vintage"] .event-card.resizing{
-    box-shadow:none;
-    filter:drop-shadow(0 10px 16px var(--shadow));
+  /* 郵票鋸齒 mask 只用在「尺寸固定、接近正方形」的頭部圖示鍵跟底部
+     上一步/下一步/鉛筆鍵上——這幾個按鍵尺寸穩定（36~44px 上下），鋸齒
+     四邊比例平均，縮放不會走樣。
+     事件卡片、日期徽章、選取/移動/刪除長條鍵這幾個「長寬比會一路變」
+     的元件（同一張卡片 15 分鐘的行程跟一整天的行程，高度可以差幾十倍）
+     故意不用同一份 mask 硬套：mask-size:100% 100% 是非等比例縮放，同一顆
+     圓弧在很扁或很窄的框框裡會被拉成畸形的橢圓、甚至幾顆弧線疊在一起
+     糊成一整坨（美式復古主題第一版就是死在這裡）。改用不會受長寬比
+     影響的「郵票感」做法：圓角矩形 + 內縮一圈虛線框，模擬郵票的打孔感，
+     不管卡片多高多扁都一定長得對。 */
+  [data-theme="american-vintage"] .event-card::after{
+    content:"";
+    position:absolute;
+    inset:2px;
+    border:1.3px dashed rgba(255,255,255,.6);
+    border-radius:5px;
+    pointer-events:none;
   }
   [data-theme="american-vintage"] .date-display{
-    -webkit-mask-image:var(--stamp-mask); mask-image:var(--stamp-mask);
-    -webkit-mask-size:100% 100%; mask-size:100% 100%;
-    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-    border-radius:0;
+    border-width:2px;
+    border-color:var(--red);
     background:var(--card);
-    box-shadow:none;
-    filter:drop-shadow(0 2px 4px var(--shadow));
+  }
+  [data-theme="american-vintage"] .date-display::after{
+    content:"";
+    position:absolute;
+    inset:4px;
+    border:1.3px dashed var(--red);
+    opacity:.45;
+    border-radius:7px;
+    pointer-events:none;
   }
   [data-theme="american-vintage"] .month-header-btn,
   [data-theme="american-vintage"] .add-col-btn,
@@ -119,20 +119,19 @@
   [data-theme="american-vintage"] .select-toggle-btn,
   [data-theme="american-vintage"] .select-move-btn,
   [data-theme="american-vintage"] .select-delete-btn{
-    -webkit-mask-image:var(--stamp-mask); mask-image:var(--stamp-mask);
-    -webkit-mask-size:100% 100%; mask-size:100% 100%;
-    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-    border-radius:0;
-    box-shadow:none;
-    filter:drop-shadow(0 3px 7px var(--shadow));
+    border-radius:9px;
   }
   /* .fab（新增行程鉛筆鍵）跟 .undo-redo-btn（上一步/下一步）原本是完全
      透明的，只有圖示本身帶 drop-shadow、沒有實體底板；美式復古改成跟
-     頭部圖示鍵同一種奶油色底板＋鋸齒方形邊，看起來才會像照片裡底下
-     那排「有實體」的郵戳按鍵，不會孤零零只剩一支筆的圖示。 */
+     頭部圖示鍵同一種奶油色底板＋鋸齒方形邊（這兩顆本身尺寸固定、接近
+     正方形，套 mask 不會有縮放走樣的問題），看起來才會像照片裡底下
+     那排「有實體」的郵戳按鍵，不會孤零零只剩一支筆的圖示。加一圈很淡
+     的咖啡色邊框，因為按鍵底色跟紙張背景色太接近，沒有邊框會糊在一起
+     分不出按鍵在哪。 */
   [data-theme="american-vintage"] .fab,
   [data-theme="american-vintage"] .undo-redo-btn{
     background:var(--btn-face);
+    border:1.5px solid rgba(107,58,40,.3);
     box-shadow:var(--btn-relief);
     filter:none;
     color:var(--btn-brown);
@@ -141,7 +140,7 @@
     -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
     border-radius:0;
   }
-  [data-theme="american-vintage"] .fab{ padding:12px; }
+  [data-theme="american-vintage"] .fab{ padding:11px; }
   [data-theme="american-vintage"] .fab:active,
   [data-theme="american-vintage"] .undo-redo-btn:active{
     background:var(--btn-face-pressed);
