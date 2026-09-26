@@ -38,6 +38,147 @@
     --hour-px:50; /* 每小時的高度（px，不含單位），縮放時由 JS 更新這個變數，
                      所有跟每小時高度成比例的地方（格線、卡片容器）都跟著變 */
   }
+  /* ============ 個人化主題：美式復古 ============
+     整組配色換成暖褐郵票紙感：深藏青／酒紅當主要強調色，背景改成偏
+     深的牛皮紙色調。因為幾乎全部元件的顏色都是走 CSS 變數（--paper、
+     --ink…），這裡只要覆寫 :root 那組變數，大部分畫面（月曆頁、通知
+     面板、各種彈窗）就會自動跟著換色，不用每個元件另外寫一次。
+     行程卡片本身的顏色（EVENT_COLORS）不是靠這些變數，是 JS 另外維護
+     的一份色票，這個主題對應的十六色在 script 裡的 EVENT_COLOR_THEME_IDS
+     單獨定義，兩個主題的顏色 id 都留在同一份陣列裡並存，不同裝置就算
+     選了不同主題看同一張卡片，顏色也還是同一個 id 對得起來、不會兩邊
+     看到不同色。 */
+  [data-theme="american-vintage"]{
+    --body-bg:#CDBB8E;
+    --paper:#F2E6C7;
+    --paper-deep:#E8D8A9;
+    --line:#D6C293;
+    --line-soft:#ECDFB8;
+    --ink:#2A1F17;
+    --ink-soft:#6B5A41;
+    --ink-faint:#9C875F;
+    --btn-coffee:#241A12;
+    --btn-brown:#6B3A28;
+    --btn-face:#F6ECCD;
+    --btn-relief:0 2px 6px rgba(107,58,40,.35), 0 1px 2px rgba(107,58,40,.24);
+    --btn-face-pressed:#E4D09E;
+    --btn-relief-pressed:inset 0 1px 3px rgba(107,58,40,.32), 0 0 0 rgba(107,58,40,0);
+    --red:#A6362B;
+    --red-deep:#7E2620;
+    --card:#FBF2D9;
+    --shadow:rgba(42,31,23,0.24);
+    --gold:#B8862A;
+    --sage:#748760;
+    --dusk:#56607E;
+    --blush:#BD7A64;
+    /* 兩份「郵票打孔」鋸齒邊的 mask 圖形：--stamp-mask 給寬扁形狀用
+       （事件卡片、日期徽章、選取／移動／刪除長條鍵——上下各一排 8 個
+       小圓弧、左右各一排 3 個大圓弧，比例配合長方形）；--stamp-mask-sq
+       給接近正方形的圖示鍵用（頭部四顆圓角方鍵、底部上一步/下一步/
+       鉛筆鍵——四邊各一排 6 個等大的圓弧）。用 mask-size:100% 100% 依
+       各元件實際尺寸等比例縮放，不用為每種尺寸各刻一份圖。 */
+    --stamp-mask:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSItMTcuNjY3IC0xNy42NjcgMTM1LjMzMyAxMzUuMzMzIj48cGF0aCBkPSJNMCwwIEE2LjI1LDYuMjUgMCAwIDEgMTIuNSwwIEE2LjI1LDYuMjUgMCAwIDEgMjUsMCBBNi4yNSw2LjI1IDAgMCAxIDM3LjUsMCBBNi4yNSw2LjI1IDAgMCAxIDUwLDAgQTYuMjUsNi4yNSAwIDAgMSA2Mi41LDAgQTYuMjUsNi4yNSAwIDAgMSA3NSwwIEE2LjI1LDYuMjUgMCAwIDEgODcuNSwwIEE2LjI1LDYuMjUgMCAwIDEgMTAwLDAgQTE2LjY2NywxNi42NjcgMCAwIDEgMTAwLDMzLjMzMyBBMTYuNjY3LDE2LjY2NyAwIDAgMSAxMDAsNjYuNjY3IEExNi42NjcsMTYuNjY3IDAgMCAxIDEwMCwxMDAgQTYuMjUsNi4yNSAwIDAgMSA4Ny41LDEwMCBBNi4yNSw2LjI1IDAgMCAxIDc1LDEwMCBBNi4yNSw2LjI1IDAgMCAxIDYyLjUsMTAwIEE2LjI1LDYuMjUgMCAwIDEgNTAsMTAwIEE2LjI1LDYuMjUgMCAwIDEgMzcuNSwxMDAgQTYuMjUsNi4yNSAwIDAgMSAyNSwxMDAgQTYuMjUsNi4yNSAwIDAgMSAxMi41LDEwMCBBNi4yNSw2LjI1IDAgMCAxIDAsMTAwIEExNi42NjcsMTYuNjY3IDAgMCAxIDAsNjYuNjY3IEExNi42NjcsMTYuNjY3IDAgMCAxIDAsMzMuMzMzIEExNi42NjcsMTYuNjY3IDAgMCAxIDAsMCBaIiBmaWxsPSIjZmZmIi8+PC9zdmc+");
+    --stamp-mask-sq:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSItOS4zMzMgLTkuMzMzIDExOC42NjcgMTE4LjY2NyI+PHBhdGggZD0iTTAsMCBBOC4zMzMsOC4zMzMgMCAwIDEgMTYuNjY3LDAgQTguMzMzLDguMzMzIDAgMCAxIDMzLjMzMywwIEE4LjMzMyw4LjMzMyAwIDAgMSA1MCwwIEE4LjMzMyw4LjMzMyAwIDAgMSA2Ni42NjcsMCBBOC4zMzMsOC4zMzMgMCAwIDEgODMuMzMzLDAgQTguMzMzLDguMzMzIDAgMCAxIDEwMCwwIEE4LjMzMyw4LjMzMyAwIDAgMSAxMDAsMTYuNjY3IEE4LjMzMyw4LjMzMyAwIDAgMSAxMDAsMzMuMzMzIEE4LjMzMyw4LjMzMyAwIDAgMSAxMDAsNTAgQTguMzMzLDguMzMzIDAgMCAxIDEwMCw2Ni42NjcgQTguMzMzLDguMzMzIDAgMCAxIDEwMCw4My4zMzMgQTguMzMzLDguMzMzIDAgMCAxIDEwMCwxMDAgQTguMzMzLDguMzMzIDAgMCAxIDgzLjMzMywxMDAgQTguMzMzLDguMzMzIDAgMCAxIDY2LjY2NywxMDAgQTguMzMzLDguMzMzIDAgMCAxIDUwLDEwMCBBOC4zMzMsOC4zMzMgMCAwIDEgMzMuMzMzLDEwMCBBOC4zMzMsOC4zMzMgMCAwIDEgMTYuNjY3LDEwMCBBOC4zMzMsOC4zMzMgMCAwIDEgMCwxMDAgQTguMzMzLDguMzMzIDAgMCAxIDAsODMuMzMzIEE4LjMzMyw4LjMzMyAwIDAgMSAwLDY2LjY2NyBBOC4zMzMsOC4zMzMgMCAwIDEgMCw1MCBBOC4zMzMsOC4zMzMgMCAwIDEgMCwzMy4zMzMgQTguMzMzLDguMzMzIDAgMCAxIDAsMTYuNjY3IEE4LjMzMyw4LjMzMyAwIDAgMSAwLDAgWiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==");
+  }
+  /* 套用鋸齒 mask 的元件：事件卡片、日期徽章、選取/移動/刪除長條鍵用
+     寬扁那份；頭部圖示鍵、底部上一步/下一步/鉛筆鍵用正方形那份。套了
+     mask 之後形狀由圖形本身決定，原本的 border-radius/box-shadow 關掉，
+     陰影改用 filter:drop-shadow——只有 drop-shadow 才會沿著 mask 裁切
+     後的鋸齒外形走，box-shadow 還是照著沒被裁切的矩形畫，會看起來卡在
+     鋸齒後面一整片方形陰影，不服貼。 */
+  [data-theme="american-vintage"] .event-card{
+    -webkit-mask-image:var(--stamp-mask); mask-image:var(--stamp-mask);
+    -webkit-mask-size:100% 100%; mask-size:100% 100%;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    border-radius:0;
+    box-shadow:none;
+    filter:drop-shadow(0 2px 3px var(--shadow));
+  }
+  [data-theme="american-vintage"] .event-card.dragging,
+  [data-theme="american-vintage"] .event-card.resizing{
+    box-shadow:none;
+    filter:drop-shadow(0 10px 16px var(--shadow));
+  }
+  [data-theme="american-vintage"] .date-display{
+    -webkit-mask-image:var(--stamp-mask); mask-image:var(--stamp-mask);
+    -webkit-mask-size:100% 100%; mask-size:100% 100%;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    border-radius:0;
+    background:var(--card);
+    box-shadow:none;
+    filter:drop-shadow(0 2px 4px var(--shadow));
+  }
+  [data-theme="american-vintage"] .month-header-btn,
+  [data-theme="american-vintage"] .add-col-btn,
+  [data-theme="american-vintage"] .notebook-btn{
+    -webkit-mask-image:var(--stamp-mask-sq); mask-image:var(--stamp-mask-sq);
+    -webkit-mask-size:100% 100%; mask-size:100% 100%;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    border-radius:0;
+  }
+  [data-theme="american-vintage"] .select-toggle-btn,
+  [data-theme="american-vintage"] .select-move-btn,
+  [data-theme="american-vintage"] .select-delete-btn{
+    -webkit-mask-image:var(--stamp-mask); mask-image:var(--stamp-mask);
+    -webkit-mask-size:100% 100%; mask-size:100% 100%;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    border-radius:0;
+    box-shadow:none;
+    filter:drop-shadow(0 3px 7px var(--shadow));
+  }
+  /* .fab（新增行程鉛筆鍵）跟 .undo-redo-btn（上一步/下一步）原本是完全
+     透明的，只有圖示本身帶 drop-shadow、沒有實體底板；美式復古改成跟
+     頭部圖示鍵同一種奶油色底板＋鋸齒方形邊，看起來才會像照片裡底下
+     那排「有實體」的郵戳按鍵，不會孤零零只剩一支筆的圖示。 */
+  [data-theme="american-vintage"] .fab,
+  [data-theme="american-vintage"] .undo-redo-btn{
+    background:var(--btn-face);
+    box-shadow:var(--btn-relief);
+    filter:none;
+    color:var(--btn-brown);
+    -webkit-mask-image:var(--stamp-mask-sq); mask-image:var(--stamp-mask-sq);
+    -webkit-mask-size:100% 100%; mask-size:100% 100%;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    border-radius:0;
+  }
+  [data-theme="american-vintage"] .fab{ padding:12px; }
+  [data-theme="american-vintage"] .fab:active,
+  [data-theme="american-vintage"] .undo-redo-btn:active{
+    background:var(--btn-face-pressed);
+    opacity:1;
+  }
+  [data-theme="american-vintage"] .undo-redo-btn:disabled{
+    color:var(--ink-faint);
+    opacity:.55;
+  }
+  /* 現在時間紅線的圓點改成小星星，呼應照片裡日期徽章旁邊的星星裝飾。 */
+  [data-theme="american-vintage"] .now-line::before{
+    width:14px; height:14px; left:-7px; top:-7px;
+    border-radius:0;
+    clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+  }
+  /* 「日常」手帳名稱那排右上角補一小塊格紋三角裝飾、名稱後面加一顆小
+     星星，呼應照片裡標題列右上角的格紋跟星星。純裝飾、不影響版面。 */
+  [data-theme="american-vintage"] .notebook-name-bar{ position:relative; }
+  [data-theme="american-vintage"] .notebook-name-bar::after{
+    content:"";
+    position:absolute;
+    top:0; right:0;
+    width:30px; height:30px;
+    clip-path:polygon(100% 0, 100% 100%, 0 0);
+    background:
+      repeating-linear-gradient(45deg, var(--red) 0 3px, transparent 3px 7px),
+      repeating-linear-gradient(-45deg, var(--red) 0 3px, transparent 3px 7px);
+    opacity:.5;
+    pointer-events:none;
+  }
+  [data-theme="american-vintage"] .notebook-name-text::after{
+    content:"★";
+    margin-left:6px;
+    color:var(--red);
+    font-size:11px;
+    vertical-align:2px;
+  }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   /* 按下去的反饋（變暗/變色）統一補上漸變時間，不要瞬間切換。快速點一下
      的話，沒有 transition 的話變化常常只閃過一兩個 frame，很容易感覺不到；
@@ -3845,10 +3986,48 @@
     {id:'macaron-sky',    name:'天空藍',   hex:'#CBE6F6'},
     {id:'macaron-pink',   name:'草莓粉',   hex:'#FBCBD7'},
     {id:'morandi-charcoal', name:'深灰藍', hex:'#5C6B73'},
-    {id:'morandi-plum',   name:'深梅紫',   hex:'#6E5265'}
+    {id:'morandi-plum',   name:'深梅紫',   hex:'#6E5265'},
+    // 「美式復古」主題的十六色（取自使用者提供的色卡），跟上面經典主題
+    // 的莫蘭迪/馬卡龍色系一樣併在同一份 EVENT_COLORS 裡、id 各自獨立——
+    // 行程存的是顏色 id，不是主題名稱，這樣兩支裝置就算選了不同介面
+    // 主題，看同一張共編卡片時顏色 id 對照出來的還是同一個顏色，不會
+    // 因為對方切換了主題而跑掉。主題只決定「新建行程預設用哪個 id」
+    // 跟「顏色選色盤要顯示哪一排」，見 EVENT_COLOR_THEME_IDS。
+    {id:'vintage-brick',   name:'磚紅',     hex:'#AC4E46'},
+    {id:'vintage-wine',    name:'酒紅',     hex:'#630810'},
+    {id:'vintage-oat',     name:'淺燕麥',   hex:'#D9D0C3'},
+    {id:'vintage-slate',   name:'石板藍',   hex:'#495670'},
+    {id:'vintage-mustard', name:'芥末金',   hex:'#D6A83C'},
+    {id:'vintage-navy',    name:'深藏青',   hex:'#2E303F'},
+    {id:'vintage-butter',  name:'奶油黃',   hex:'#EFD08D'},
+    {id:'vintage-vanilla', name:'香草乳白', hex:'#F1E2BD'},
+    {id:'vintage-pine',    name:'墨綠',     hex:'#1E4C1D'},
+    {id:'vintage-olive',   name:'橄欖灰',   hex:'#505343'},
+    {id:'vintage-peach',   name:'蜜桃橘',   hex:'#E6A982'},
+    {id:'vintage-dustyblue', name:'湖水灰藍', hex:'#A5BDC5'},
+    {id:'vintage-blushgrey', name:'淺灰粉', hex:'#E4D9D4'},
+    {id:'vintage-rose',    name:'玫瑰莓紅', hex:'#BB566A'},
+    {id:'vintage-khaki',   name:'卡其黃',   hex:'#D9D1A1'},
+    {id:'vintage-khakiolive', name:'橄欖卡其', hex:'#ADA581'}
   ];
   const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
   const eventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
+  // 每個介面主題對應顯示的十六色子集（依序），顏色選色盤（renderColorSwatches）
+  // 跟「新建行程預設色」都看這份對照表決定要用哪一排，不是整份 EVENT_COLORS
+  // 都顯示。currentTheme 這個變數定義在後面「個人化：介面色彩主題」那一段，
+  // 但因為這裡只是函式宣告（function 具有 hoisting），實際呼叫時 currentTheme
+  // 早就已經被賦值過了，不會有先後順序的問題。
+  const EVENT_COLOR_THEME_IDS = {
+    'default': ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
+    'american-vintage': ['vintage-brick','vintage-wine','vintage-oat','vintage-slate','vintage-mustard','vintage-navy','vintage-butter','vintage-vanilla','vintage-pine','vintage-olive','vintage-peach','vintage-dustyblue','vintage-blushgrey','vintage-rose','vintage-khaki','vintage-khakiolive']
+  };
+  function themeEventColorList(){
+    const ids = EVENT_COLOR_THEME_IDS[currentTheme] || EVENT_COLOR_THEME_IDS['default'];
+    return ids.map(eventColorById);
+  }
+  function themeDefaultEventColor(){
+    return themeEventColorList()[0].id;
+  }
 
   // 淺色格子配黑字、深色格子配白字：用感知亮度（YIQ）快速判斷，
   // 不需要精確色彩科學，只要淺／深兩邊都選對就好。
@@ -7475,7 +7654,7 @@
       notes: '',
       participants: participantIds.slice(),
       creatorId: creatorId,
-      color: EVENT_COLORS[events.length % EVENT_COLORS.length].id,
+      color: (function(){ const pal = themeEventColorList(); return pal[events.length % pal.length].id; })(),
       recurrence: null
     };
     events.push(ev);
@@ -7660,9 +7839,9 @@
   }
 
   function renderColorSwatches(colorId){
-    selectedColor = colorId || DEFAULT_EVENT_COLOR;
+    selectedColor = colorId || themeDefaultEventColor();
     colorBox.innerHTML = '';
-    EVENT_COLORS.forEach(c => {
+    themeEventColorList().forEach(c => {
       const sw = document.createElement('div');
       sw.className = 'color-swatch' + (selectedColor === c.id ? ' selected' : '');
       sw.style.background = c.hex;
@@ -9068,7 +9247,8 @@
   // 之前先套用一次，這裡的 applyTheme() 負責之後使用者手動切換時用。
   const THEME_STORAGE_KEY = 'plannerTheme';
   const THEMES = [
-    { id: 'default', name: '經典', colors: ['#EFE8D6', '#B23A2F', '#C08A2E'] }
+    { id: 'default', name: '經典', colors: ['#EFE8D6', '#B23A2F', '#C08A2E'] },
+    { id: 'american-vintage', name: '美式復古', colors: ['#F2E6C7', '#A6362B', '#2E303F'] }
   ];
   let currentTheme = 'default';
   (function initTheme(){
