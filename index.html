@@ -113,14 +113,16 @@
   [data-theme="american-vintage"] .notebook-btn{
     background:var(--btn-face);
     border:none;
-    border-radius:7px;
+    border-radius:6px;
     box-shadow:var(--btn-relief);
   }
   /* .add-col-btn／.notebook-btn 本來就是 position:absolute（靠 right/top
-     卡在頭部列右側的位置），不能覆寫成 relative，否則位置會整個跑掉；
-     .month-header-btn 本來沒設 position（static），這裡另外單獨補上
-     relative，讓底下的虛線框 ::after 有正確的定位基準就好。 */
-  [data-theme="american-vintage"] .month-header-btn{
+     卡在頭部列右側的位置），不能覆寫成 relative，否則位置會整個跑掉。
+     「選單」鍵（btnMenu）身上同時掛了 .month-header-btn 跟 .notebook-btn
+     兩個 class，所以這裡要用 :not(.notebook-btn) 特別排除掉它，只給
+     真正只有 .month-header-btn（本來沒設 position，static）的按鍵補上
+     relative，讓底下的虛線框 ::after 有正確的定位基準。 */
+  [data-theme="american-vintage"] .month-header-btn:not(.notebook-btn){
     position:relative;
   }
   [data-theme="american-vintage"] .month-header-btn::after,
@@ -128,10 +130,10 @@
   [data-theme="american-vintage"] .notebook-btn::after{
     content:"";
     position:absolute;
-    inset:3px;
-    border:1.2px dashed var(--btn-coffee);
-    border-radius:4px;
-    opacity:.55;
+    inset:1.5px;
+    border:1px dashed var(--btn-coffee);
+    border-radius:4.5px;
+    opacity:.6;
     pointer-events:none;
   }
   [data-theme="american-vintage"] .month-header-btn:active,
@@ -143,7 +145,7 @@
   [data-theme="american-vintage"] .select-move-btn,
   [data-theme="american-vintage"] .select-delete-btn{
     border:none;
-    border-radius:7px;
+    border-radius:6px;
     position:relative;
   }
   [data-theme="american-vintage"] .select-toggle-btn::after,
@@ -151,10 +153,10 @@
   [data-theme="american-vintage"] .select-delete-btn::after{
     content:"";
     position:absolute;
-    inset:3px;
-    border:1.2px dashed var(--paper);
-    border-radius:4px;
-    opacity:.6;
+    inset:1.5px;
+    border:1px dashed var(--paper);
+    border-radius:4.5px;
+    opacity:.65;
     pointer-events:none;
   }
   /* .fab（新增行程鉛筆鍵）跟 .undo-redo-btn（上一步/下一步）原本是完全
@@ -171,17 +173,17 @@
     box-shadow:var(--btn-relief);
     filter:none;
     color:var(--btn-brown);
-    border-radius:7px;
+    border-radius:6px;
     position:relative;
   }
   [data-theme="american-vintage"] .fab::after,
   [data-theme="american-vintage"] .undo-redo-btn::after{
     content:"";
     position:absolute;
-    inset:3px;
-    border:1.2px dashed var(--btn-coffee);
-    border-radius:4px;
-    opacity:.55;
+    inset:1.5px;
+    border:1px dashed var(--btn-coffee);
+    border-radius:4.5px;
+    opacity:.6;
     pointer-events:none;
   }
   [data-theme="american-vintage"] .fab{
