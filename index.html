@@ -71,21 +71,13 @@
     --sage:#748760;
     --dusk:#56607E;
     --blush:#BD7A64;
-    /* 郵票鋸齒邊 mask（只用在尺寸固定、接近正方形的圖示鍵上——長寬比
-       會變的卡片/日期徽章/長條鍵改用別的做法，見下方說明）：四邊各一排
-       6 個等大的圓弧，用 mask-size:100% 100% 依按鍵實際尺寸縮放。 */
-    --stamp-mask-sq:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSItOS4zMzMgLTkuMzMzIDExOC42NjcgMTE4LjY2NyI+PHBhdGggZD0iTTAsMCBBOC4zMzMsOC4zMzMgMCAwIDEgMTYuNjY3LDAgQTguMzMzLDguMzMzIDAgMCAxIDMzLjMzMywwIEE4LjMzMyw4LjMzMyAwIDAgMSA1MCwwIEE4LjMzMyw4LjMzMyAwIDAgMSA2Ni42NjcsMCBBOC4zMzMsOC4zMzMgMCAwIDEgODMuMzMzLDAgQTguMzMzLDguMzMzIDAgMCAxIDEwMCwwIEE4LjMzMyw4LjMzMyAwIDAgMSAxMDAsMTYuNjY3IEE4LjMzMyw4LjMzMyAwIDAgMSAxMDAsMzMuMzMzIEE4LjMzMyw4LjMzMyAwIDAgMSAxMDAsNTAgQTguMzMzLDguMzMzIDAgMCAxIDEwMCw2Ni42NjcgQTguMzMzLDguMzMzIDAgMCAxIDEwMCw4My4zMzMgQTguMzMzLDguMzMzIDAgMCAxIDEwMCwxMDAgQTguMzMzLDguMzMzIDAgMCAxIDgzLjMzMywxMDAgQTguMzMzLDguMzMzIDAgMCAxIDY2LjY2NywxMDAgQTguMzMzLDguMzMzIDAgMCAxIDUwLDEwMCBBOC4zMzMsOC4zMzMgMCAwIDEgMzMuMzMzLDEwMCBBOC4zMzMsOC4zMzMgMCAwIDEgMTYuNjY3LDEwMCBBOC4zMzMsOC4zMzMgMCAwIDEgMCwxMDAgQTguMzMzLDguMzMzIDAgMCAxIDAsODMuMzMzIEE4LjMzMyw4LjMzMyAwIDAgMSAwLDY2LjY2NyBBOC4zMzMsOC4zMzMgMCAwIDEgMCw1MCBBOC4zMzMsOC4zMzMgMCAwIDEgMCwzMy4zMzMgQTguMzMzLDguMzMzIDAgMCAxIDAsMTYuNjY3IEE4LjMzMyw4LjMzMyAwIDAgMSAwLDAgWiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==");
   }
-  /* 郵票鋸齒 mask 只用在「尺寸固定、接近正方形」的頭部圖示鍵跟底部
-     上一步/下一步/鉛筆鍵上——這幾個按鍵尺寸穩定（36~44px 上下），鋸齒
-     四邊比例平均，縮放不會走樣。
-     事件卡片、日期徽章、選取/移動/刪除長條鍵這幾個「長寬比會一路變」
-     的元件（同一張卡片 15 分鐘的行程跟一整天的行程，高度可以差幾十倍）
-     故意不用同一份 mask 硬套：mask-size:100% 100% 是非等比例縮放，同一顆
-     圓弧在很扁或很窄的框框裡會被拉成畸形的橢圓、甚至幾顆弧線疊在一起
-     糊成一整坨（美式復古主題第一版就是死在這裡）。改用不會受長寬比
-     影響的「郵票感」做法：圓角矩形 + 內縮一圈虛線框，模擬郵票的打孔感，
-     不管卡片多高多扁都一定長得對。 */
+  /* 卡片、日期徽章、按鍵的邊框設計：跟參考圖一樣，按鍵是乾淨、清楚可見
+     的圓角方形（實心底＋明顯的深咖啡色邊框），不是鋸齒/郵票孔——鋸齒
+     mask 之前試過，會讓長寬比差很多的元件（尤其行程卡片，15 分鐘的
+     行程跟一整天的行程高度差幾十倍）在拉伸縮放時走樣糊成一團，所以
+     拿掉了。行程卡片、日期徽章改用不受長寬比影響的做法：圓角矩形 +
+     內縮一圈虛線框，模擬郵票打孔的感覺，不管卡片多高多扁都不會壞掉。 */
   [data-theme="american-vintage"] .event-card::after{
     content:"";
     position:absolute;
@@ -111,10 +103,14 @@
   [data-theme="american-vintage"] .month-header-btn,
   [data-theme="american-vintage"] .add-col-btn,
   [data-theme="american-vintage"] .notebook-btn{
-    -webkit-mask-image:var(--stamp-mask-sq); mask-image:var(--stamp-mask-sq);
-    -webkit-mask-size:100% 100%; mask-size:100% 100%;
-    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-    border-radius:0;
+    background:var(--btn-face);
+    border:1.8px solid var(--btn-brown);
+    box-shadow:var(--btn-relief);
+  }
+  [data-theme="american-vintage"] .month-header-btn:active,
+  [data-theme="american-vintage"] .add-col-btn:active,
+  [data-theme="american-vintage"] .notebook-btn:active{
+    background:var(--btn-face-pressed);
   }
   [data-theme="american-vintage"] .select-toggle-btn,
   [data-theme="american-vintage"] .select-move-btn,
@@ -123,24 +119,25 @@
   }
   /* .fab（新增行程鉛筆鍵）跟 .undo-redo-btn（上一步/下一步）原本是完全
      透明的，只有圖示本身帶 drop-shadow、沒有實體底板；美式復古改成跟
-     頭部圖示鍵同一種奶油色底板＋鋸齒方形邊（這兩顆本身尺寸固定、接近
-     正方形，套 mask 不會有縮放走樣的問題），看起來才會像照片裡底下
-     那排「有實體」的郵戳按鍵，不會孤零零只剩一支筆的圖示。加一圈很淡
-     的咖啡色邊框，因為按鍵底色跟紙張背景色太接近，沒有邊框會糊在一起
-     分不出按鍵在哪。 */
+     頭部圖示鍵同一種奶油色底板＋清楚的深咖啡色邊框，看起來才會像參考
+     圖裡那排「有實體」的按鍵，不會孤零零只剩一支筆的圖示、也不會因為
+     底色跟紙張背景太接近而糊在一起看不出按鍵在哪。
+     鉛筆鍵原本的圖示（32px）比上一步/下一步的圖示大很多，兩邊原本都是
+     透明底板時看不太出來，現在都套了實體底板，就得把外框尺寸拉齊、
+     縮小內距，鉛筆鍵才不會比旁邊三顆大一圈。 */
   [data-theme="american-vintage"] .fab,
   [data-theme="american-vintage"] .undo-redo-btn{
     background:var(--btn-face);
-    border:1.5px solid rgba(107,58,40,.3);
+    border:1.8px solid var(--btn-brown);
     box-shadow:var(--btn-relief);
     filter:none;
     color:var(--btn-brown);
-    -webkit-mask-image:var(--stamp-mask-sq); mask-image:var(--stamp-mask-sq);
-    -webkit-mask-size:100% 100%; mask-size:100% 100%;
-    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-    border-radius:0;
+    border-radius:11px;
   }
-  [data-theme="american-vintage"] .fab{ padding:11px; }
+  [data-theme="american-vintage"] .fab{
+    width:38px; height:38px;
+    padding:3px;
+  }
   [data-theme="american-vintage"] .fab:active,
   [data-theme="american-vintage"] .undo-redo-btn:active{
     background:var(--btn-face-pressed);
