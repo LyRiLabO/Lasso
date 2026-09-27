@@ -39,38 +39,40 @@
                      所有跟每小時高度成比例的地方（格線、卡片容器）都跟著變 */
   }
   /* ============ 個人化主題：美式復古 ============
-     整組配色換成暖褐郵票紙感：深藏青／酒紅當主要強調色，背景改成偏
-     深的牛皮紙色調。因為幾乎全部元件的顏色都是走 CSS 變數（--paper、
-     --ink…），這裡只要覆寫 :root 那組變數，大部分畫面（月曆頁、通知
-     面板、各種彈窗）就會自動跟著換色，不用每個元件另外寫一次。
+     主色調：酒紅、深藍、暖黃、米白。深色系按鍵（原本的深咖啡黑
+     --btn-coffee）換成深藍，強調色的紅（--red）換成酒紅，其餘顏色
+     依同樣邏輯往這四個色調靠攏。因為幾乎全部元件的顏色都是走 CSS
+     變數（--paper、--ink…），這裡只要覆寫 :root 那組變數，大部分畫面
+     （月曆頁、通知面板、各種彈窗）就會自動跟著換色，不用每個元件
+     另外寫一次。
      行程卡片本身的顏色（EVENT_COLORS）不是靠這些變數，是 JS 另外維護
      的一份色票，這個主題對應的十六色在 script 裡的 EVENT_COLOR_THEME_IDS
      單獨定義，兩個主題的顏色 id 都留在同一份陣列裡並存，不同裝置就算
      選了不同主題看同一張卡片，顏色也還是同一個 id 對得起來、不會兩邊
      看到不同色。 */
   [data-theme="american-vintage"]{
-    --body-bg:#CDBB8E;
-    --paper:#F2E6C7;
-    --paper-deep:#E8D8A9;
-    --line:#D6C293;
-    --line-soft:#ECDFB8;
-    --ink:#2A1F17;
-    --ink-soft:#6B5A41;
-    --ink-faint:#9C875F;
-    --btn-coffee:#241A12;
-    --btn-brown:#6B3A28;
-    --btn-face:#F6ECCD;
-    --btn-relief:0 2px 6px rgba(107,58,40,.35), 0 1px 2px rgba(107,58,40,.24);
-    --btn-face-pressed:#E4D09E;
-    --btn-relief-pressed:inset 0 1px 3px rgba(107,58,40,.32), 0 0 0 rgba(107,58,40,0);
-    --red:#A6362B;
-    --red-deep:#7E2620;
-    --card:#FBF2D9;
-    --shadow:rgba(42,31,23,0.24);
-    --gold:#B8862A;
-    --sage:#748760;
-    --dusk:#56607E;
-    --blush:#BD7A64;
+    --body-bg:#DCCFA6;
+    --paper:#F5EEDA;
+    --paper-deep:#ECE1BF;
+    --line:#D9CBA0;
+    --line-soft:#EFE7CC;
+    --ink:#1D2333;
+    --ink-soft:#4B5468;
+    --ink-faint:#8A93A5;
+    --btn-coffee:#1F2A47;
+    --btn-brown:#23304D;
+    --btn-face:#F7F0DA;
+    --btn-relief:0 3px 8px rgba(20,26,45,.32), 0 1px 3px rgba(20,26,45,.2);
+    --btn-face-pressed:#EAD9A0;
+    --btn-relief-pressed:inset 0 1px 3px rgba(20,26,45,.3), 0 0 0 rgba(20,26,45,0);
+    --red:#7A1B2E;
+    --red-deep:#591420;
+    --card:#FBF4DE;
+    --shadow:rgba(20,26,45,.28);
+    --gold:#D9A62A;
+    --sage:#7C8C4A;
+    --dusk:#33456B;
+    --blush:#9C3B4A;
   }
   /* 卡片、日期徽章、按鍵的邊框設計：跟參考圖一樣，按鍵是乾淨、清楚可見
      的圓角方形（實心底＋明顯的深咖啡色邊框），不是鋸齒/郵票孔——鋸齒
@@ -100,12 +102,37 @@
     border-radius:7px;
     pointer-events:none;
   }
+  /* 按鍵造型：矩形、四個角是小小的圓角（視覺上像切掉一小塊四分之一圓），
+     不畫外框線，邊界純粹靠陰影（--btn-relief）帶出來；邊界往內一點再
+     疊一圈細細的深藍色虛線，呼應參考圖的做法。淺色（米白底）按鍵用
+     深藍虛線；選取/移動/刪除這幾顆本身已經是深藍/酒紅實色底，深藍
+     虛線疊上去會看不見，改用米白虛線，同樣是「內縮一圈細虛線」的
+     設計，只是換個在自己底色上看得見的顏色。 */
   [data-theme="american-vintage"] .month-header-btn,
   [data-theme="american-vintage"] .add-col-btn,
   [data-theme="american-vintage"] .notebook-btn{
     background:var(--btn-face);
-    border:1.8px solid var(--btn-brown);
+    border:none;
+    border-radius:7px;
     box-shadow:var(--btn-relief);
+  }
+  /* .add-col-btn／.notebook-btn 本來就是 position:absolute（靠 right/top
+     卡在頭部列右側的位置），不能覆寫成 relative，否則位置會整個跑掉；
+     .month-header-btn 本來沒設 position（static），這裡另外單獨補上
+     relative，讓底下的虛線框 ::after 有正確的定位基準就好。 */
+  [data-theme="american-vintage"] .month-header-btn{
+    position:relative;
+  }
+  [data-theme="american-vintage"] .month-header-btn::after,
+  [data-theme="american-vintage"] .add-col-btn::after,
+  [data-theme="american-vintage"] .notebook-btn::after{
+    content:"";
+    position:absolute;
+    inset:3px;
+    border:1.2px dashed var(--btn-coffee);
+    border-radius:4px;
+    opacity:.55;
+    pointer-events:none;
   }
   [data-theme="american-vintage"] .month-header-btn:active,
   [data-theme="american-vintage"] .add-col-btn:active,
@@ -115,24 +142,47 @@
   [data-theme="american-vintage"] .select-toggle-btn,
   [data-theme="american-vintage"] .select-move-btn,
   [data-theme="american-vintage"] .select-delete-btn{
-    border-radius:9px;
+    border:none;
+    border-radius:7px;
+    position:relative;
+  }
+  [data-theme="american-vintage"] .select-toggle-btn::after,
+  [data-theme="american-vintage"] .select-move-btn::after,
+  [data-theme="american-vintage"] .select-delete-btn::after{
+    content:"";
+    position:absolute;
+    inset:3px;
+    border:1.2px dashed var(--paper);
+    border-radius:4px;
+    opacity:.6;
+    pointer-events:none;
   }
   /* .fab（新增行程鉛筆鍵）跟 .undo-redo-btn（上一步/下一步）原本是完全
      透明的，只有圖示本身帶 drop-shadow、沒有實體底板；美式復古改成跟
-     頭部圖示鍵同一種奶油色底板＋清楚的深咖啡色邊框，看起來才會像參考
-     圖裡那排「有實體」的按鍵，不會孤零零只剩一支筆的圖示、也不會因為
-     底色跟紙張背景太接近而糊在一起看不出按鍵在哪。
+     頭部圖示鍵同一種米白底板，一樣不畫外框、靠陰影帶出邊界，再疊一圈
+     內縮的深藍虛線。
      鉛筆鍵原本的圖示（32px）比上一步/下一步的圖示大很多，兩邊原本都是
      透明底板時看不太出來，現在都套了實體底板，就得把外框尺寸拉齊、
      縮小內距，鉛筆鍵才不會比旁邊三顆大一圈。 */
   [data-theme="american-vintage"] .fab,
   [data-theme="american-vintage"] .undo-redo-btn{
     background:var(--btn-face);
-    border:1.8px solid var(--btn-brown);
+    border:none;
     box-shadow:var(--btn-relief);
     filter:none;
     color:var(--btn-brown);
-    border-radius:11px;
+    border-radius:7px;
+    position:relative;
+  }
+  [data-theme="american-vintage"] .fab::after,
+  [data-theme="american-vintage"] .undo-redo-btn::after{
+    content:"";
+    position:absolute;
+    inset:3px;
+    border:1.2px dashed var(--btn-coffee);
+    border-radius:4px;
+    opacity:.55;
+    pointer-events:none;
   }
   [data-theme="american-vintage"] .fab{
     width:38px; height:38px;
@@ -146,6 +196,9 @@
   [data-theme="american-vintage"] .undo-redo-btn:disabled{
     color:var(--ink-faint);
     opacity:.55;
+  }
+  [data-theme="american-vintage"] .undo-redo-btn:disabled::after{
+    opacity:.25;
   }
   /* 現在時間紅線的圓點改成小星星，呼應照片裡日期徽章旁邊的星星裝飾。 */
   [data-theme="american-vintage"] .now-line::before{
