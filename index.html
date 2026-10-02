@@ -88,58 +88,52 @@
     border-radius:5px;
     pointer-events:none;
   }
+  /* 日期徽章：換成使用者提供的酒紅色雙線框——矩形四角各切一個小斜角，
+     外面一條粗實線、裡面一條細實線，中間留一點米白色的縫，跟參考圖
+     一樣。角度切割用 clip-path（算百分比／px 都是直線，不是圓弧，不管
+     元件被拉伸成多寬多扁都不會變形走樣，跟之前鋸齒圓弧那次的問題不
+     一樣），雙線本身是背景圖（SVG），畫在 clip-path 裁出來的範圍裡。
+     陰影改用 filter:drop-shadow，因為一般的 box-shadow 不會跟著
+     clip-path 的斜角走，還是會是方形陰影，跟切角的外形對不起來。 */
   [data-theme="american-vintage"] .date-display{
-    border-width:2px;
-    border-color:var(--red);
-    background:var(--card);
+    --cut:10px;
+    background:
+      url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+Cjxwb2x5Z29uIHBvaW50cz0iOCwwIDkyLDAgMTAwLDggMTAwLDkyIDkyLDEwMCA4LDEwMCAwLDkyIDAsOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN0ExQjJFIiBzdHJva2Utd2lkdGg9IjYiLz4KPHBvbHlnb24gcG9pbnRzPSIxNCw2IDg2LDYgOTQsMTQgOTQsODYgODYsOTQgMTQsOTQgNiw4NiA2LDE0IiBmaWxsPSJub25lIiBzdHJva2U9IiM3QTFCMkUiIHN0cm9rZS13aWR0aD0iMS44Ii8+Cjwvc3ZnPg==") no-repeat center/100% 100%,
+      var(--card);
+    border:none;
+    box-shadow:none;
+    filter:drop-shadow(0 2px 4px var(--shadow));
+    clip-path:polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
   }
   [data-theme="american-vintage"] .date-display::after{
-    content:"";
-    position:absolute;
-    inset:4px;
-    border:1.3px dashed var(--red);
-    opacity:.45;
-    border-radius:7px;
-    pointer-events:none;
+    content:none;
   }
-  /* 按鍵造型：矩形、四個角是小小的圓角（視覺上像切掉一小塊四分之一圓），
-     不畫外框線，邊界純粹靠陰影（--btn-relief）帶出來；邊界往內一點再
-     疊一圈細細的深藍色虛線，呼應參考圖的做法。淺色（米白底）按鍵用
-     深藍虛線；選取/移動/刪除這幾顆本身已經是深藍/酒紅實色底，深藍
-     虛線疊上去會看不見，改用米白虛線，同樣是「內縮一圈細虛線」的
-     設計，只是換個在自己底色上看得見的顏色。 */
+  /* 頭部四顆圖示鍵（通知/月曆/新增欄位/選單）：換成使用者提供的深藍色
+     雙線框造型——八角形（四個角各切掉一塊），外面一條粗實線、裡面一條
+     虛線，一樣是背景 SVG + clip-path，道理跟上面日期徽章相同。這四顆
+     按鍵本身尺寸固定、接近正方形，用等比例（百分比）的切角不會有拉伸
+     走樣的問題。 */
   [data-theme="american-vintage"] .month-header-btn,
   [data-theme="american-vintage"] .add-col-btn,
   [data-theme="american-vintage"] .notebook-btn{
-    background:var(--btn-face);
+    background:
+      url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+Cjxwb2x5Z29uIHBvaW50cz0iMjAsMCA4MCwwIDEwMCwyMCAxMDAsODAgODAsMTAwIDIwLDEwMCAwLDgwIDAsMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzFGMkE0NyIgc3Ryb2tlLXdpZHRoPSI3Ii8+Cjxwb2x5Z29uIHBvaW50cz0iMzIsMTIgNjgsMTIgODgsMzIgODgsNjggNjgsODggMzIsODggMTIsNjggMTIsMzIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzFGMkE0NyIgc3Ryb2tlLXdpZHRoPSIyLjQiIHN0cm9rZS1kYXNoYXJyYXk9IjQsMy42Ii8+Cjwvc3ZnPg==") no-repeat center/100% 100%,
+      var(--btn-face);
     border:none;
-    border-radius:6px;
-    box-shadow:var(--btn-relief);
-  }
-  /* .add-col-btn／.notebook-btn 本來就是 position:absolute（靠 right/top
-     卡在頭部列右側的位置），不能覆寫成 relative，否則位置會整個跑掉。
-     「選單」鍵（btnMenu）身上同時掛了 .month-header-btn 跟 .notebook-btn
-     兩個 class，所以這裡要用 :not(.notebook-btn) 特別排除掉它，只給
-     真正只有 .month-header-btn（本來沒設 position，static）的按鍵補上
-     relative，讓底下的虛線框 ::after 有正確的定位基準。 */
-  [data-theme="american-vintage"] .month-header-btn:not(.notebook-btn){
-    position:relative;
+    border-radius:0;
+    box-shadow:none;
+    filter:drop-shadow(0 2px 4px var(--shadow));
+    clip-path:polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
   }
   [data-theme="american-vintage"] .month-header-btn::after,
   [data-theme="american-vintage"] .add-col-btn::after,
   [data-theme="american-vintage"] .notebook-btn::after{
-    content:"";
-    position:absolute;
-    inset:1.5px;
-    border:1px dashed var(--btn-coffee);
-    border-radius:4.5px;
-    opacity:.6;
-    pointer-events:none;
+    content:none;
   }
   [data-theme="american-vintage"] .month-header-btn:active,
   [data-theme="american-vintage"] .add-col-btn:active,
   [data-theme="american-vintage"] .notebook-btn:active{
-    background:var(--btn-face-pressed);
+    background-color:var(--btn-face-pressed);
   }
   [data-theme="american-vintage"] .select-toggle-btn,
   [data-theme="american-vintage"] .select-move-btn,
