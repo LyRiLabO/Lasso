@@ -39,17 +39,13 @@
                      所有跟每小時高度成比例的地方（格線、卡片容器）都跟著變 */
   }
   /* ============ 個人化主題：美式復古 ============
-     主色調：酒紅、深藍、暖黃、米白。深色系按鍵（原本的深咖啡黑
-     --btn-coffee）換成深藍，強調色的紅（--red）換成酒紅，其餘顏色
-     依同樣邏輯往這四個色調靠攏。因為幾乎全部元件的顏色都是走 CSS
-     變數（--paper、--ink…），這裡只要覆寫 :root 那組變數，大部分畫面
-     （月曆頁、通知面板、各種彈窗）就會自動跟著換色，不用每個元件
-     另外寫一次。
+     跟「經典」只差在兩件事：
+       1. 配色（酒紅、深藍、暖黃、米白）：只要覆寫 :root 那組 CSS 變數，
+          大部分畫面（月曆頁、通知面板、各種彈窗）就會自動跟著換色。
+       2. 兩處小裝飾：現在時間線最左端的星星、手帳名稱後面的星星。
+     所有按鍵、行程卡片、日期徽章的造型都沿用經典，這裡不再覆寫。
      行程卡片本身的顏色（EVENT_COLORS）不是靠這些變數，是 JS 另外維護
-     的一份色票，這個主題對應的十六色在 script 裡的 EVENT_COLOR_THEME_IDS
-     單獨定義，兩個主題的顏色 id 都留在同一份陣列裡並存，不同裝置就算
-     選了不同主題看同一張卡片，顏色也還是同一個 id 對得起來、不會兩邊
-     看到不同色。 */
+     的色票，兩套風格的十六色是「兩兩配對」的，見 EVENT_COLOR_THEME_IDS。 */
   [data-theme="american-vintage"]{
     --body-bg:#DCCFA6;
     --paper:#F5EEDA;
@@ -74,149 +70,13 @@
     --dusk:#33456B;
     --blush:#9C3B4A;
   }
-  /* 卡片、日期徽章、按鍵的邊框設計：跟參考圖一樣，按鍵是乾淨、清楚可見
-     的圓角方形（實心底＋明顯的深咖啡色邊框），不是鋸齒/郵票孔——鋸齒
-     mask 之前試過，會讓長寬比差很多的元件（尤其行程卡片，15 分鐘的
-     行程跟一整天的行程高度差幾十倍）在拉伸縮放時走樣糊成一團，所以
-     拿掉了。行程卡片、日期徽章改用不受長寬比影響的做法：圓角矩形 +
-     內縮一圈虛線框，模擬郵票打孔的感覺，不管卡片多高多扁都不會壞掉。 */
-  [data-theme="american-vintage"] .event-card::after{
-    content:"";
-    position:absolute;
-    inset:2px;
-    border:1.3px dashed rgba(255,255,255,.6);
-    border-radius:5px;
-    pointer-events:none;
-  }
-  /* 日期徽章：換成使用者提供的酒紅色雙線框——矩形四角各切一個小斜角，
-     外面一條粗實線、裡面一條細實線，中間留一點米白色的縫，跟參考圖
-     一樣。角度切割用 clip-path（算百分比／px 都是直線，不是圓弧，不管
-     元件被拉伸成多寬多扁都不會變形走樣，跟之前鋸齒圓弧那次的問題不
-     一樣），雙線本身是背景圖（SVG），畫在 clip-path 裁出來的範圍裡。
-     陰影改用 filter:drop-shadow，因為一般的 box-shadow 不會跟著
-     clip-path 的斜角走，還是會是方形陰影，跟切角的外形對不起來。 */
-  [data-theme="american-vintage"] .date-display{
-    --cut:10px;
-    background:
-      url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+Cjxwb2x5Z29uIHBvaW50cz0iOCwwIDkyLDAgMTAwLDggMTAwLDkyIDkyLDEwMCA4LDEwMCAwLDkyIDAsOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN0ExQjJFIiBzdHJva2Utd2lkdGg9IjYiLz4KPHBvbHlnb24gcG9pbnRzPSIxNCw2IDg2LDYgOTQsMTQgOTQsODYgODYsOTQgMTQsOTQgNiw4NiA2LDE0IiBmaWxsPSJub25lIiBzdHJva2U9IiM3QTFCMkUiIHN0cm9rZS13aWR0aD0iMS44Ii8+Cjwvc3ZnPg==") no-repeat center/100% 100%,
-      var(--card);
-    border:none;
-    box-shadow:none;
-    filter:drop-shadow(0 2px 4px var(--shadow));
-    clip-path:polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
-  }
-  [data-theme="american-vintage"] .date-display::after{
-    content:none;
-  }
-  /* 頭部四顆圖示鍵（通知/月曆/新增欄位/選單）：換成使用者提供的深藍色
-     雙線框造型——八角形（四個角各切掉一塊），外面一條粗實線、裡面一條
-     虛線，一樣是背景 SVG + clip-path，道理跟上面日期徽章相同。這四顆
-     按鍵本身尺寸固定、接近正方形，用等比例（百分比）的切角不會有拉伸
-     走樣的問題。 */
-  [data-theme="american-vintage"] .month-header-btn,
-  [data-theme="american-vintage"] .add-col-btn,
-  [data-theme="american-vintage"] .notebook-btn{
-    background:
-      url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+Cjxwb2x5Z29uIHBvaW50cz0iMjAsMCA4MCwwIDEwMCwyMCAxMDAsODAgODAsMTAwIDIwLDEwMCAwLDgwIDAsMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzFGMkE0NyIgc3Ryb2tlLXdpZHRoPSI3Ii8+Cjxwb2x5Z29uIHBvaW50cz0iMzIsMTIgNjgsMTIgODgsMzIgODgsNjggNjgsODggMzIsODggMTIsNjggMTIsMzIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzFGMkE0NyIgc3Ryb2tlLXdpZHRoPSIyLjQiIHN0cm9rZS1kYXNoYXJyYXk9IjQsMy42Ii8+Cjwvc3ZnPg==") no-repeat center/100% 100%,
-      var(--btn-face);
-    border:none;
-    border-radius:0;
-    box-shadow:none;
-    filter:drop-shadow(0 2px 4px var(--shadow));
-    clip-path:polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
-  }
-  [data-theme="american-vintage"] .month-header-btn::after,
-  [data-theme="american-vintage"] .add-col-btn::after,
-  [data-theme="american-vintage"] .notebook-btn::after{
-    content:none;
-  }
-  [data-theme="american-vintage"] .month-header-btn:active,
-  [data-theme="american-vintage"] .add-col-btn:active,
-  [data-theme="american-vintage"] .notebook-btn:active{
-    background-color:var(--btn-face-pressed);
-  }
-  [data-theme="american-vintage"] .select-toggle-btn,
-  [data-theme="american-vintage"] .select-move-btn,
-  [data-theme="american-vintage"] .select-delete-btn{
-    border:none;
-    border-radius:6px;
-    position:relative;
-  }
-  [data-theme="american-vintage"] .select-toggle-btn::after,
-  [data-theme="american-vintage"] .select-move-btn::after,
-  [data-theme="american-vintage"] .select-delete-btn::after{
-    content:"";
-    position:absolute;
-    inset:1.5px;
-    border:1px dashed var(--paper);
-    border-radius:4.5px;
-    opacity:.65;
-    pointer-events:none;
-  }
-  /* .fab（新增行程鉛筆鍵）跟 .undo-redo-btn（上一步/下一步）原本是完全
-     透明的，只有圖示本身帶 drop-shadow、沒有實體底板；美式復古改成跟
-     頭部圖示鍵同一種米白底板，一樣不畫外框、靠陰影帶出邊界，再疊一圈
-     內縮的深藍虛線。
-     鉛筆鍵原本的圖示（32px）比上一步/下一步的圖示大很多，兩邊原本都是
-     透明底板時看不太出來，現在都套了實體底板，就得把外框尺寸拉齊、
-     縮小內距，鉛筆鍵才不會比旁邊三顆大一圈。 */
-  [data-theme="american-vintage"] .fab,
-  [data-theme="american-vintage"] .undo-redo-btn{
-    background:var(--btn-face);
-    border:none;
-    box-shadow:var(--btn-relief);
-    filter:none;
-    color:var(--btn-brown);
-    border-radius:6px;
-    position:relative;
-  }
-  [data-theme="american-vintage"] .fab::after,
-  [data-theme="american-vintage"] .undo-redo-btn::after{
-    content:"";
-    position:absolute;
-    inset:1.5px;
-    border:1px dashed var(--btn-coffee);
-    border-radius:4.5px;
-    opacity:.6;
-    pointer-events:none;
-  }
-  [data-theme="american-vintage"] .fab{
-    width:38px; height:38px;
-    padding:3px;
-  }
-  [data-theme="american-vintage"] .fab:active,
-  [data-theme="american-vintage"] .undo-redo-btn:active{
-    background:var(--btn-face-pressed);
-    opacity:1;
-  }
-  [data-theme="american-vintage"] .undo-redo-btn:disabled{
-    color:var(--ink-faint);
-    opacity:.55;
-  }
-  [data-theme="american-vintage"] .undo-redo-btn:disabled::after{
-    opacity:.25;
-  }
-  /* 現在時間紅線的圓點改成小星星，呼應照片裡日期徽章旁邊的星星裝飾。 */
+  /* 現在時間線最左端的圓點改成小星星。 */
   [data-theme="american-vintage"] .now-line::before{
     width:14px; height:14px; left:-7px; top:-7px;
     border-radius:0;
     clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
   }
-  /* 「日常」手帳名稱那排右上角補一小塊格紋三角裝飾、名稱後面加一顆小
-     星星，呼應照片裡標題列右上角的格紋跟星星。純裝飾、不影響版面。 */
-  [data-theme="american-vintage"] .notebook-name-bar{ position:relative; }
-  [data-theme="american-vintage"] .notebook-name-bar::after{
-    content:"";
-    position:absolute;
-    top:0; right:0;
-    width:30px; height:30px;
-    clip-path:polygon(100% 0, 100% 100%, 0 0);
-    background:
-      repeating-linear-gradient(45deg, var(--red) 0 3px, transparent 3px 7px),
-      repeating-linear-gradient(-45deg, var(--red) 0 3px, transparent 3px 7px);
-    opacity:.5;
-    pointer-events:none;
-  }
+  /* 手帳名稱後面加一顆小星星（純裝飾、不影響版面）。 */
   [data-theme="american-vintage"] .notebook-name-text::after{
     content:"★";
     margin-left:6px;
@@ -4034,10 +3894,9 @@
     {id:'morandi-plum',   name:'深梅紫',   hex:'#6E5265'},
     // 「美式復古」主題的十六色（取自使用者提供的色卡），跟上面經典主題
     // 的莫蘭迪/馬卡龍色系一樣併在同一份 EVENT_COLORS 裡、id 各自獨立——
-    // 行程存的是顏色 id，不是主題名稱，這樣兩支裝置就算選了不同介面
-    // 主題，看同一張共編卡片時顏色 id 對照出來的還是同一個顏色，不會
-    // 因為對方切換了主題而跑掉。主題只決定「新建行程預設用哪個 id」
-    // 跟「顏色選色盤要顯示哪一排」，見 EVENT_COLOR_THEME_IDS。
+    // 行程存的是顏色 id（不隨介面風格改動，共編時對方用哪套風格都不會
+    // 動到資料），顯示時才依「目前風格」換成配對的那一色，見
+    // EVENT_COLOR_THEME_IDS 跟 eventColorById()。
     {id:'vintage-brick',   name:'磚紅',     hex:'#AC4E46'},
     {id:'vintage-wine',    name:'酒紅',     hex:'#630810'},
     {id:'vintage-oat',     name:'淺燕麥',   hex:'#D9D0C3'},
@@ -4056,19 +3915,41 @@
     {id:'vintage-khakiolive', name:'橄欖卡其', hex:'#ADA581'}
   ];
   const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
-  const eventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
+  const rawEventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
+  // 顯示用：依目前風格換成配對的顏色（行程卡片、月曆、叢集清單都走這個）
+  const eventColorById = id => rawEventColorById(pairedEventColorId(id));
   // 每個介面主題對應顯示的十六色子集（依序），顏色選色盤（renderColorSwatches）
   // 跟「新建行程預設色」都看這份對照表決定要用哪一排，不是整份 EVENT_COLORS
   // 都顯示。currentTheme 這個變數定義在後面「個人化：介面色彩主題」那一段，
   // 但因為這裡只是函式宣告（function 具有 hoisting），實際呼叫時 currentTheme
   // 早就已經被賦值過了，不會有先後順序的問題。
+  // 【配對規則】兩套陣列「同一個位置」的顏色互為配對：切換風格時，行程
+  // 會從原本風格的第 N 色換成新風格的第 N 色，選色盤的排列位置也一樣。
+  // 想調整配對，只要在其中一套裡把兩個 id 對調位置就好。
   const EVENT_COLOR_THEME_IDS = {
-    'default': ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
-    'american-vintage': ['vintage-brick','vintage-wine','vintage-oat','vintage-slate','vintage-mustard','vintage-navy','vintage-butter','vintage-vanilla','vintage-pine','vintage-olive','vintage-peach','vintage-dustyblue','vintage-blushgrey','vintage-rose','vintage-khaki','vintage-khakiolive']
+    'default':          ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
+    'american-vintage': ['vintage-brick','vintage-slate','vintage-olive','vintage-oat','vintage-rose','vintage-pine','vintage-mustard','vintage-khakiolive','vintage-vanilla','vintage-khaki','vintage-blushgrey','vintage-butter','vintage-dustyblue','vintage-peach','vintage-navy','vintage-wine']
   };
+  // 目前的風格 id：直接讀 <html data-theme>（<head> 的小 script 在畫面畫出來前
+  // 就設好了，applyTheme 也會同步更新），不依賴後面才宣告的 currentTheme，
+  // 這樣就算畫面在主題初始化前先繪製也不會出錯。
+  function activeThemeId(){
+    return document.documentElement.getAttribute('data-theme') || 'default';
+  }
+  // 把任何一套風格的顏色 id 換成「目前風格」裡配對的那一色 id；不認得的
+  // id（舊資料、空字串）退回目前風格的第一色。
+  function pairedEventColorId(id){
+    const cur = EVENT_COLOR_THEME_IDS[activeThemeId()] || EVENT_COLOR_THEME_IDS['default'];
+    if(cur.indexOf(id) >= 0) return id;
+    for(const k in EVENT_COLOR_THEME_IDS){
+      const i = EVENT_COLOR_THEME_IDS[k].indexOf(id);
+      if(i >= 0) return cur[i];
+    }
+    return cur[0];
+  }
   function themeEventColorList(){
-    const ids = EVENT_COLOR_THEME_IDS[currentTheme] || EVENT_COLOR_THEME_IDS['default'];
-    return ids.map(eventColorById);
+    const ids = EVENT_COLOR_THEME_IDS[activeThemeId()] || EVENT_COLOR_THEME_IDS['default'];
+    return ids.map(rawEventColorById);
   }
   function themeDefaultEventColor(){
     return themeEventColorList()[0].id;
@@ -7884,7 +7765,7 @@
   }
 
   function renderColorSwatches(colorId){
-    selectedColor = colorId || themeDefaultEventColor();
+    selectedColor = colorId ? pairedEventColorId(colorId) : themeDefaultEventColor();
     colorBox.innerHTML = '';
     themeEventColorList().forEach(c => {
       const sw = document.createElement('div');
@@ -8542,12 +8423,13 @@
     if(checkDate !== o.date) changeLabels.push('日期');
     if(newStart !== o.start || newEnd !== o.end) changeLabels.push('時間');
     if(newNotes !== (o.notes || '')) changeLabels.push('備註');
-    if(selectedColor !== o.color) changeLabels.push('顏色');
+    if(selectedColor !== pairedEventColorId(o.color)) changeLabels.push('顏色');
     if(newWeekdays.join(',') !== o.weekdays) changeLabels.push('重複');
 
     // 顏色是整個行程系列共用的分類標籤，不像時間/備註那樣需要區分「只改這一天」，
     // 一律直接寫回本體，不放進 override。
-    master.color = selectedColor;
+    // 只有使用者真的換了顏色才寫回；沒動的話保留原本存的 id（可能是另一套風格的 id）
+    if(!master.color || selectedColor !== pairedEventColorId(master.color)) master.color = selectedColor;
 
     // 「重複」規則永遠套用到整個系列，跟同步編輯開關無關（單一日期沒有自己的重複規則）
     master.recurrence = newWeekdays.length ? {weekdays:newWeekdays} : null;
@@ -9309,6 +9191,13 @@
     if(themeId === 'default') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', themeId);
     try{ localStorage.setItem(THEME_STORAGE_KEY, themeId); }catch(err){}
+    // 行程顏色會跟著風格換成配對色，已經畫在畫面上的卡片要重畫
+    if(NOTEBOOK){
+      try{
+        renderEvents();
+        if(pageMonth.classList.contains('active')) renderMonthGrid();
+      }catch(err){ console.error('切換風格後重繪失敗：', err); }
+    }
   }
   function renderThemeSwatches(){
     const row = document.getElementById('themeSwatchRow');
