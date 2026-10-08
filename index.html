@@ -70,6 +70,32 @@
     --dusk:#33456B;
     --blush:#9C3B4A;
   }
+  /* ============ 個人化主題：昭和懷舊 ============
+     手帳底色（--paper）取自使用者提供的色卡背景 #C8B597，其餘米褐系的
+     變數（外圍、格線、卡片面）都以它為基準調深/調淺，文字改成偏暖的深
+     褐色，強調色取自色卡裡的煉瓦紅與琥珀黃。按鍵、卡片的造型全部沿用
+     經典，只有配色不同。行程十六色見 EVENT_COLOR_THEME_IDS。 */
+  [data-theme="showa"]{
+    --body-bg:#B3A183;
+    --paper:#C8B597;
+    --paper-deep:#BCA988;
+    --line:#AE9A78;
+    --line-soft:#BAA783;
+    --ink:#2E2418;
+    --ink-soft:#5A4A36;
+    --ink-faint:#80704F;
+    --btn-brown:#4F2F16;
+    --btn-relief:0 2px 6px rgba(79,47,22,.32), 0 1px 2px rgba(79,47,22,.24);
+    --btn-relief-pressed:inset 0 1px 3px rgba(79,47,22,.3), 0 0 0 rgba(79,47,22,0);
+    --red:#A34543;
+    --red-deep:#7E322F;
+    --card:#DACCB1;
+    --shadow:rgba(46,36,24,.22);
+    --gold:#E5AD4E;
+    --sage:#5A6348;
+    --dusk:#4E7480;
+    --blush:#C46F68;
+  }
   /* 現在時間線最左端的圓點改成小星星。 */
   [data-theme="american-vintage"] .now-line::before{
     width:14px; height:14px; left:-7px; top:-7px;
@@ -3912,7 +3938,24 @@
     {id:'vintage-blushgrey', name:'淺灰粉', hex:'#E4D9D4'},
     {id:'vintage-rose',    name:'玫瑰莓紅', hex:'#BB566A'},
     {id:'vintage-khaki',   name:'卡其黃',   hex:'#D9D1A1'},
-    {id:'vintage-khakiolive', name:'橄欖卡其', hex:'#ADA581'}
+    {id:'vintage-khakiolive', name:'橄欖卡其', hex:'#ADA581'},
+    // 「昭和懷舊」主題的十六色（取自使用者提供的色卡），配對位置見 EVENT_COLOR_THEME_IDS
+    {id:'showa-brick',   name:'煉瓦紅',   hex:'#A34543'},
+    {id:'showa-water',   name:'水淺蔥',   hex:'#90B5BD'},
+    {id:'showa-matcha',  name:'淺抹茶綠', hex:'#A5B392'},
+    {id:'showa-greige',  name:'灰褐',     hex:'#98917E'},
+    {id:'showa-coal',    name:'焦茶黑',   hex:'#403B35'},
+    {id:'showa-moss',    name:'深苔綠',   hex:'#5A6348'},
+    {id:'showa-amber',   name:'琥珀黃',   hex:'#E5AD4E'},
+    {id:'showa-lead',    name:'鉛灰',     hex:'#676966'},
+    {id:'showa-terra',   name:'赤陶橙',   hex:'#DA8664'},
+    {id:'showa-olive',   name:'橄欖黃綠', hex:'#82852C'},
+    {id:'showa-salmon',  name:'鮭魚粉',   hex:'#DE877E'},
+    {id:'showa-cream',   name:'奶油杏',   hex:'#F0D8A8'},
+    {id:'showa-ice',     name:'冰水藍',   hex:'#C3DFE0'},
+    {id:'showa-vermil',  name:'朱紅',     hex:'#C64530'},
+    {id:'showa-night',   name:'墨藍紫',   hex:'#322F40'},
+    {id:'showa-cocoa',   name:'深可可棕', hex:'#4F2F16'}
   ];
   const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
   const rawEventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
@@ -3928,7 +3971,8 @@
   // 想調整配對，只要在其中一套裡把兩個 id 對調位置就好。
   const EVENT_COLOR_THEME_IDS = {
     'default':          ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
-    'american-vintage': ['vintage-brick','vintage-slate','vintage-olive','vintage-oat','vintage-rose','vintage-pine','vintage-mustard','vintage-khakiolive','vintage-vanilla','vintage-khaki','vintage-blushgrey','vintage-butter','vintage-dustyblue','vintage-peach','vintage-navy','vintage-wine']
+    'american-vintage': ['vintage-brick','vintage-slate','vintage-olive','vintage-oat','vintage-rose','vintage-pine','vintage-mustard','vintage-khakiolive','vintage-vanilla','vintage-khaki','vintage-blushgrey','vintage-butter','vintage-dustyblue','vintage-peach','vintage-navy','vintage-wine'],
+    'showa':            ['showa-brick','showa-water','showa-matcha','showa-greige','showa-coal','showa-moss','showa-amber','showa-lead','showa-terra','showa-olive','showa-salmon','showa-cream','showa-ice','showa-vermil','showa-night','showa-cocoa']
   };
   // 目前的風格 id：直接讀 <html data-theme>（<head> 的小 script 在畫面畫出來前
   // 就設好了，applyTheme 也會同步更新），不依賴後面才宣告的 currentTheme，
@@ -9175,7 +9219,8 @@
   const THEME_STORAGE_KEY = 'plannerTheme';
   const THEMES = [
     { id: 'default', name: '經典', colors: ['#EFE8D6', '#B23A2F', '#C08A2E'] },
-    { id: 'american-vintage', name: '美式復古', colors: ['#F2E6C7', '#A6362B', '#2E303F'] }
+    { id: 'american-vintage', name: '美式復古', colors: ['#F2E6C7', '#A6362B', '#2E303F'] },
+    { id: 'showa', name: '昭和懷舊', colors: ['#C8B597', '#A34543', '#E5AD4E'] }
   ];
   let currentTheme = 'default';
   (function initTheme(){
