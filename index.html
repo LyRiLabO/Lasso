@@ -432,7 +432,11 @@
     width:42px; height:42px; border-radius:50%;
     border:2px solid transparent;
     box-shadow:0 2px 5px rgba(0,0,0,.2);
-    background:conic-gradient(from -30deg, var(--sw-c1) 0 34%, var(--sw-c2) 34% 67%, var(--sw-c3) 67% 100%);
+    background:conic-gradient(from -30deg, var(--sw-c1) 0 33.34%, var(--sw-c2) 33.34% 66.67%, var(--sw-c3) 66.67% 100%);
+    /* 圓形的邊框是透明的，漸層預設只鋪在「內容區」再往外重複，邊緣就會跑出
+       另一側的顏色。改成鋪滿整個圓（含邊框底下），三色就是完整的三等分。 */
+    background-origin:border-box;
+    background-clip:border-box;
   }
   .theme-swatch.selected{color:var(--ink); font-weight:700;}
   .theme-swatch.selected .theme-swatch-dot{border-color:var(--btn-brown);}
@@ -1197,6 +1201,7 @@
     display:flex;
     flex-direction:column;
     background:var(--btn-coffee);
+    background:color-mix(in srgb, var(--btn-coffee) 60%, transparent); /* 底色不透明度 60% */
     border-radius:11px;
     box-shadow:0 10px 24px rgba(32,38,58,0.4);
     overflow:hidden;
@@ -9247,7 +9252,7 @@
   // 之前先套用一次，這裡的 applyTheme() 負責之後使用者手動切換時用。
   const THEME_STORAGE_KEY = 'plannerTheme';
   const THEMES = [
-    { id: 'default', name: '經典', colors: ['#B23A2F', '#20263A', '#F6F1E4'] },
+    { id: 'default', name: '經典', colors: ['#FBD3C4', '#8FA1B0', '#FCEFB4'] },
     { id: 'american-vintage', name: '美式復古', colors: ['#7E0003', '#1E2343', '#F8EDDB'] },
     { id: 'showa', name: '昭和懷舊', colors: ['#861108', '#317B6A', '#DE942B'] }
   ];
