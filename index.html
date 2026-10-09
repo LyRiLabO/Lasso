@@ -56,6 +56,7 @@
      行程卡片本身的顏色（EVENT_COLORS）不是靠這些變數，是 JS 另外維護
      的色票，兩套風格的十六色是「兩兩配對」的，見 EVENT_COLOR_THEME_IDS。 */
   [data-theme="american-vintage"]{
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
     --body-bg:#C6BEB2;
     --paper:#D7CEC1;
     --paper-deep:#C3B9AC;
@@ -89,6 +90,7 @@
      按鍵、卡片的造型全部沿用經典，只有配色不同。行程十六色見
      EVENT_COLOR_THEME_IDS。 */
   [data-theme="showa"]{
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
     --body-bg:#D4BF9E;
     --paper:#E6D0AC;
     --paper-deep:#CEBA9A;
@@ -124,6 +126,7 @@
      沿用經典。時間軸的橫線（每小時／半小時／15 分鐘）比「線條」再淡一半，
      跟美式復古、昭和懷舊一致。行程十六色見 EVENT_COLOR_THEME_IDS。 */
   [data-theme="forest"]{
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
     --body-bg:#D8CFC2;
     --paper:#EBE1D3;
     --paper-deep:#D1C8BB;
@@ -511,7 +514,7 @@
     width:100%; text-align:left;
     padding:8px 10px 8px 30px;
     background:
-      repeating-linear-gradient(to bottom, transparent 0 13px, var(--line-soft) 13px 14px),
+      repeating-linear-gradient(to bottom, transparent 0 13px, var(--nav-rule, var(--line-soft)) 13px 14px),
       var(--card);
     border:1px solid var(--line); border-radius:9px;
     color:var(--ink); font-family:'Noto Sans TC', sans-serif; cursor:pointer;
@@ -531,7 +534,7 @@
     opacity:.55;
   }
   .nav-row:active{background:
-      repeating-linear-gradient(to bottom, transparent 0 13px, var(--line-soft) 13px 14px),
+      repeating-linear-gradient(to bottom, transparent 0 13px, var(--nav-rule, var(--line-soft)) 13px 14px),
       var(--paper-deep);}
   .nav-row.current{border-color:var(--btn-brown); cursor:default;}
   .nav-row-title{font-family:'Noto Serif TC', serif; font-size:16px; font-weight:700; word-break:break-all;}
@@ -4018,23 +4021,23 @@
     {id:'sw-vermil', name:'朱紅', hex:'#B93713'},
     {id:'sw-greyteal', name:'灰青綠', hex:'#6C857F'},
     {id:'sw-sienna', name:'焦赭', hex:'#5D1D02'},
-    // ---- 森林手札 ----（取自使用者提供的新色卡，由左到右、由上到下）
-    {id:'fo-khaki', name:'橄欖卡其', hex:'#8A875E'},
-    {id:'fo-asholive', name:'淡橄欖灰', hex:'#AEAA8D'},
-    {id:'fo-moss', name:'苔綠', hex:'#6B6E4F'},
-    {id:'fo-deepcedar', name:'深杉綠', hex:'#525B3C'},
-    {id:'fo-leaf', name:'嫩葉綠', hex:'#8FA06C'},
-    {id:'fo-forest', name:'森林綠', hex:'#5B7049'},
-    {id:'fo-oat', name:'燕麥米', hex:'#DCD4BF'},
-    {id:'fo-sagegrey', name:'灰鼠尾草', hex:'#90A28A'},
-    {id:'fo-cream', name:'奶油白', hex:'#FCF7F3'},
-    {id:'fo-mistrose', name:'粉霧米', hex:'#D7C6BE'},
-    {id:'fo-apricot', name:'杏膚粉', hex:'#D1B19A'},
-    {id:'fo-sandapricot', name:'沙杏', hex:'#DBCAAC'},
-    {id:'fo-darkolive', name:'暗橄欖灰', hex:'#5D5A47'},
-    {id:'fo-rosebrown', name:'玫瑰褐', hex:'#9B796D'},
-    {id:'fo-bark', name:'深樹皮', hex:'#443D2B'},
-    {id:'fo-chestgrey', name:'灰栗褐', hex:'#635856'}
+    // ---- 森林手札 ----（取自使用者提供的色卡，由左到右、由上到下）
+    {id:'fo-khaki', name:'橄欖卡其', hex:'#7F7B55'},
+    {id:'fo-asholive', name:'淡橄欖灰', hex:'#A29F80'},
+    {id:'fo-moss', name:'苔綠', hex:'#626548'},
+    {id:'fo-deepcedar', name:'深杉綠', hex:'#4A5336'},
+    {id:'fo-forest', name:'森林綠', hex:'#576B46'},
+    {id:'fo-leaf', name:'嫩葉綠', hex:'#869367'},
+    {id:'fo-sagegrey', name:'灰鼠尾草', hex:'#85977F'},
+    {id:'fo-oat', name:'燕麥米', hex:'#D6CBB5'},
+    {id:'fo-cream', name:'奶油白', hex:'#FCF5EF'},
+    {id:'fo-sand', name:'沙米色', hex:'#D4C1A0'},
+    {id:'fo-greige', name:'淺灰駝', hex:'#CABDAA'},
+    {id:'fo-darkolive', name:'暗橄欖灰', hex:'#55523F'},
+    {id:'fo-mistrose', name:'粉霧米', hex:'#E2D0C2'},
+    {id:'fo-rosebrown', name:'玫瑰褐', hex:'#907C73'},
+    {id:'fo-chestgrey', name:'灰栗褐', hex:'#5C534E'},
+    {id:'fo-bark', name:'深樹皮', hex:'#3E3725'}
   ];
   const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
   const rawEventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
@@ -4050,9 +4053,9 @@
   // 想調整配對，只要在其中一套裡把兩個 id 對調位置就好。
   const EVENT_COLOR_THEME_IDS = {
     'default':          ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
-    'american-vintage': ['av-chestnut','av-slateteal','av-greyolive','av-camel','av-navy','av-inkteal','av-amber','av-darkolive','av-pumpkin','av-ivory','av-wine','av-yolk','av-mistteal','av-rust','av-pine','av-prune'],
-    'showa':            ['sw-coffee','sw-leadblue','sw-greymoss','sw-amber','sw-nightpurple','sw-turquoise','sw-cocoa','sw-moss','sw-terra','sw-matcha','sw-brick','sw-wheat','sw-jade','sw-vermil','sw-greyteal','sw-sienna'],
-    'forest':           ['fo-khaki','fo-asholive','fo-moss','fo-deepcedar','fo-leaf','fo-forest','fo-oat','fo-sagegrey','fo-cream','fo-mistrose','fo-apricot','fo-sandapricot','fo-darkolive','fo-rosebrown','fo-bark','fo-chestgrey']
+    'american-vintage': ['av-wine','av-rust','av-pumpkin','av-yolk','av-greyolive','av-mistteal','av-inkteal','av-pine','av-slateteal','av-navy','av-ivory','av-camel','av-amber','av-chestnut','av-prune','av-darkolive'],
+    'showa':            ['sw-sienna','sw-brick','sw-vermil','sw-amber','sw-wheat','sw-matcha','sw-greymoss','sw-moss','sw-turquoise','sw-jade','sw-greyteal','sw-leadblue','sw-nightpurple','sw-cocoa','sw-coffee','sw-terra'],
+    'forest':           ['fo-khaki','fo-asholive','fo-moss','fo-deepcedar','fo-forest','fo-leaf','fo-sagegrey','fo-oat','fo-cream','fo-sand','fo-greige','fo-darkolive','fo-mistrose','fo-rosebrown','fo-chestgrey','fo-bark']
   };
   // 舊版配色（已被取代）用過的 id：照原本所在的位置對應到新色票的同一格，
   // 這樣舊行程不會因為換了色票就全部變成同一種顏色。
@@ -4061,6 +4064,7 @@
   ['showa-brick','showa-water','showa-matcha','showa-greige','showa-coal','showa-moss','showa-amber','showa-lead','showa-terra','showa-olive','showa-salmon','showa-cream','showa-ice','showa-vermil','showa-night','showa-cocoa'].forEach((id,i)=>{ LEGACY_COLOR_SLOTS[id]=i; });
   // 森林手札舊版十六色（已換成新色卡）：照原本位置對應到新色票的同一格。
   ['fr-cocoarose','fr-chestgrey','fr-mist','fr-straw','fr-ebony','fr-cedar','fr-hay','fr-moss','fr-sand','fr-linen','fr-dustrose','fr-honey','fr-forest','fr-clayrose','fr-mossgrey','fr-bark'].forEach((id,i)=>{ LEGACY_COLOR_SLOTS[id]=i; });
+  LEGACY_COLOR_SLOTS['fo-apricot']=9; LEGACY_COLOR_SLOTS['fo-sandapricot']=10; // 森林手札上一版色卡裡被換掉的兩色
   // 目前的風格 id：直接讀 <html data-theme>（<head> 的小 script 在畫面畫出來前
   // 就設好了，applyTheme 也會同步更新），不依賴後面才宣告的 currentTheme，
   // 這樣就算畫面在主題初始化前先繪製也不會出錯。
@@ -5221,7 +5225,10 @@
     let left = rect.left;
     left = Math.max(8, Math.min(left, window.innerWidth - panelRect.width - 8));
     panel.style.left = left + 'px';
-    panel.style.top = (rect.bottom + 8) + 'px';
+    // 面板的上緣要比「按鍵」「日期顯示屏」兩者的下緣都再低一點，不要貼著日期
+    // 顯示屏的下端（面板比按鍵寬，左半邊會蓋到日期顯示屏正下方）。
+    const dateRect = dateDisplayBtn ? dateDisplayBtn.getBoundingClientRect() : rect;
+    panel.style.top = (Math.max(rect.bottom, dateRect.bottom) + 14) + 'px';
 
     notifPanelEl = panel;
 
