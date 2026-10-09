@@ -4018,23 +4018,23 @@
     {id:'sw-vermil', name:'朱紅', hex:'#B93713'},
     {id:'sw-greyteal', name:'灰青綠', hex:'#6C857F'},
     {id:'sw-sienna', name:'焦赭', hex:'#5D1D02'},
-    // ---- 森林手札 ----
-    {id:'fr-moss', name:'苔橄欖', hex:'#807C56'},
-    {id:'fr-mist', name:'霧苔綠', hex:'#A3A081'},
-    {id:'fr-forest', name:'森林橄欖', hex:'#616447'},
-    {id:'fr-cedar', name:'杉綠', hex:'#4A5334'},
-    {id:'fr-linen', name:'亞麻米', hex:'#D6CBB7'},
-    {id:'fr-sand', name:'沙米色', hex:'#D4C1A1'},
-    {id:'fr-straw', name:'淡稻黃', hex:'#F1D993'},
-    {id:'fr-honey', name:'蜂蜜黃', hex:'#ECC96F'},
-    {id:'fr-clayrose', name:'陶土粉', hex:'#C9A78E'},
-    {id:'fr-dustrose', name:'玫瑰灰粉', hex:'#D5B9AD'},
-    {id:'fr-hay', name:'乾草駝', hex:'#B69D7E'},
-    {id:'fr-cocoarose', name:'可可玫瑰', hex:'#906E62'},
-    {id:'fr-mossgrey', name:'苔岩灰', hex:'#55523F'},
-    {id:'fr-ebony', name:'烏木褐', hex:'#473C38'},
-    {id:'fr-bark', name:'樹皮黑褐', hex:'#3E3727'},
-    {id:'fr-chestgrey', name:'灰栗褐', hex:'#5B504E'}
+    // ---- 森林手札 ----（取自使用者提供的新色卡，由左到右、由上到下）
+    {id:'fo-khaki', name:'橄欖卡其', hex:'#8A875E'},
+    {id:'fo-asholive', name:'淡橄欖灰', hex:'#AEAA8D'},
+    {id:'fo-moss', name:'苔綠', hex:'#6B6E4F'},
+    {id:'fo-deepcedar', name:'深杉綠', hex:'#525B3C'},
+    {id:'fo-leaf', name:'嫩葉綠', hex:'#8FA06C'},
+    {id:'fo-forest', name:'森林綠', hex:'#5B7049'},
+    {id:'fo-oat', name:'燕麥米', hex:'#DCD4BF'},
+    {id:'fo-sagegrey', name:'灰鼠尾草', hex:'#90A28A'},
+    {id:'fo-cream', name:'奶油白', hex:'#FCF7F3'},
+    {id:'fo-mistrose', name:'粉霧米', hex:'#D7C6BE'},
+    {id:'fo-apricot', name:'杏膚粉', hex:'#D1B19A'},
+    {id:'fo-sandapricot', name:'沙杏', hex:'#DBCAAC'},
+    {id:'fo-darkolive', name:'暗橄欖灰', hex:'#5D5A47'},
+    {id:'fo-rosebrown', name:'玫瑰褐', hex:'#9B796D'},
+    {id:'fo-bark', name:'深樹皮', hex:'#443D2B'},
+    {id:'fo-chestgrey', name:'灰栗褐', hex:'#635856'}
   ];
   const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
   const rawEventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
@@ -4052,13 +4052,15 @@
     'default':          ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
     'american-vintage': ['av-chestnut','av-slateteal','av-greyolive','av-camel','av-navy','av-inkteal','av-amber','av-darkolive','av-pumpkin','av-ivory','av-wine','av-yolk','av-mistteal','av-rust','av-pine','av-prune'],
     'showa':            ['sw-coffee','sw-leadblue','sw-greymoss','sw-amber','sw-nightpurple','sw-turquoise','sw-cocoa','sw-moss','sw-terra','sw-matcha','sw-brick','sw-wheat','sw-jade','sw-vermil','sw-greyteal','sw-sienna'],
-    'forest':           ['fr-cocoarose','fr-chestgrey','fr-mist','fr-straw','fr-ebony','fr-cedar','fr-hay','fr-moss','fr-sand','fr-linen','fr-dustrose','fr-honey','fr-forest','fr-clayrose','fr-mossgrey','fr-bark']
+    'forest':           ['fo-khaki','fo-asholive','fo-moss','fo-deepcedar','fo-leaf','fo-forest','fo-oat','fo-sagegrey','fo-cream','fo-mistrose','fo-apricot','fo-sandapricot','fo-darkolive','fo-rosebrown','fo-bark','fo-chestgrey']
   };
   // 舊版配色（已被取代）用過的 id：照原本所在的位置對應到新色票的同一格，
   // 這樣舊行程不會因為換了色票就全部變成同一種顏色。
   const LEGACY_COLOR_SLOTS = {};
   ['vintage-brick','vintage-slate','vintage-olive','vintage-oat','vintage-rose','vintage-pine','vintage-mustard','vintage-khakiolive','vintage-vanilla','vintage-khaki','vintage-blushgrey','vintage-butter','vintage-dustyblue','vintage-peach','vintage-navy','vintage-wine'].forEach((id,i)=>{ LEGACY_COLOR_SLOTS[id]=i; });
   ['showa-brick','showa-water','showa-matcha','showa-greige','showa-coal','showa-moss','showa-amber','showa-lead','showa-terra','showa-olive','showa-salmon','showa-cream','showa-ice','showa-vermil','showa-night','showa-cocoa'].forEach((id,i)=>{ LEGACY_COLOR_SLOTS[id]=i; });
+  // 森林手札舊版十六色（已換成新色卡）：照原本位置對應到新色票的同一格。
+  ['fr-cocoarose','fr-chestgrey','fr-mist','fr-straw','fr-ebony','fr-cedar','fr-hay','fr-moss','fr-sand','fr-linen','fr-dustrose','fr-honey','fr-forest','fr-clayrose','fr-mossgrey','fr-bark'].forEach((id,i)=>{ LEGACY_COLOR_SLOTS[id]=i; });
   // 目前的風格 id：直接讀 <html data-theme>（<head> 的小 script 在畫面畫出來前
   // 就設好了，applyTheme 也會同步更新），不依賴後面才宣告的 currentTheme，
   // 這樣就算畫面在主題初始化前先繪製也不會出錯。
