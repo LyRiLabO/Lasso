@@ -119,6 +119,40 @@
     --chip-fg:#402814;
   }
 
+  /* ============ 個人化主題：森林手札 ============
+     各分類的顏色由使用者逐項指定（變數意義同美式復古那段）。按鍵、卡片的造型
+     沿用經典。時間軸的橫線（每小時／半小時／15 分鐘）比「線條」再淡一半，
+     跟美式復古、昭和懷舊一致。行程十六色還沒提供，暫時沿用經典的十六色
+     （EVENT_COLOR_THEME_IDS 沒有 'forest' 時會退回 'default'）。 */
+  [data-theme="forest"]{
+    --body-bg:#D8CFC2;
+    --paper:#EBE1D3;
+    --paper-deep:#D1C8BB;
+    --line:#74735D;
+    --line-soft:#74735D;
+    --grid-line:#B0AA98;
+    --grid-line-sub:#B0AA98;
+    --ink:#4D4C37;
+    --ink-soft:#74735D;
+    --ink-faint:#74735D;
+    --btn-coffee:#4D4C37;
+    --btn-brown:#4F403C;
+    --btn-face:#EBE1D3;
+    --btn-relief:0 3px 8px rgba(77,76,55,0.34), 0 1px 3px rgba(77,76,55,0.22);
+    --btn-face-pressed:#D1C8BB;
+    --btn-relief-pressed:inset 0 1px 3px rgba(77,76,55,0.32), 0 0 0 rgba(77,76,55,0);
+    --red:#813E29;
+    --red-deep:#5A2B1D;
+    --card:#FBF1E2;
+    --date-bg:#FBF1E2;
+    --shadow:rgba(77,76,55,0.26);
+    --gold:#BC9C79;
+    --gold-fg:#4D4C37;
+    --sage:#616543;
+    --dusk:#74735D;
+    --blush:#813E29;
+  }
+
   /* 現在時間線最左端的圓點改成小星星。 */
   [data-theme="american-vintage"] .now-line::before{
     width:14px; height:14px; left:-7px; top:-7px;
@@ -9254,7 +9288,8 @@
   const THEMES = [
     { id: 'default', name: '經典', colors: ['#FBD3C4', '#8FA1B0', '#FCEFB4'] },
     { id: 'american-vintage', name: '美式復古', colors: ['#7E0003', '#1E2343', '#F8EDDB'] },
-    { id: 'showa', name: '昭和懷舊', colors: ['#861108', '#317B6A', '#DE942B'] }
+    { id: 'showa', name: '昭和懷舊', colors: ['#861108', '#317B6A', '#DE942B'] },
+    { id: 'forest', name: '森林手札', colors: ['#616543', '#A39F7D', '#D7CBB3'] }
   ];
   let currentTheme = 'default';
   (function initTheme(){
