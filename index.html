@@ -122,8 +122,7 @@
   /* ============ 個人化主題：森林手札 ============
      各分類的顏色由使用者逐項指定（變數意義同美式復古那段）。按鍵、卡片的造型
      沿用經典。時間軸的橫線（每小時／半小時／15 分鐘）比「線條」再淡一半，
-     跟美式復古、昭和懷舊一致。行程十六色還沒提供，暫時沿用經典的十六色
-     （EVENT_COLOR_THEME_IDS 沒有 'forest' 時會退回 'default'）。 */
+     跟美式復古、昭和懷舊一致。行程十六色見 EVENT_COLOR_THEME_IDS。 */
   [data-theme="forest"]{
     --body-bg:#D8CFC2;
     --paper:#EBE1D3;
@@ -1235,7 +1234,7 @@
     display:flex;
     flex-direction:column;
     background:var(--btn-coffee);
-    background:color-mix(in srgb, var(--btn-coffee) 60%, transparent); /* 底色不透明度 60% */
+    background:color-mix(in srgb, var(--btn-coffee) 80%, transparent); /* 底色不透明度 80% */
     border-radius:11px;
     box-shadow:0 10px 24px rgba(32,38,58,0.4);
     overflow:hidden;
@@ -2059,6 +2058,7 @@
   }
   .picker-cal-cell.selected.today{
     background:var(--red); /* 選到的日期剛好是今天：直接用今天的紅色就好，不用金色再疊一層 */
+    color:#fff; /* 當日數字：紅色底上一律用白色 */
   }
   .picker-cal-cell:active{opacity:.6;}
   .picker-today-btn{
@@ -2410,7 +2410,7 @@
     line-height:18px;
     border-radius:50%;
     background:var(--red);
-    color:var(--paper);
+    color:#fff; /* 當日數字：紅色底上一律用白色 */
     font-weight:700;
     margin:0 auto;
   }
@@ -4017,7 +4017,24 @@
     {id:'sw-jade', name:'翡翠青', hex:'#239888'},
     {id:'sw-vermil', name:'朱紅', hex:'#B93713'},
     {id:'sw-greyteal', name:'灰青綠', hex:'#6C857F'},
-    {id:'sw-sienna', name:'焦赭', hex:'#5D1D02'}
+    {id:'sw-sienna', name:'焦赭', hex:'#5D1D02'},
+    // ---- 森林手札 ----
+    {id:'fr-moss', name:'苔橄欖', hex:'#807C56'},
+    {id:'fr-mist', name:'霧苔綠', hex:'#A3A081'},
+    {id:'fr-forest', name:'森林橄欖', hex:'#616447'},
+    {id:'fr-cedar', name:'杉綠', hex:'#4A5334'},
+    {id:'fr-linen', name:'亞麻米', hex:'#D6CBB7'},
+    {id:'fr-sand', name:'沙米色', hex:'#D4C1A1'},
+    {id:'fr-straw', name:'淡稻黃', hex:'#F1D993'},
+    {id:'fr-honey', name:'蜂蜜黃', hex:'#ECC96F'},
+    {id:'fr-clayrose', name:'陶土粉', hex:'#C9A78E'},
+    {id:'fr-dustrose', name:'玫瑰灰粉', hex:'#D5B9AD'},
+    {id:'fr-hay', name:'乾草駝', hex:'#B69D7E'},
+    {id:'fr-cocoarose', name:'可可玫瑰', hex:'#906E62'},
+    {id:'fr-mossgrey', name:'苔岩灰', hex:'#55523F'},
+    {id:'fr-ebony', name:'烏木褐', hex:'#473C38'},
+    {id:'fr-bark', name:'樹皮黑褐', hex:'#3E3727'},
+    {id:'fr-chestgrey', name:'灰栗褐', hex:'#5B504E'}
   ];
   const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
   const rawEventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
@@ -4034,7 +4051,8 @@
   const EVENT_COLOR_THEME_IDS = {
     'default':          ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
     'american-vintage': ['av-chestnut','av-slateteal','av-greyolive','av-camel','av-navy','av-inkteal','av-amber','av-darkolive','av-pumpkin','av-ivory','av-wine','av-yolk','av-mistteal','av-rust','av-pine','av-prune'],
-    'showa':            ['sw-coffee','sw-leadblue','sw-greymoss','sw-amber','sw-nightpurple','sw-turquoise','sw-cocoa','sw-moss','sw-terra','sw-matcha','sw-brick','sw-wheat','sw-jade','sw-vermil','sw-greyteal','sw-sienna']
+    'showa':            ['sw-coffee','sw-leadblue','sw-greymoss','sw-amber','sw-nightpurple','sw-turquoise','sw-cocoa','sw-moss','sw-terra','sw-matcha','sw-brick','sw-wheat','sw-jade','sw-vermil','sw-greyteal','sw-sienna'],
+    'forest':           ['fr-cocoarose','fr-chestgrey','fr-mist','fr-straw','fr-ebony','fr-cedar','fr-hay','fr-moss','fr-sand','fr-linen','fr-dustrose','fr-honey','fr-forest','fr-clayrose','fr-mossgrey','fr-bark']
   };
   // 舊版配色（已被取代）用過的 id：照原本所在的位置對應到新色票的同一格，
   // 這樣舊行程不會因為換了色票就全部變成同一種顏色。
