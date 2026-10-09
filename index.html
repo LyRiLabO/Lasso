@@ -31,6 +31,8 @@
     --red-deep:#8E2C24;
     --card:#FFFDF8;
     --gold-fg:var(--paper); /* 金色底上的字 */
+    --grid-line:var(--line-soft); /* 時間軸每小時的橫線 */
+    --grid-line-sub:var(--line); /* 時間軸半小時（虛線）、15 分鐘（點線）刻度 */
     --date-bg:#FFFFFF; /* 頂端日期顯示屏的底色：各風格改成比手帳底色淺一點 */
     --chip-bg:var(--btn-coffee); /* 「參與者」勾選按鍵選取後的底色與字色 */
     --chip-fg:var(--paper);
@@ -59,10 +61,10 @@
     --paper-deep:#C3B9AC;
     --line:#B09E94;
     --line-soft:#B09E94;
-    --ink:#3A0B0B;
+    --ink:#24353B;
     --ink-soft:#6C4F4F;
     --ink-faint:#6C4F4F;
-    --btn-coffee:#3A0B0B;
+    --btn-coffee:#24353B;
     --btn-brown:#3A0B0B;
     --btn-face:#D7CEC1;
     --btn-relief:0 3px 8px rgba(58,11,11,0.34), 0 1px 3px rgba(58,11,11,0.22);
@@ -73,7 +75,9 @@
     --card:#E8E0D5;
     --shadow:rgba(58,11,11,0.26);
     --gold:#FFD966;
-    --gold-fg:#3A0B0B; /* 金色底上的字（月曆目前所在日、日期選擇器選取日）：用深色才看得清楚 */
+    --grid-line:#C4B6AA;
+    --grid-line-sub:#C4B6AA;
+    --gold-fg:#24353B; /* 金色底上的字（月曆目前所在日、日期選擇器選取日）：用深色才看得清楚 */
     --sage:#5A897F;
     --dusk:#4B4F69;
     --blush:#99351D;
@@ -104,6 +108,8 @@
     --card:#EEE1CB;
     --shadow:rgba(64,40,20,0.26);
     --gold:#D78612;
+    --grid-line:#CAB190;
+    --grid-line-sub:#CAB190;
     --gold-fg:#402814; /* 金色底上的字（月曆目前所在日、日期選擇器選取日）：用深色才看得清楚 */
     --sage:#576146;
     --dusk:#34435A;
@@ -843,7 +849,7 @@
     position:absolute;
     left:0; right:0;
     height:calc(var(--hour-px) * 1px);
-    border-top:1px solid var(--line-soft);
+    border-top:1px solid var(--grid-line);
   }
   .hour-row:first-child{border-top:none;}
   .hour-row .hlabel{
@@ -858,13 +864,13 @@
   .hour-row .half-tick{
     position:absolute;
     left:52px; right:0; top:calc(var(--hour-px) * 0.5px);
-    border-top:1px dashed var(--line);
+    border-top:1px dashed var(--grid-line-sub);
     opacity:.7;
   }
   .hour-row .quarter-tick{
     position:absolute;
     left:52px; right:0;
-    border-top:1px dotted var(--line);
+    border-top:1px dotted var(--grid-line-sub);
     opacity:.4;
   }
   .now-line{
