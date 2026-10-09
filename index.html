@@ -30,6 +30,9 @@
     --red:#B23A2F;
     --red-deep:#8E2C24;
     --card:#FFFDF8;
+    --date-bg:#FFFFFF; /* 頂端日期顯示屏的底色：各風格改成比手帳底色淺一點 */
+    --chip-bg:var(--btn-coffee); /* 「參與者」勾選按鍵選取後的底色與字色 */
+    --chip-fg:var(--paper);
     --shadow:rgba(32,38,58,0.16);
     --gold:#C08A2E;
     --sage:#7C8F6A;
@@ -58,51 +61,62 @@
     --ink:#181C36;
     --ink-soft:#555562;
     --ink-faint:#878387;
-    --btn-coffee:#1E2343;
-    --btn-brown:#1E2343;
-    --btn-face:#F8EDDB;
+    --btn-coffee:#2F3668;
+    --btn-brown:#2F3668;
+    --btn-face:#FCF5E8;
     --btn-relief:0 3px 8px rgba(30,35,67,0.34), 0 1px 3px rgba(30,35,67,0.22);
-    --btn-face-pressed:#DED5C9;
+    --btn-face-pressed:#E1DCD4;
     --btn-relief-pressed:inset 0 1px 3px rgba(30,35,67,0.32), 0 0 0 rgba(30,35,67,0);
-    --red:#7E0003;
-    --red-deep:#580002;
-    --card:#F8EDDB;
+    --red:#A8101A;
+    --red-deep:#760B12;
+    --card:#FCF5E8;
     --shadow:rgba(30,35,67,0.26);
     --gold:#A36B21;
     --sage:#5A897F;
     --dusk:#4B4F69;
     --blush:#99351D;
+    --date-bg:#EBE6E0;
   }
+
   /* ============ 個人化主題：昭和懷舊 ============
      手帳底色（--paper）= 色卡背景色；色卡最下方三個「主軸色」依序用在：
        深紅 → --red（強調、現在時間線）、青綠 → --btn-coffee / --btn-brown
        （按鍵）與 --line（線條，混入底色的淡版）、琥珀橙 → --gold 跟
        按鍵按下去的底色。外圍、卡片面、文字顏色都以底色或主軸色調出來。
        按鍵、卡片的造型全部沿用經典，只有配色不同。行程十六色見
-       EVENT_COLOR_THEME_IDS。 */
+       EVENT_COLOR_THEME_IDS。
+       注意：這裡實際用的主軸色，刻意跟色卡原色（也就是選單圓圈顯示的、
+       行程卡片色票裡的顏色）差了一點明暗，避免按鍵、時間線疊在同色的行程
+       卡片上時糊在一起；選單圓圈顯示的仍是色卡原色（見 THEMES）。 */
   [data-theme="showa"]{
     --body-bg:#CAB598;
     --paper:#DCC5A5;
     --paper-deep:#D1BB9D;
     --line:#B0B296;
-    --line-soft:#C6BB9D;
+    --line-soft:#CCB496;
     --ink:#391A05;
     --ink-soft:#6D5138;
     --ink-faint:#987D62;
-    --btn-coffee:#317B6A;
-    --btn-brown:#276255;
+    --btn-coffee:#286555;
+    --btn-brown:#563F2D; /* 按鍵圖示、返回箭頭、外框：咖啡褐（比色卡的咖啡褐略深） */
     --btn-relief:0 2px 6px rgba(57,26,5,0.32), 0 1px 2px rgba(57,26,5,0.24);
-    --btn-face-pressed:#DCB986;
+    --btn-face-pressed:#E0BE8D;
     --btn-relief-pressed:inset 0 1px 3px rgba(57,26,5,0.3), 0 0 0 rgba(57,26,5,0);
-    --red:#861108;
-    --red-deep:#5E0C06;
+    --red:#6E0A07;
+    --red-deep:#4D0705;
     --card:#EBDDCB;
     --shadow:rgba(57,26,5,0.24);
-    --gold:#DE942B;
+    --gold:#EDAA45;
     --sage:#576146;
     --dusk:#34435A;
     --blush:#B93713;
+    --date-bg:#EEE2D2;
+    --chip-bg:#EDAA45; /* 參與者按鍵改用主軸色 3（琥珀橙），字用深色確保看得清楚 */
+    --chip-fg:#391A05;
   }
+
+
+
   /* 現在時間線最左端的圓點改成小星星。 */
   [data-theme="american-vintage"] .now-line::before{
     width:14px; height:14px; left:-7px; top:-7px;
@@ -732,7 +746,7 @@
     min-width:150px;
     padding:5px 14px;
     /* 白色實心底板，襯出「嵌在螢幕裡」的感覺 */
-    background:#FFFFFF;
+    background:var(--date-bg);
     border-radius:10px;
     border:2px solid transparent; /* 預留邊框粗細，是今天時只換顏色，不會因為邊框出現/消失而跳動 */
     box-shadow:inset 0 1px 4px rgba(32,38,58,0.18), 0 1px 0 rgba(255,255,255,0.6);
@@ -2443,11 +2457,11 @@
     background:var(--ink-faint);
   }
   .participant-chip.selected{
-    border-color:var(--btn-coffee);
-    background:var(--btn-coffee);
-    color:var(--paper);
+    border-color:var(--chip-bg);
+    background:var(--chip-bg);
+    color:var(--chip-fg);
   }
-  .participant-chip.selected .chip-dot{background:var(--paper);}
+  .participant-chip.selected .chip-dot{background:var(--chip-fg);}
 
   .color-box{
     display:flex; flex-wrap:wrap; gap:10px;
