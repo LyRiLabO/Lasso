@@ -543,7 +543,7 @@
     background-clip:border-box;
   }
 
-  /* ============ 時間軸背景：格子（個人化 → 時間軸背景）============
+  /* ============ 時間軸背景：格子（個人化 → 背景格線）============
      <html data-timegrid="cells"> 時，時間軸改成方格底。整片格線用 ::before 的背景
      漸層畫（不產生大量 DOM 元素）：橫向每 --cell-px 一條、直向每 --cell-px 一條，
      單格是正方形。--cell-px 由 JS 依 hourPx 換算成「剛好整除一小時高度」的值
@@ -568,16 +568,19 @@
 
   /* 「個人化」裡的時間軸背景選項（橫線／格子），跟色票用同一套選到就描邊的語彙 */
   .timegrid-title{font-size:12.5px; font-weight:700; color:var(--ink); margin-top:4px;}
-  .timegrid-row{display:flex; justify-content:center; gap:10px;}
+  .timegrid-row{display:flex; justify-content:center; gap:4px;} /* 跟上面色票同樣的欄寬（三分之一），兩個選項整排置中 */
   .timegrid-opt{
-    flex:0 0 calc((100% - 10px) / 2); min-width:0; box-sizing:border-box;
+    flex:0 0 calc((100% - 8px) / 3); min-width:0; box-sizing:border-box;
     display:flex; flex-direction:column; align-items:center; gap:5px;
     background:none; border:none; padding:2px 0; cursor:pointer;
     font-family:'Noto Sans TC', sans-serif; font-size:10.5px; white-space:nowrap; color:var(--ink-soft);
   }
   .timegrid-prev{
     width:44px; height:30px; border-radius:6px; box-sizing:border-box;
-    border:2px solid var(--line-soft); background-color:var(--paper);
+    /* 沒選到的選項不畫邊框，只用陰影（跟「主題色彩」色票同一種處理）；選到的才描邊 */
+    border:2px solid transparent; box-shadow:0 2px 5px rgba(0,0,0,.2);
+    background-color:var(--card);
+    background-origin:border-box; background-clip:border-box;
     --pv:color-mix(in srgb, var(--grid-line-sub) 80%, transparent);
   }
   .timegrid-prev.lines{
@@ -2974,9 +2977,10 @@
       </button>
       <div class="nav-body">
         <div class="nav-body-inner">
+          <div class="timegrid-title">主題色彩</div>
           <div class="nav-hint">選一種介面色彩搭配，只有你自己看到的畫面會變，不影響其他共編者。</div>
           <div class="theme-swatch-row" id="themeSwatchRow"></div>
-          <div class="timegrid-title">時間軸背景</div>
+          <div class="timegrid-title">背景格線</div>
           <div class="timegrid-row" id="timeGridRow"></div>
         </div>
       </div>
@@ -6066,6 +6070,30 @@
     try{ localStorage.setItem(colOrderKey(), JSON.stringify(columns.map(c => c.id))); }catch(err){}
   }
 
+  // 平滑捲動到指定位置（毫秒 dur），期間若使用者開始自己滑就中止
+  let colScrollAnimRaf = 0;
+  function animateColScrollTo(target, dur){
+    if(colScrollAnimRaf){ cancelAnimationFrame(colScrollAnimRaf); colScrollAnimRaf = 0; }
+    const from = colScrollX, t0 = performance.now();
+    if(Math.abs(target - from) < 0.5){ setColScroll(target); return; }
+    const step = function(now){
+      const k = Math.min(1, (now - t0) / dur);
+      const e = 1 - Math.pow(1 - k, 3); // ease-out
+      setColScroll(from + (target - from) * e);
+      colScrollAnimRaf = k < 1 ? requestAnimationFrame(step) : 0;
+    };
+    colScrollAnimRaf = requestAnimationFrame(step);
+  }
+  // 把第 idx 欄捲到「完整看得到」的位置（已經完整看得到就不動）
+  function scrollColumnIntoView(idx){
+    if(!colW) return;
+    const left = idx * colW, right = (idx + 1) * colW;
+    let target = colScrollX;
+    if(right > colScrollX + colViewW) target = right - colViewW;
+    if(left < target) target = left;
+    animateColScrollTo(Math.max(0, Math.min(Math.max(0, colsTotalW - colViewW), target)), 280);
+  }
+
   function onColHeadTap(col){
     if(selectMode){
       if(!canSelectColumn(col)) return;
@@ -6161,16 +6189,23 @@
     function finishReorder(commit){
       stopEdge();
       const from = g.fromIdx, to = g.toIdx;
-      g.cellEl.classList.remove('reordering');
-      g.cellEl.style.transform = '';
-      if(g.mark && g.mark.parentNode) g.mark.parentNode.removeChild(g.mark);
+      const cellEl = g.cellEl;
+      if(g.mark && g.mark.parentNode) g.mark.parentNode.removeChild(g.mark); // 先拿掉，不然會佔掉標題列子元素的順序、影響動畫對位
       if(commit && from !== to && from >= 0){
-        const moved = columns.splice(from, 1)[0];
-        columns.splice(to, 0, moved);
-        saveLocalColumnOrder();
-        renderColumnHeader();
-        renderColumnDividers();
-        renderEvents();
+        // 用跟新增／刪除欄位同一套 FLIP 動畫：標題、行程卡片、分隔線都從「放手當下的位置」
+        // 滑到新位置，兩邊欄位的行程就會看起來是互相換位置。被拖的那一欄還帶著
+        // transform（浮起來的位置），動畫的起點就是它被放開的地方。
+        animateColumnChange(function(){
+          const moved = columns.splice(from, 1)[0];
+          columns.splice(to, 0, moved);
+          saveLocalColumnOrder();
+          renderColumnHeader();
+          renderColumnDividers();
+          renderEvents();
+        });
+      } else {
+        cellEl.classList.remove('reordering');
+        cellEl.style.transform = '';
       }
     }
 
@@ -6221,6 +6256,7 @@
       if(e.pointerType === 'mouse' && e.button !== 0) return;
       if(g) return; // 已經有一根手指在操作，其他手指忽略
       stopMomentum();
+      if(colScrollAnimRaf){ cancelAnimationFrame(colScrollAnimRaf); colScrollAnimRaf = 0; }
       const cellEl = e.target.closest ? e.target.closest('.col-head') : null;
       g = {
         id: e.pointerId, mode: 'pending',
@@ -8296,6 +8332,9 @@
         renderColumnHeader();
         renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
       });
+      // 新欄位在最右邊，可能落在可視範圍外：等進場動畫播完，再平滑捲到能完整看到它，
+      // 使用者才能確定自己真的新增成功了。
+      setTimeout(function(){ scrollColumnIntoView(columns.length - 1); }, 330);
     }, {
       hint: '請輸入欄位名稱',
       validate: function(value){
