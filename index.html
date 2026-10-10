@@ -41,6 +41,7 @@
     --sage:#7C8F6A;
     --dusk:#6E7FA3;
     --blush:#C77B6C;
+    --cell-px:16.67; /* 「格子」時間軸背景的單格邊長（px，不含單位），跟 --hour-px 一樣由 JS 在縮放時更新 */
     --hour-px:50; /* 每小時的高度（px，不含單位），縮放時由 JS 更新這個變數，
                      所有跟每小時高度成比例的地方（格線、卡片容器）都跟著變 */
   }
@@ -540,6 +541,55 @@
     background-origin:border-box;
     background-clip:border-box;
   }
+
+  /* ============ 時間軸背景：格子（個人化 → 時間軸背景）============
+     <html data-timegrid="cells"> 時，時間軸改成方格底。整片格線用 ::before 的背景
+     漸層畫（不產生大量 DOM 元素）：橫向每 --cell-px 一條、直向每 --cell-px 一條，
+     單格是正方形。--cell-px 由 JS 依 hourPx 換算成「剛好整除一小時高度」的值
+     （見 updateCellPx），所以每個整點的位置一定落在格線上，而且仍然有原本
+     .hour-row 的實線疊在上面給使用者對時間。半小時／15 分的虛線、點線在格子模式
+     下不需要（格子本身就是刻度），所以隱藏。 */
+  html[data-timegrid="cells"] .timeline-grid::before,
+  html[data-timegrid="cells"] .day-preview-panel::before{
+    content:"";
+    position:absolute;
+    left:52px; right:0; top:0; bottom:0;
+    pointer-events:none;
+    --cell-line:color-mix(in srgb, var(--grid-line-sub) 62%, transparent);
+    background-image:
+      linear-gradient(to bottom, var(--cell-line) 0 1px, transparent 1px),
+      linear-gradient(to right, var(--cell-line) 0 1px, transparent 1px);
+    background-size:100% calc(var(--cell-px) * 1px), calc(var(--cell-px) * 1px) 100%;
+    background-repeat:repeat;
+  }
+  html[data-timegrid="cells"] .hour-row .half-tick,
+  html[data-timegrid="cells"] .hour-row .quarter-tick{display:none;}
+
+  /* 「個人化」裡的時間軸背景選項（橫線／格子），跟色票用同一套選到就描邊的語彙 */
+  .timegrid-title{font-size:12.5px; font-weight:700; color:var(--ink); margin-top:4px;}
+  .timegrid-row{display:flex; justify-content:center; gap:10px;}
+  .timegrid-opt{
+    flex:0 0 calc((100% - 10px) / 2); min-width:0; box-sizing:border-box;
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    background:none; border:none; padding:2px 0; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; font-size:10.5px; white-space:nowrap; color:var(--ink-soft);
+  }
+  .timegrid-prev{
+    width:44px; height:30px; border-radius:6px; box-sizing:border-box;
+    border:2px solid var(--line-soft); background-color:var(--paper);
+    --pv:color-mix(in srgb, var(--grid-line-sub) 80%, transparent);
+  }
+  .timegrid-prev.lines{
+    background-image:linear-gradient(to bottom, var(--pv) 0 1px, transparent 1px);
+    background-size:100% 8px;
+  }
+  .timegrid-prev.cells{
+    background-image:linear-gradient(to bottom, var(--pv) 0 1px, transparent 1px), linear-gradient(to right, var(--pv) 0 1px, transparent 1px);
+    background-size:100% 6px, 6px 100%;
+  }
+  .timegrid-opt.selected{color:var(--ink); font-weight:700;}
+  .timegrid-opt.selected .timegrid-prev{border-color:var(--btn-brown);}
+  .timegrid-opt:active .timegrid-prev{opacity:.7;}
   .theme-swatch.selected{color:var(--ink); font-weight:700;}
   .theme-swatch.selected .theme-swatch-dot{border-color:var(--btn-brown);}
   .theme-swatch:active .theme-swatch-dot{opacity:.7;}
@@ -2693,6 +2743,7 @@
     try{
       const saved = localStorage.getItem('plannerTheme');
       if(saved && saved !== 'default') document.documentElement.setAttribute('data-theme', saved);
+      if(localStorage.getItem('plannerTimeGrid') === 'cells') document.documentElement.setAttribute('data-timegrid', 'cells');
     }catch(err){}
   })();
 </script>
@@ -2877,6 +2928,8 @@
         <div class="nav-body-inner">
           <div class="nav-hint">選一種介面色彩搭配，只有你自己看到的畫面會變，不影響其他共編者。</div>
           <div class="theme-swatch-row" id="themeSwatchRow"></div>
+          <div class="timegrid-title">時間軸背景</div>
+          <div class="timegrid-row" id="timeGridRow"></div>
         </div>
       </div>
     </div>
@@ -5438,6 +5491,16 @@
   const MIN_READABLE_CARD_PX = 11; // 卡片矮於這個高度，連最小字體都看不清楚，改交給「N 項行程」
   const HOUR_PX_MAX = 300;
   let hourPx = HOUR_PX_DEFAULT;
+  // 「格子」時間軸背景：每格是正方形，邊長不小於 CELL_MIN_PX。一小時分成 n 格
+  // （n 是整數、至少 1），格子邊長 = hourPx / n，所以每個整點一定落在格線上。
+  // n = floor(hourPx / CELL_MIN_PX)：放大時格數變多、縮小時變少（最少 1 格），
+  // 邊長會落在 CELL_MIN_PX 到 CELL_MIN_PX*(n+1)/n 之間（n>=2 時約 16～24px），
+  // 不會無限變小或變大。
+  const CELL_MIN_PX = 16;
+  function updateCellPx(){
+    const n = Math.max(1, Math.floor(hourPx / CELL_MIN_PX + 1e-6));
+    document.documentElement.style.setProperty('--cell-px', (hourPx / n).toFixed(3));
+  }
   // 時間軸上下各保留的緩衝空間（px），讓 00:00 / 24:00 附近也能捲離畫面邊緣方便觸控。
   // 這個緩衝區是「day-slider 自己的額外高度」，不是用 timeline-scroll 的 padding 做
   // （padding-bottom 在部分瀏覽器的捲動容器裡不會確實計入可捲動範圍，是已知的跨瀏覽器
@@ -5936,6 +5999,7 @@
   }
 
   function buildHourRows(){
+    updateCellPx(); // 每次縮放（setHourPx）都會重建整點列，順便更新格子大小
     // 先移除舊的 hour-row（保留 margin-rule 與 events-layer）
     timelineGrid.querySelectorAll('.hour-row').forEach(el=>el.remove());
     for(let h=0; h<24; h++){
@@ -9458,6 +9522,52 @@
       }catch(err){ console.error('切換風格後重繪失敗：', err); }
     }
   }
+
+  // ============ 個人化：時間軸背景（橫線／格子）============
+  // 同樣只存在這支裝置的 localStorage（不同步給其他共編者）。<head> 的小 script
+  // 會先把 <html data-timegrid="cells"> 設好，這裡負責切換與格子大小的計算。
+  const TIMEGRID_STORAGE_KEY = 'plannerTimeGrid';
+  const TIMEGRID_MODES = [
+    { id: 'lines', name: '橫線' },
+    { id: 'cells', name: '格子' }
+  ];
+  let currentTimeGrid = 'lines';
+  (function initTimeGrid(){
+    let saved = 'lines';
+    try{ saved = localStorage.getItem(TIMEGRID_STORAGE_KEY) || 'lines'; }catch(err){}
+    currentTimeGrid = (saved === 'cells') ? 'cells' : 'lines';
+    if(currentTimeGrid === 'cells') document.documentElement.setAttribute('data-timegrid', 'cells');
+    updateCellPx();
+  })();
+  function applyTimeGrid(mode){
+    currentTimeGrid = mode;
+    if(mode === 'cells') document.documentElement.setAttribute('data-timegrid', 'cells');
+    else document.documentElement.removeAttribute('data-timegrid');
+    try{ localStorage.setItem(TIMEGRID_STORAGE_KEY, mode); }catch(err){}
+    updateCellPx();
+  }
+  function renderTimeGridOptions(){
+    const row = document.getElementById('timeGridRow');
+    if(!row) return;
+    row.innerHTML = '';
+    TIMEGRID_MODES.forEach(function(m){
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'timegrid-opt' + (currentTimeGrid === m.id ? ' selected' : '');
+      const prev = document.createElement('span');
+      prev.className = 'timegrid-prev ' + m.id;
+      const label = document.createElement('span');
+      label.textContent = m.name;
+      btn.appendChild(prev);
+      btn.appendChild(label);
+      btn.addEventListener('click', function(){
+        if(currentTimeGrid === m.id) return;
+        applyTimeGrid(m.id);
+        renderTimeGridOptions();
+      });
+      row.appendChild(btn);
+    });
+  }
   function renderThemeSwatches(){
     const row = document.getElementById('themeSwatchRow');
     if(!row) return;
@@ -9611,6 +9721,7 @@
   // 每次打開選單都重新整理裡面的內容（密碼、手帳清單）
   function renderDrawerContents(){
     renderThemeSwatches(); // 跟通知面板無關的個人設定，不用等 NOTEBOOK 載入也能顯示
+    renderTimeGridOptions();
     if(!NOTEBOOK) return;
     navCode.textContent = formatJoinCode(NOTEBOOK.code);
     navCopy.textContent = '複製';
