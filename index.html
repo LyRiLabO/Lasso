@@ -1751,6 +1751,79 @@
   }
   .notebook-name-text:active{opacity:.6;}
 
+
+  /* ---- 分隔線上的小膠囊（提示：這裡可以長按拖移調欄寬）---- */
+  .column-header-row .col-head{position:relative;}
+  .column-header-row .col-head + .col-head::before{
+    content:"";
+    position:absolute; left:-3px; top:50%;
+    width:5px; height:20px; transform:translateY(-50%);
+    border-radius:3px;
+    background:color-mix(in srgb, var(--line) 34%, var(--paper)); /* 盡量淺：看得到、但不搶眼 */
+    pointer-events:none;
+  }
+  .column-header-row .col-head.div-active::before{background:var(--red);}
+
+  /* ---- 欄位名稱後面的使用者圖示 ---- */
+  .column-header-row .col-head .col-name{display:flex; align-items:center; justify-content:center; gap:4px; box-sizing:content-box; height:16.65px; overflow:visible;} /* 高度固定（跟沒有圖示時一樣），圖示比一行字高一點也不會把標題列撐高 */
+  .column-header-row .col-head .col-name-text{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .col-icon{
+    flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+    width:1.5em; height:1.5em;
+    /* 觸控範圍比圖示本身大一圈（負 margin 抵銷，不會把排版撐開） */
+    padding:5px; margin:-5px;
+    box-sizing:content-box;
+  }
+  .col-icon svg{width:100%; height:100%; display:block; overflow:visible;}
+  .col-icon-empty svg{opacity:.55;}
+
+  /* ---- 選擇圖示與顏色的視窗 ---- */
+  .icon-picker-overlay{
+    position:fixed; inset:0; z-index:100000;
+    background:rgba(0,0,0,.38);
+    display:flex; align-items:center; justify-content:center;
+    padding:16px; box-sizing:border-box;
+  }
+  .icon-picker-card{
+    width:100%; max-width:340px; max-height:calc(100% - 8px); overflow-y:auto;
+    background:var(--card); color:var(--ink);
+    border-radius:18px; padding:16px 16px 14px; box-sizing:border-box;
+    box-shadow:0 10px 30px rgba(0,0,0,.28);
+    font-family:'Noto Sans TC', sans-serif;
+  }
+  .icon-picker-title{font-size:16px; font-weight:700; margin-bottom:2px;}
+  .icon-picker-sub{font-size:12px; color:var(--ink-faint); margin-bottom:10px;}
+  .icon-picker-label{font-size:12px; color:var(--ink-faint); margin:10px 0 6px;}
+  .icon-picker-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;}
+  .icon-picker-colors{display:grid; grid-template-columns:repeat(8, 1fr); gap:8px;}
+  .icon-tile{
+    aspect-ratio:1/1; border:2px solid transparent; border-radius:12px;
+    background:var(--paper-deep); cursor:pointer; padding:7px; box-sizing:border-box;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .icon-tile svg{width:100%; height:100%; display:block;}
+  .icon-tile.selected{border-color:var(--btn-brown); background:var(--paper);}
+  .color-dot{
+    aspect-ratio:1/1; border-radius:50%; border:2px solid transparent; padding:0; cursor:pointer;
+    box-shadow:0 1px 3px rgba(0,0,0,.28);
+  }
+  .color-dot.selected{border-color:var(--btn-brown); box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--btn-brown);}
+  .icon-picker-error{min-height:18px; margin-top:10px; font-size:12.5px; color:var(--red); white-space:pre-line;}
+  .icon-picker-actions{display:flex; gap:10px; margin-top:6px;}
+  .icon-picker-actions button{
+    flex:1; border:none; border-radius:12px; padding:11px 0; font-size:15px; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; background:var(--paper-deep); color:var(--ink);
+  }
+  .icon-picker-actions button.primary{background:var(--btn-coffee); color:var(--card);}
+  /* 創建／加入手帳表單裡「選擇圖示與顏色」的按鍵 */
+  .icon-pick-btn{
+    display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box;
+    border:1.5px solid var(--btn-coffee); border-radius:14px; background:var(--card); color:var(--ink);
+    padding:10px 16px; font-family:'Noto Sans TC', sans-serif; font-size:15px; cursor:pointer; text-align:left;
+  }
+  .icon-pick-btn .pick-prev{width:26px; height:26px; flex:0 0 auto; display:inline-flex;}
+  .icon-pick-btn .pick-prev svg{width:100%; height:100%;}
+  .icon-pick-btn .pick-hint{color:var(--ink-faint);}
   /* ---- 欄位標題列（可左右捲動）----
      .col-head-bar：整條標題列的外觀（底色、底線、左側時間刻度欄的留白 58px、右邊 6px）。
      .col-head-viewport：真正的「可視範圍」，超出的欄位被裁掉，只能靠左右滑動（見
@@ -2876,6 +2949,8 @@
       <input type="text" id="nbCreateNotebookName" class="nb-input" autocomplete="off" placeholder="例如：我們的行程表">
       <div class="nb-field-label">你的使用者名稱</div>
       <input type="text" id="nbCreateName" class="nb-input" autocomplete="off">
+      <div class="nb-field-label">你的圖示（顯示在欄位名稱後面，用來區分使用者）</div>
+      <button type="button" class="icon-pick-btn" id="nbCreateIconBtn"></button>
       <div class="nb-import-box" id="nbCreateImportBox" hidden></div>
       <div class="nb-error" id="nbCreateError"></div>
       <div class="device-user-actions">
@@ -2901,6 +2976,8 @@
       <div class="device-user-hint">這會是你在這本手帳裡的欄位名稱。</div>
       <div class="nb-field-label">你的使用者名稱</div>
       <input type="text" id="nbJoinName" class="nb-input" autocomplete="off">
+      <div class="nb-field-label">你的圖示（顯示在欄位名稱後面，用來區分使用者）</div>
+      <button type="button" class="icon-pick-btn" id="nbJoinIconBtn"></button>
       <div class="nb-import-box" id="nbJoinImportBox" hidden></div>
       <div class="nb-error" id="nbJoinNameError"></div>
       <div class="device-user-actions">
@@ -3794,8 +3871,31 @@
 
   // App 的 JS 物件（camelCase）跟 Supabase 資料表的欄位（snake_case）
   // 互相轉換，只在同步這一層做轉換，其餘程式碼完全不用管資料庫欄位長怎樣。
-  function columnToRow(col){ return { id: col.id, name: col.name, owner_id: col.ownerId || null, notebook_id: NOTEBOOK ? NOTEBOOK.id : null }; }
-  function rowToColumn(row){ return { id: row.id, name: row.name, ownerId: row.owner_id || null }; }
+  // 使用者圖示（icon／icon_color）要先在 Supabase 的 columns 資料表加兩個欄位（見
+  // supabase-schema.sql）。還沒加的話，寫入會被拒絕；偵測到那種錯誤就改成「不送圖示欄位」
+  // 重送一次，並記住這次連線都不再送，欄位本身的新增／改名才不會被圖示功能拖垮。
+  let columnIconSyncOk = true;
+  function columnRowFor(col, nbId){
+    const row = { id: col.id, name: col.name, owner_id: col.ownerId || null, notebook_id: nbId };
+    if(columnIconSyncOk){ row.icon = col.icon || null; row.icon_color = col.iconColor || null; }
+    return row;
+  }
+  function columnToRow(col){ return columnRowFor(col, NOTEBOOK ? NOTEBOOK.id : null); }
+  function rowToColumn(row){
+    const c = { id: row.id, name: row.name, ownerId: row.owner_id || null };
+    if(row.icon){ c.icon = row.icon; c.iconColor = row.icon_color || null; }
+    return c;
+  }
+  async function upsertColumnRows(rows){
+    let r = await sb.from('columns').upsert(rows);
+    if(r && r.error && columnIconSyncOk && /icon/i.test(String(r.error.message || r.error.details || ''))){
+      console.warn('Supabase columns 資料表還沒有 icon／icon_color 欄位，先不同步圖示：', r.error);
+      columnIconSyncOk = false;
+      rows = rows.map(function(x){ const y = Object.assign({}, x); delete y.icon; delete y.icon_color; return y; });
+      r = await sb.from('columns').upsert(rows);
+    }
+    return r;
+  }
   function eventToRow(ev){
     return {
       id: ev.id, title: ev.title || '', date: ev.date, start: ev.start, end: ev.end,
@@ -3835,7 +3935,7 @@
     });
     try{
       if(upsertRows.length){
-        const { error } = await sb.from(table).upsert(upsertRows);
+        const { error } = table === 'columns' ? await upsertColumnRows(upsertRows) : await sb.from(table).upsert(upsertRows);
         if(error) console.error('Supabase upsert 失敗（'+table+'）：', error);
       }
       if(deleteIds.length){
@@ -5984,7 +6084,7 @@
     return nameUnits(str) > NAME_MAX_UNITS ? '名稱最多 ' + NAME_MAX_UNITS + ' 個字（英文、數字兩個算一個字）' : '';
   }
   function fitColumnNames(){
-    const names = Array.from(columnHeaderRow.querySelectorAll('.col-name'));
+    const names = Array.from(columnHeaderRow.querySelectorAll('.col-name-text'));
     if(!names.length) return;
     let size = COL_NAME_MAX_PX;
     columnHeaderRow.style.setProperty('--col-name-px', size + 'px');
@@ -6109,7 +6209,7 @@
 
   function initColHeadGestures(){
     const vp = colHeadViewport;
-    const MOVE_TOL = 8, LONG_MS = 450, DIV_HIT = 14;
+    const MOVE_TOL = 8, LONG_MS = 450, DIV_LONG_MS = 320, DIV_HIT = 26; // 分隔線的觸控範圍加大（左右各 26px）、長按時間縮短，比較好按
     let g = null;
     let momentumRaf = 0, edgeRaf = 0;
 
@@ -6137,6 +6237,7 @@
         if(cells[g.divider]) cells[g.divider].classList.add('div-active');
         const bl = bodyDividerEl(g.divider);
         if(bl) bl.classList.add('div-active');
+        try{ if(navigator.vibrate) navigator.vibrate(8); }catch(err){}
         zoomFastMode = true; // 拖移中卡片只更新位置和大小、不排版文字（跟雙指縮放同一套省效能做法）
         return;
       }
@@ -6265,7 +6366,8 @@
         cellEl: cellEl, divider: dividerAt(e.clientX),
         vel: 0, lastT: performance.now(), timer: 0
       };
-      g.timer = setTimeout(longPress, LONG_MS);
+      g.target = e.target;
+      g.timer = setTimeout(longPress, g.divider > 0 ? DIV_LONG_MS : LONG_MS);
       try{ vp.setPointerCapture(e.pointerId); }catch(err){}
     });
     vp.addEventListener('pointermove', function(e){
@@ -6303,7 +6405,10 @@
       else if(gg.mode === 'scroll'){ if(!cancelled && Math.abs(gg.vel) > 0.05) startMomentum(gg.vel); }
       else if(gg.mode === 'pending' && !cancelled && gg.cellEl){
         const col = columns.find(c => c.id === gg.cellEl.dataset.colId);
-        if(col) onColHeadTap(col);
+        if(col){
+          if(!selectMode && gg.target && gg.target.closest && gg.target.closest('.col-icon') && col.ownerId === DEVICE_ID) openColumnIconPicker(col);
+          else onColHeadTap(col);
+        }
       }
       g = null;
     }
@@ -6311,6 +6416,115 @@
     vp.addEventListener('pointercancel', function(e){ end(e, true); });
   }
   initColHeadGestures();
+
+
+  // ============ 使用者圖示（欄位名稱後面）============
+  // 十六個線條圖示（不填色），顏色是圖示的線條顏色，從「目前主題色彩的十六色」裡挑。
+  // 欄位資料裡存的是 icon（圖示 id）和 iconColor（行程顏色 id）；顏色 id 跟行程顏色一樣
+  // 會依照每個人自己的主題「同一格對應」換成當下主題的色，所以不同主題的人看到的是
+  // 同一格的顏色。「圖示＋顏色」的組合在同一本手帳裡不能重複。
+  const COL_ICONS = [
+    {id:'apple', name:'蘋果', svg:'<path d="M12 8.2C10.4 6.8 6.9 6.9 5.5 10c-1.4 3.1.3 8 2.6 9.9 1.3 1.1 2.5.6 3.9.6s2.6.5 3.9-.6c2.3-1.9 4-6.8 2.6-9.9-1.4-3.1-4.9-3.2-6.5-1.8z"/><path d="M12 8.2c0-1.7.6-3.1 1.8-4.1"/><path d="M13.9 5.9c1.2-1.1 2.8-1.3 4-.6-.5 1.5-2.5 2.2-4 .6z"/>'},
+    {id:'strawberry', name:'草莓', svg:'<path d="M12 20.6C7.6 18.5 5.2 14.4 5.4 10.8c.1-2 1.9-3.2 3.8-3 1 .1 2 .5 2.8.5s1.8-.4 2.8-.5c1.9-.2 3.7 1 3.8 3 .2 3.6-2.2 7.7-6.6 9.8z"/><path d="M8.4 7.4 12 9.4l3.6-2"/><path d="M12 6.4c-.2-1.2.4-2.1 1.5-2.6"/><path d="M9.6 12.4v1.1M12 14v1.1M14.4 12.4v1.1M10.8 16.2v1M13.2 16.2v1"/>'},
+    {id:'orange', name:'橘子', svg:'<circle cx="12" cy="13.2" r="7"/><path d="M12 6.2V4.4"/><path d="M12 5.4c1.2-1.4 3.3-1.6 4.5-.7-1 1.4-3.2 1.6-4.5.7z"/><path d="M8.2 11.6c.5-1.6 1.7-2.6 3.2-2.9"/>'},
+    {id:'lemon', name:'檸檬', svg:'<ellipse cx="12" cy="12" rx="7.6" ry="5.6" transform="rotate(-35 12 12)"/><path d="M18.2 7.6l1.5-1M5.8 16.4l-1.5 1"/><path d="M9 11.6c.6-1.4 1.8-2.3 3.2-2.5"/>'},
+    {id:'grape', name:'葡萄', svg:'<circle cx="8.4" cy="10" r="1.75"/><circle cx="12" cy="10" r="1.75"/><circle cx="15.6" cy="10" r="1.75"/><circle cx="10.2" cy="13.5" r="1.75"/><circle cx="13.8" cy="13.5" r="1.75"/><circle cx="12" cy="17" r="1.75"/><path d="M12 8.2V4.4"/><path d="M12 5.6c1.4-1.5 3.6-1.7 4.8-.7-1 1.5-3.4 1.8-4.8.7z"/>'},
+    {id:'peach', name:'桃子', svg:'<path d="M12 7.6C10.6 6.6 7.5 6.8 6.1 9.7c-1.3 2.8.2 7.4 2.9 9.4 1.4 1 2.4.7 3 .7s1.6.3 3-.7c2.7-2 4.2-6.6 2.9-9.4-1.4-2.9-4.5-3.1-5.9-2.1z"/><path d="M12 8c-1 2.6-1 6.8.2 11.6"/><path d="M12 6.8c1.2-1.9 3.3-2.6 5-2.1-.6 1.9-2.9 2.7-5 2.1z"/>'},
+    {id:'pear', name:'梨子', svg:'<path d="M12 5.4c-1.6 0-2.3 1.5-2.5 3.1-.2 1.5-.7 2.4-2 3.9-1.3 1.5-1.7 2.8-1.7 3.8 0 2.7 2.8 4.4 6.2 4.4s6.2-1.7 6.2-4.4c0-1-.4-2.3-1.7-3.8-1.3-1.5-1.8-2.4-2-3.9-.2-1.6-.9-3.1-2.5-3.1z"/><path d="M12 5.4l.6-2.2"/><path d="M12.8 4c1.1-1 2.8-1.1 4-.4-.9 1.3-2.8 1.5-4 .4z"/>'},
+    {id:'flower', name:'五瓣花', svg:'<circle cx="12" cy="7.3" r="2.7"/><circle cx="16.47" cy="10.55" r="2.7"/><circle cx="14.76" cy="15.8" r="2.7"/><circle cx="9.24" cy="15.8" r="2.7"/><circle cx="7.53" cy="10.55" r="2.7"/><circle cx="12" cy="12" r="1.5"/>'},
+    {id:'leaf', name:'樹葉', svg:'<path d="M5 19c0-8 5.5-13.5 14-14 .5 8-5 14-14 14z"/><path d="M4 20 16.5 7.5"/><path d="M9 15l-.2-3.4M12 12l3.4.2"/>'},
+    {id:'maple', name:'楓葉', svg:'<path d="M12 3 14 7.2 16.8 5.6 16 10 20.2 9 18 12.4 20.5 14.6 15.8 15 16.2 17.8 12.8 16.4V21H11.2V16.4L7.8 17.8 8.2 15 3.5 14.6 6 12.4 3.8 9 8 10 7.2 5.6 10 7.2z"/>'},
+    {id:'star', name:'五芒星', svg:'<path d="M12 2.8 14.6 9.1 21.4 9.5 16.2 13.9 17.9 20.5 12 16.9 6.1 20.5 7.8 13.9 2.6 9.5 9.4 9.1z"/>'},
+    {id:'heart', name:'愛心', svg:'<path d="M12 20C5.5 15.2 3.8 11.6 3.8 8.9c0-2.4 1.8-4.1 4.1-4.1 1.7 0 3.2 1 4.1 2.5.9-1.5 2.4-2.5 4.1-2.5 2.3 0 4.1 1.7 4.1 4.1 0 2.7-1.7 6.3-8.2 11.1z"/>'},
+    {id:'circle', name:'圓', svg:'<circle cx="12" cy="12" r="8"/>'},
+    {id:'square', name:'正方形', svg:'<rect x="4.5" y="4.5" width="15" height="15" rx="1"/>'},
+    {id:'triangle', name:'三角形', svg:'<path d="M12 4.6 20.2 19H3.8z"/>'},
+    {id:'diamond', name:'菱形', svg:'<path d="M12 3.6 20 12 12 20.4 4 12z"/>'}
+  ];
+  const COL_ICON_MAP = {};
+  COL_ICONS.forEach(function(ic){ COL_ICON_MAP[ic.id] = ic; });
+  function colIconSvg(iconId, color){
+    const ic = COL_ICON_MAP[iconId];
+    if(!ic) return '';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ic.svg + '</svg>';
+  }
+  // 欄位的圖示顏色（hex）：存的是色 id，換算成「目前主題同一格」的顏色
+  function colIconHex(col){
+    try{ return rawEventColorById(pairedEventColorId(col.iconColor || themeDefaultEventColor())).hex; }
+    catch(err){ return '#888888'; }
+  }
+  function sameIconCombo(a, b){
+    return !!a && !!b && a.icon === b.icon && pairedEventColorId(a.iconColor) === pairedEventColorId(b.iconColor);
+  }
+  // 別人已經用了的「圖示＋顏色」：回傳那位使用者（找不到回 null）。excludeId＝不算自己。
+  function findIconComboUser(cols, sel, excludeId){
+    return (cols || []).find(function(c){ return c.id !== excludeId && c.icon && sameIconCombo(c, {icon: sel.icon, iconColor: sel.color}); }) || null;
+  }
+
+  // 選擇圖示與顏色的視窗。opts:
+  //   initial  {icon, color} 或 null；usedCols 已存在的欄位（拿來檢查組合有沒有被用過）；
+  //   excludeId 不算進「已使用」的欄位 id（改自己的圖示時傳自己的欄位 id）；
+  //   onConfirm(sel) 確定且沒重複時呼叫。
+  function openIconPicker(opts){
+    const colors = themeEventColorList();
+    const sel = {icon: opts.initial && opts.initial.icon || null,
+                 color: opts.initial && opts.initial.color ? pairedEventColorId(opts.initial.color) : colors[0].id};
+    const overlay = document.createElement('div');
+    overlay.className = 'icon-picker-overlay';
+    overlay.innerHTML = '<div class="icon-picker-card" role="dialog" aria-modal="true">' +
+      '<div class="icon-picker-title">選擇你的圖示</div>' +
+      '<div class="icon-picker-sub">會顯示在你的欄位名稱後面。圖示與顏色的組合在同一本手帳裡不能跟別人重複。</div>' +
+      '<div class="icon-picker-label">圖示</div><div class="icon-picker-grid" id="ipIcons"></div>' +
+      '<div class="icon-picker-label">顏色</div><div class="icon-picker-colors" id="ipColors"></div>' +
+      '<div class="icon-picker-error" id="ipError"></div>' +
+      '<div class="icon-picker-actions"><button type="button" id="ipCancel">取消</button><button type="button" class="primary" id="ipOk">確定</button></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    const iconsEl = overlay.querySelector('#ipIcons'), colorsEl = overlay.querySelector('#ipColors'), errEl = overlay.querySelector('#ipError');
+    function hexOf(id){ return rawEventColorById(id).hex; }
+    function draw(){
+      iconsEl.innerHTML = '';
+      COL_ICONS.forEach(function(ic){
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'icon-tile' + (sel.icon === ic.id ? ' selected' : '');
+        b.setAttribute('aria-label', ic.name);
+        b.innerHTML = colIconSvg(ic.id, hexOf(sel.color));
+        b.addEventListener('click', function(){ sel.icon = ic.id; errEl.textContent = ''; draw(); });
+        iconsEl.appendChild(b);
+      });
+      colorsEl.innerHTML = '';
+      colors.forEach(function(c){
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'color-dot' + (sel.color === c.id ? ' selected' : '');
+        b.style.background = c.hex; b.setAttribute('aria-label', c.name);
+        b.addEventListener('click', function(){ sel.color = c.id; errEl.textContent = ''; draw(); });
+        colorsEl.appendChild(b);
+      });
+    }
+    draw();
+    function close(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+    overlay.querySelector('#ipCancel').addEventListener('click', close);
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
+    overlay.querySelector('#ipOk').addEventListener('click', function(){
+      if(!sel.icon){ errEl.textContent = '請先選一個圖示'; return; }
+      const used = findIconComboUser(opts.usedCols, sel, opts.excludeId);
+      if(used){ errEl.textContent = '這個圖示與顏色已經被「' + used.name + '」使用了，\n請換一個圖示或顏色。'; return; }
+      close();
+      opts.onConfirm({icon: sel.icon, color: sel.color});
+    });
+  }
+  // 自己欄位的圖示：點欄位名稱後面的圖示（還沒設定過的會顯示一個虛線小圓圈）來修改
+  function openColumnIconPicker(col){
+    openIconPicker({
+      initial: col.icon ? {icon: col.icon, color: col.iconColor} : null,
+      usedCols: columns, excludeId: col.id,
+      onConfirm: function(sel){
+        col.icon = sel.icon; col.iconColor = sel.color;
+        scheduleSaveToStorage();
+        renderColumnHeader();
+      }
+    });
+  }
 
   function renderColumnHeader(){
     applyLocalColumnOrder(); // 排列順序只存在這支裝置：每次重畫前都先照本機記住的順序排好
@@ -6322,8 +6536,24 @@
       cell.className = 'col-head';
       cell.dataset.colId = col.id;
       cell.innerHTML = '<span class="col-name"></span>';
-      cell.querySelector('.col-name').textContent = col.name;
-      cell.querySelector('.col-name').dataset.ul = String(deviceLineStyle(col));
+      const nameEl = cell.querySelector('.col-name');
+      nameEl.dataset.ul = String(deviceLineStyle(col));
+      const nameText = document.createElement('span');
+      nameText.className = 'col-name-text';
+      nameText.textContent = col.name;
+      nameEl.appendChild(nameText);
+      // 名稱後面的使用者圖示；自己的欄位還沒設定圖示時，顯示虛線小圓圈當作入口
+      if(col.icon && COL_ICON_MAP[col.icon]){
+        const ic = document.createElement('span');
+        ic.className = 'col-icon';
+        ic.innerHTML = colIconSvg(col.icon, colIconHex(col));
+        nameEl.appendChild(ic);
+      } else if(!selectMode && col.ownerId === DEVICE_ID){
+        const ic = document.createElement('span');
+        ic.className = 'col-icon col-icon-empty';
+        ic.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-dasharray="2.2 3" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>';
+        nameEl.appendChild(ic);
+      }
 
       if(selectMode){
         // 選取狀態下，欄位標題也是可點擊的選取對象（點擊由 initColHeadGestures 統一處理）
@@ -9427,7 +9657,7 @@
     }
     if(switching){
       if(newColumn && sb){
-        const r = await sb.from('columns').upsert([{id: newColumn.id, name: newColumn.name, owner_id: newColumn.ownerId || null, notebook_id: nb.id}]);
+        const r = await upsertColumnRows([columnRowFor(newColumn, nb.id)]);
         if(r && r.error) throw r.error;
       }
       saveToStorage();
@@ -9487,11 +9717,44 @@
     try{ await runPendingImport(); }catch(err){ console.error('匯入失敗：', err); }
   }
 
+
+  // ---- 創建／加入手帳時選擇圖示與顏色 ----
+  let createIconSel = null, joinIconSel = null; // {icon, color}
+  function renderIconPickBtn(btn, sel){
+    btn.innerHTML = '';
+    const prev = document.createElement('span');
+    prev.className = 'pick-prev';
+    const txt = document.createElement('span');
+    if(sel){
+      prev.innerHTML = colIconSvg(sel.icon, rawEventColorById(sel.color).hex);
+      txt.textContent = (COL_ICON_MAP[sel.icon] ? COL_ICON_MAP[sel.icon].name : '') + '（點一下可以重選）';
+    } else {
+      prev.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-dasharray="2.2 3" aria-hidden="true" style="color:var(--ink-faint)"><circle cx="12" cy="12" r="8"/></svg>';
+      txt.className = 'pick-hint';
+      txt.textContent = '選擇圖示與顏色';
+    }
+    btn.appendChild(prev); btn.appendChild(txt);
+  }
+  const nbCreateIconBtn = document.getElementById('nbCreateIconBtn');
+  const nbJoinIconBtn = document.getElementById('nbJoinIconBtn');
+  renderIconPickBtn(nbCreateIconBtn, null);
+  renderIconPickBtn(nbJoinIconBtn, null);
+  nbCreateIconBtn.addEventListener('click', function(){
+    openIconPicker({initial: createIconSel ? {icon: createIconSel.icon, color: createIconSel.color} : null, usedCols: [],
+      onConfirm: function(sel){ createIconSel = sel; renderIconPickBtn(nbCreateIconBtn, sel); setNbError('nbCreateError', ''); }});
+  });
+  nbJoinIconBtn.addEventListener('click', function(){
+    openIconPicker({initial: joinIconSel ? {icon: joinIconSel.icon, color: joinIconSel.color} : null,
+      usedCols: pendingJoin ? pendingJoin.remote.columns : [],
+      onConfirm: function(sel){ joinIconSel = sel; renderIconPickBtn(nbJoinIconBtn, sel); setNbError('nbJoinNameError', ''); }});
+  });
+
   async function submitCreate(){
     const notebookName = nbCreateNotebookName.value.trim();
     const name = nbCreateName.value.trim();
     if(!name){ setNbError('nbCreateError', '請輸入使用者名稱'); return; }
     if(nameLengthError(name)){ setNbError('nbCreateError', nameLengthError(name)); return; }
+    if(!createIconSel){ setNbError('nbCreateError', '請選擇一個圖示與顏色'); return; }
     nbCreateSubmit.disabled = true;
     try{
       let nb = null;
@@ -9503,7 +9766,7 @@
         if(error.code !== '23505') throw error; // 23505＝密碼剛好跟別本重複，換一組再試
       }
       if(!nb) throw new Error('密碼重複太多次');
-      const col = {id: newColumnId(), name: name, ownerId: DEVICE_ID};
+      const col = {id: newColumnId(), name: name, ownerId: DEVICE_ID, icon: createIconSel.icon, iconColor: createIconSel.color};
       await enterNotebook(nb, {columns:[col], events:[], notifications:[]}, col, createImport ? createImport.get() : null);
     }catch(err){
       console.error('建立手帳失敗：', err);
@@ -9532,6 +9795,7 @@
         return;
       }
       pendingJoin = {nb: nb, remote: remote};
+      joinIconSel = null; renderIconPickBtn(nbJoinIconBtn, null);
       showNbStep('joinName');
     }catch(err){
       console.error('加入手帳失敗：', err);
@@ -9547,9 +9811,12 @@
     if(!name){ setNbError('nbJoinNameError', '請輸入使用者名稱'); return; }
     if(nameLengthError(name)){ setNbError('nbJoinNameError', nameLengthError(name)); return; }
     if(pendingJoin.remote.columns.some(c => c.name === name)){ setNbError('nbJoinNameError', '名稱已被使用'); return; }
+    if(!joinIconSel){ setNbError('nbJoinNameError', '請選擇一個圖示與顏色'); return; }
+    const taken = findIconComboUser(pendingJoin.remote.columns, joinIconSel, null);
+    if(taken){ setNbError('nbJoinNameError', '這個圖示與顏色已經被「' + taken.name + '」使用了，請重新選擇'); return; }
     nbJoinNameSubmit.disabled = true;
     try{
-      const col = {id: newColumnId(), name: name, ownerId: DEVICE_ID};
+      const col = {id: newColumnId(), name: name, ownerId: DEVICE_ID, icon: joinIconSel.icon, iconColor: joinIconSel.color};
       const remote = pendingJoin.remote;
       remote.columns.push(col);
       const nb = pendingJoin.nb;
@@ -9563,7 +9830,7 @@
     }
   }
 
-  document.getElementById('nbBtnCreate').addEventListener('click', function(){ showNbStep('create'); });
+  document.getElementById('nbBtnCreate').addEventListener('click', function(){ createIconSel = null; renderIconPickBtn(nbCreateIconBtn, null); showNbStep('create'); });
   document.getElementById('nbBtnJoin').addEventListener('click', function(){ showNbStep('join'); });
   document.getElementById('nbBtnMyBooks').addEventListener('click', function(){
     renderMyBooksList();
