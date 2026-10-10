@@ -56,7 +56,7 @@
      行程卡片本身的顏色（EVENT_COLORS）不是靠這些變數，是 JS 另外維護
      的色票，兩套風格的十六色是「兩兩配對」的，見 EVENT_COLOR_THEME_IDS。 */
   [data-theme="american-vintage"]{
-    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --nav-rule:color-mix(in srgb, var(--line-soft) 50%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
     --body-bg:#C6BEB2;
     --paper:#D7CEC1;
     --paper-deep:#C3B9AC;
@@ -75,9 +75,9 @@
     --red-deep:#420002;
     --card:#E8E0D5;
     --shadow:rgba(58,11,11,0.26);
-    --gold:#FFD966;
-    --grid-line:#C4B6AA;
-    --grid-line-sub:#C4B6AA;
+    --gold:#CDA16C;
+    --grid-line:#BDAEA2;
+    --grid-line-sub:#BDAEA2;
     --gold-fg:#24353B; /* 金色底上的字（月曆目前所在日、日期選擇器選取日）：用深色才看得清楚 */
     --sage:#5A897F;
     --dusk:#4B4F69;
@@ -90,7 +90,7 @@
      按鍵、卡片的造型全部沿用經典，只有配色不同。行程十六色見
      EVENT_COLOR_THEME_IDS。 */
   [data-theme="showa"]{
-    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --nav-rule:color-mix(in srgb, var(--line-soft) 50%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
     --body-bg:#D4BF9E;
     --paper:#E6D0AC;
     --paper-deep:#CEBA9A;
@@ -110,8 +110,8 @@
     --card:#EEE1CB;
     --shadow:rgba(64,40,20,0.26);
     --gold:#D78612;
-    --grid-line:#CAB190;
-    --grid-line-sub:#CAB190;
+    --grid-line:#C0A686;
+    --grid-line-sub:#C0A686;
     --gold-fg:#402814; /* 金色底上的字（月曆目前所在日、日期選擇器選取日）：用深色才看得清楚 */
     --sage:#576146;
     --dusk:#34435A;
@@ -155,7 +155,7 @@
     --blush:#813E29;
   }
 
-  /* ============ 個人化主題：花園午茶 ============
+  /* ============ 個人化主題：花園茶會 ============
      各分類的顏色由使用者逐項指定（變數意義同美式復古那段）。「線條」類（線條、
      淡橫條紋、次要文字、提示文字）共用色卡上的「次要文字」色，時間軸橫線再往
      手帳底色混淡一些。月曆所在日（--gold）是各風格自己的顏色，圈內數字用主文字色。行程十六色見
@@ -165,24 +165,24 @@
     --body-bg:#E5E5DE;
     --paper:#F4F4EC;
     --paper-deep:#DDDCD6;
-    --line:#5E4F75;
-    --line-soft:#5E4F75;
-    --grid-line:#B0AAB6;
-    --grid-line-sub:#B0AAB6;
-    --ink:#290848;
-    --ink-soft:#5E4F75;
-    --ink-faint:#5E4F75;
-    --btn-coffee:#290848;
-    --btn-brown:#3F4C42;
+    --line:#9E3858;
+    --line-soft:#9E3858;
+    --grid-line:#DCBFC3;
+    --grid-line-sub:#DCBFC3;
+    --ink:#57172B;
+    --ink-soft:#9E3858;
+    --ink-faint:#9E3858;
+    --btn-coffee:#57172B;
+    --btn-brown:#475A4B;
     --btn-face:#F4F4EC;
-    --btn-relief:0 3px 8px rgba(63,76,66,0.34), 0 1px 3px rgba(63,76,66,0.22);
+    --btn-relief:0 3px 8px rgba(71,90,75,0.34), 0 1px 3px rgba(71,90,75,0.22);
     --btn-face-pressed:#DDDCD6;
-    --btn-relief-pressed:inset 0 1px 3px rgba(63,76,66,0.32), 0 0 0 rgba(63,76,66,0);
-    --red:#F1407F;
-    --red-deep:#AE2E5B;
+    --btn-relief-pressed:inset 0 1px 3px rgba(71,90,75,0.32), 0 0 0 rgba(71,90,75,0);
+    --red:#F2799E;
+    --red-deep:#AE5772;
     --card:#FFFFF7;
     --date-bg:#FEFFFF;
-    --shadow:rgba(41,8,72,0.22);
+    --shadow:rgba(87,23,43,0.22);
     --gold:#94C1A0;
     --gold-fg:var(--ink); /* 月曆所在日圓圈裡的數字：用主文字色，淺色底上才看得清楚 */
   }
@@ -210,8 +210,8 @@
     --btn-relief:0 3px 8px rgba(68,103,123,0.34), 0 1px 3px rgba(68,103,123,0.22);
     --btn-face-pressed:#E6E5E1;
     --btn-relief-pressed:inset 0 1px 3px rgba(68,103,123,0.32), 0 0 0 rgba(68,103,123,0);
-    --red:#E12032;
-    --red-deep:#A21724;
+    --red:#D5283E;
+    --red-deep:#991D2D;
     --card:#FFFFFE;
     --date-bg:#FEFEFE;
     --shadow:rgba(36,90,122,0.22);
@@ -500,9 +500,9 @@
     text-align:left; cursor:pointer;
   }
   .nav-head:active{background:var(--paper-deep);}
-  .nav-icon{flex:0 0 auto; color:var(--btn-brown);}
+  .nav-icon{flex:0 0 auto; color:var(--ink);} /* 選單圖示：跟文字同一個顏色 */
   .nav-label{flex:1; min-width:0;}
-  .nav-chevron{flex:0 0 auto; color:var(--ink-faint); transition:transform .28s cubic-bezier(.3,.6,.3,1);}
+  .nav-chevron{flex:0 0 auto; color:var(--ink); transition:transform .28s cubic-bezier(.3,.6,.3,1);}
   .nav-item.open .nav-chevron{transform:rotate(180deg);}
   /* .nav-body：下拉/收合動畫的外層容器，只負責裁切高度，不放 padding
      （padding 放在裡面的 .nav-body-inner），這樣量測 scrollHeight 時
@@ -2456,7 +2456,7 @@
     filter:brightness(0.88); /* 加深格子原本的顏色，不換色 */
     transition:filter .1s ease;
   }
-  .month-cell.outside-month{opacity:.4;}
+  .month-cell.outside-month{opacity:.6;} /* 上／下個月的日期：格子半透明會透出底下格線色，像蒙了一層顏色；不透明度調高（.4→.6）＝那層顏色變淡 */
   .month-cell .cell-date{
     flex:0 0 auto;
     font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
@@ -4065,7 +4065,7 @@
     {id:'av-pumpkin', name:'南瓜橘', hex:'#DF661F'},
     {id:'av-ivory', name:'象牙白', hex:'#F8EDDB'},
     {id:'av-wine', name:'酒紅', hex:'#7E0003'},
-    {id:'av-yolk', name:'蛋黃', hex:'#FED966'},
+    {id:'av-yolk', name:'蛋黃', hex:'#FCCB32'},
     {id:'av-mistteal', name:'霧青綠', hex:'#5A897F'},
     {id:'av-rust', name:'磚赭紅', hex:'#99351D'},
     {id:'av-pine', name:'暗松綠', hex:'#192414'},
@@ -4104,7 +4104,7 @@
     {id:'fo-rosebrown', name:'玫瑰褐', hex:'#907C73'},
     {id:'fo-chestgrey', name:'灰栗褐', hex:'#5C534E'},
     {id:'fo-bark', name:'深樹皮', hex:'#3E3725'},
-    // ---- 花園午茶 ----（取自使用者提供的色卡，由左到右、由上到下）
+    // ---- 花園茶會 ----（取自使用者提供的色卡，由左到右、由上到下）
     {id:'gt-rose', name:'玫瑰粉', hex:'#F75D93'},
     {id:'gt-blossom', name:'櫻花粉', hex:'#FF9CA8'},
     {id:'gt-dustrose', name:'霧玫瑰', hex:'#EDC5BD'},
@@ -4122,11 +4122,11 @@
     {id:'gt-lavender', name:'薰衣草紫', hex:'#B694F2'},
     {id:'gt-pearl', name:'珍珠粉灰', hex:'#EBE0E6'},
     // ---- 莓果野餐 ----（取自使用者提供的色卡，由左到右、由上到下）
-    {id:'bp-coral', name:'珊瑚紅', hex:'#FF7777'},
-    {id:'bp-berry', name:'莓果紅', hex:'#EF283B'},
-    {id:'bp-tomato', name:'番茄紅', hex:'#E14337'},
-    {id:'bp-orange', name:'橘紅', hex:'#FB693A'},
-    {id:'bp-peach', name:'蜜桃', hex:'#FFBC97'},
+    {id:'bp-coral', name:'珊瑚紅', hex:'#FF7780'},
+    {id:'bp-berry', name:'莓果紅', hex:'#F0284E'},
+    {id:'bp-tomato', name:'番茄紅', hex:'#C3172D'},
+    {id:'bp-orange', name:'橘紅', hex:'#FB503B'},
+    {id:'bp-peach', name:'蜜桃', hex:'#FFAB96'},
     {id:'bp-mistblue', name:'霧藍白', hex:'#D6DFF0'},
     {id:'bp-sky', name:'天空藍', hex:'#A3C0E0'},
     {id:'bp-denim', name:'丹寧藍', hex:'#668EB2'},
@@ -9429,8 +9429,8 @@
     { id: 'american-vintage', name: '美式復古', colors: ['#99341D', '#25353C', '#5A8A7F'] },
     { id: 'showa', name: '昭和懷舊', colors: ['#861108', '#317B6A', '#DE942B'] },
     { id: 'forest', name: '森林手札', colors: ['#616543', '#A39F7D', '#D7CBB3'] },
-    { id: 'garden-tea', name: '花園午茶', colors: ['#FF9CA8', '#F3C622', '#2289B1'] },
-    { id: 'berry-picnic', name: '莓果野餐', colors: ['#F22B3E', '#D8E2F3', '#DCE6CD'] }
+    { id: 'garden-tea', name: '花園茶會', colors: ['#F75D93', '#BEC9EA', '#96C1A0'] },
+    { id: 'berry-picnic', name: '莓果野餐', colors: ['#F22B3E', '#A3C0E0', '#B7C4B1'] }
   ];
   let currentTheme = 'default';
   (function initTheme(){
