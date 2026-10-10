@@ -1756,9 +1756,9 @@
   .column-header-row .col-head{position:relative;}
   .column-header-row .col-head + .col-head::before{
     content:"";
-    position:absolute; left:-3px; top:50%;
-    width:5px; height:20px; transform:translateY(-50%);
-    border-radius:3px;
+    position:absolute; left:-2.5px; top:0; bottom:0; /* 上下端貼齊標題列的上下橫線，所以看不到原本的直線 */
+    width:5px;
+    border-radius:2.5px;
     background:color-mix(in srgb, var(--line) 34%, var(--paper)); /* 盡量淺：看得到、但不搶眼 */
     pointer-events:none;
   }
@@ -1785,29 +1785,32 @@
     padding:16px; box-sizing:border-box;
   }
   .icon-picker-card{
-    width:100%; max-width:340px; max-height:calc(100% - 8px); overflow-y:auto;
+    width:100%; max-width:324px; max-height:calc(100% - 8px); max-height:calc(100dvh - 32px); overflow-y:auto; -webkit-overflow-scrolling:touch;
     background:var(--card); color:var(--ink);
-    border-radius:18px; padding:16px 16px 14px; box-sizing:border-box;
+    border-radius:18px; padding:14px 14px 12px; box-sizing:border-box;
     box-shadow:0 10px 30px rgba(0,0,0,.28);
     font-family:'Noto Sans TC', sans-serif;
   }
   .icon-picker-title{font-size:16px; font-weight:700; margin-bottom:2px;}
   .icon-picker-sub{font-size:12px; color:var(--ink-faint); margin-bottom:10px;}
   .icon-picker-label{font-size:12px; color:var(--ink-faint); margin:10px 0 6px;}
-  .icon-picker-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;}
-  .icon-picker-colors{display:grid; grid-template-columns:repeat(8, 1fr); gap:8px;}
+  /* minmax(0,1fr)：欄寬不被內容撐開；方形格子用「height:0 + padding-bottom:100%」做，
+     不用 aspect-ratio（舊版 iOS Safari 不支援，會變成長方形並撐破視窗）。 */
+  .icon-picker-grid{display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px;}
+  .icon-picker-colors{display:grid; grid-template-columns:repeat(8, minmax(0, 1fr)); gap:6px;}
   .icon-tile{
-    aspect-ratio:1/1; border:2px solid transparent; border-radius:12px;
-    background:var(--paper-deep); cursor:pointer; padding:7px; box-sizing:border-box;
-    display:flex; align-items:center; justify-content:center;
+    position:relative; width:100%; height:0; padding:0 0 100%; box-sizing:border-box;
+    border:none; border-radius:12px; /* 選取框用 inset 陰影畫，不佔尺寸，格子才是正方形 */
+    background:var(--paper-deep); cursor:pointer; display:block;
   }
-  .icon-tile svg{width:100%; height:100%; display:block;}
-  .icon-tile.selected{border-color:var(--btn-brown); background:var(--paper);}
+  .icon-tile svg{position:absolute; left:16%; top:16%; width:68%; height:68%; display:block;}
+  .icon-tile.selected{box-shadow:inset 0 0 0 2px var(--btn-brown); background:var(--paper);}
   .color-dot{
-    aspect-ratio:1/1; border-radius:50%; border:2px solid transparent; padding:0; cursor:pointer;
+    width:100%; height:0; padding:0 0 100%; box-sizing:border-box;
+    border-radius:50%; border:none; cursor:pointer; display:block;
     box-shadow:0 1px 3px rgba(0,0,0,.28);
   }
-  .color-dot.selected{border-color:var(--btn-brown); box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--btn-brown);}
+  .color-dot.selected{box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--btn-brown);}
   .icon-picker-error{min-height:18px; margin-top:10px; font-size:12.5px; color:var(--red); white-space:pre-line;}
   .icon-picker-actions{display:flex; gap:10px; margin-top:6px;}
   .icon-picker-actions button{
@@ -1857,11 +1860,7 @@
     padding:4.5px 4px 3.5px; /* 上下內距放在每一欄自己身上（不是整列），分隔線才能從最上拉到最下 */
   }
   /* 欄位之間的分隔線延伸到標題列：跟時間軸本體的 .col-div-line 在同一個 x 位置 */
-  .column-header-row .col-head + .col-head{
-    border-left:1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  }
   /* 長按分隔線拖移調整欄位寬度時：被拖的那條線標紅加粗（標題列跟時間軸本體各一條） */
-  .column-header-row .col-head.div-active{border-left:2px solid var(--red);}
   .col-div-line.div-active{background:var(--red); width:2px; opacity:1;}
   /* 長按欄位名稱拖移排序：被拖的那一欄浮起來，目的地用淡色塊標示 */
   .column-header-row .col-head.reordering{
@@ -6448,22 +6447,41 @@
     if(!ic) return '';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ic.svg + '</svg>';
   }
-  // 欄位的圖示顏色（hex）：存的是色 id，換算成「目前主題同一格」的顏色
-  function colIconHex(col){
-    try{ return rawEventColorById(pairedEventColorId(col.iconColor || themeDefaultEventColor())).hex; }
+  // 圖示顏色（hex）：存的是色 id，換算成「目前主題同一格」的顏色
+  function colIconHex(colorId){
+    try{ return rawEventColorById(pairedEventColorId(colorId || themeDefaultEventColor())).hex; }
     catch(err){ return '#888888'; }
   }
-  function sameIconCombo(a, b){
-    return !!a && !!b && a.icon === b.icon && pairedEventColorId(a.iconColor) === pairedEventColorId(b.iconColor);
+  // 同一個裝置＝同一個使用者：這個使用者名下不管有幾個欄位，都用同一組圖示＋顏色。
+  // 欄位自己沒存圖示時，借用同一位使用者（同 ownerId）其他欄位上的。
+  function userIconOf(col, list){
+    if(col.icon) return {icon: col.icon, color: col.iconColor};
+    if(!col.ownerId) return null;
+    const o = (list || columns).find(c => c.ownerId === col.ownerId && c.icon);
+    return o ? {icon: o.icon, color: o.iconColor} : null;
   }
-  // 別人已經用了的「圖示＋顏色」：回傳那位使用者（找不到回 null）。excludeId＝不算自己。
-  function findIconComboUser(cols, sel, excludeId){
-    return (cols || []).find(function(c){ return c.id !== excludeId && c.icon && sameIconCombo(c, {icon: sel.icon, iconColor: sel.color}); }) || null;
+  // 別人（不同使用者）已經用了的「圖示＋顏色」：回傳那位使用者的欄位（找不到回 null）。
+  // excludeOwnerId＝不算進去的使用者（改自己的圖示時傳自己的 ownerId，自己名下的欄位不算衝突）。
+  function findIconComboUser(list, sel, excludeOwnerId){
+    return (list || []).find(function(c){
+      if(excludeOwnerId && c.ownerId === excludeOwnerId) return false;
+      const u = userIconOf(c, list);
+      return !!u && u.icon === sel.icon && pairedEventColorId(u.color) === pairedEventColorId(sel.color);
+    }) || null;
+  }
+  // 切換主題色彩後，標題列上的圖示顏色要跟著換成新主題同一格的顏色（原地換色，不重畫整列）
+  function refreshColumnIconColors(){
+    Array.from(columnHeaderRow.querySelectorAll('.col-head')).forEach(function(cell){
+      const col = columns.find(c => c.id === cell.dataset.colId);
+      const svg = cell.querySelector('.col-icon:not(.col-icon-empty) svg');
+      const u = col ? userIconOf(col) : null;
+      if(svg && u) svg.setAttribute('stroke', colIconHex(u.color));
+    });
   }
 
   // 選擇圖示與顏色的視窗。opts:
   //   initial  {icon, color} 或 null；usedCols 已存在的欄位（拿來檢查組合有沒有被用過）；
-  //   excludeId 不算進「已使用」的欄位 id（改自己的圖示時傳自己的欄位 id）；
+  //   excludeOwnerId 不算進「已使用」的使用者（改自己的圖示時傳自己的 ownerId）；
   //   onConfirm(sel) 確定且沒重複時呼叫。
   function openIconPicker(opts){
     const colors = themeEventColorList();
@@ -6507,7 +6525,7 @@
     overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
     overlay.querySelector('#ipOk').addEventListener('click', function(){
       if(!sel.icon){ errEl.textContent = '請先選一個圖示'; return; }
-      const used = findIconComboUser(opts.usedCols, sel, opts.excludeId);
+      const used = findIconComboUser(opts.usedCols, sel, opts.excludeOwnerId);
       if(used){ errEl.textContent = '這個圖示與顏色已經被「' + used.name + '」使用了，\n請換一個圖示或顏色。'; return; }
       close();
       opts.onConfirm({icon: sel.icon, color: sel.color});
@@ -6515,11 +6533,13 @@
   }
   // 自己欄位的圖示：點欄位名稱後面的圖示（還沒設定過的會顯示一個虛線小圓圈）來修改
   function openColumnIconPicker(col){
+    const cur = userIconOf(col);
     openIconPicker({
-      initial: col.icon ? {icon: col.icon, color: col.iconColor} : null,
-      usedCols: columns, excludeId: col.id,
+      initial: cur ? {icon: cur.icon, color: cur.color} : null,
+      usedCols: columns, excludeOwnerId: col.ownerId,
       onConfirm: function(sel){
-        col.icon = sel.icon; col.iconColor = sel.color;
+        // 同一個使用者名下的所有欄位一起換成同一組圖示
+        columns.forEach(function(c){ if(c.ownerId === col.ownerId){ c.icon = sel.icon; c.iconColor = sel.color; } });
         scheduleSaveToStorage();
         renderColumnHeader();
       }
@@ -6543,10 +6563,11 @@
       nameText.textContent = col.name;
       nameEl.appendChild(nameText);
       // 名稱後面的使用者圖示；自己的欄位還沒設定圖示時，顯示虛線小圓圈當作入口
-      if(col.icon && COL_ICON_MAP[col.icon]){
+      const uIcon = userIconOf(col);
+      if(uIcon && COL_ICON_MAP[uIcon.icon]){
         const ic = document.createElement('span');
         ic.className = 'col-icon';
-        ic.innerHTML = colIconSvg(col.icon, colIconHex(col));
+        ic.innerHTML = colIconSvg(uIcon.icon, colIconHex(uIcon.color));
         nameEl.appendChild(ic);
       } else if(!selectMode && col.ownerId === DEVICE_ID){
         const ic = document.createElement('span');
@@ -8558,7 +8579,10 @@
       if(!name) return;
       const id = newColumnId();
       animateColumnChange(function(){
-        columns.push({id, name, ownerId: DEVICE_ID});
+        const mineIcon = userIconOf({ownerId: DEVICE_ID});
+        const newCol = {id, name, ownerId: DEVICE_ID};
+        if(mineIcon){ newCol.icon = mineIcon.icon; newCol.iconColor = mineIcon.color; } // 同一個使用者的欄位用同一組圖示
+        columns.push(newCol);
         renderColumnHeader();
         renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
       });
@@ -10158,6 +10182,7 @@
     // 行程顏色會跟著風格換成配對色，已經畫在畫面上的卡片要重畫
     if(NOTEBOOK){
       try{
+        refreshColumnIconColors();
         renderEvents();
         if(pageMonth.classList.contains('active')) renderMonthGrid();
       }catch(err){ console.error('切換風格後重繪失敗：', err); }
