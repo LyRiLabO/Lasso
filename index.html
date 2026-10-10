@@ -6,7 +6,7 @@
 <title>手帳曆 · 共編行事曆</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --body-bg:#DDD5C0;
@@ -153,6 +153,70 @@
     --sage:#616543;
     --dusk:#74735D;
     --blush:#813E29;
+  }
+
+  /* ============ 個人化主題：花園午茶 ============
+     各分類的顏色由使用者逐項指定（變數意義同美式復古那段）。「線條」類（線條、
+     淡橫條紋、次要文字、提示文字）共用色卡上的「次要文字」色，時間軸橫線再往
+     手帳底色混淡一些。月曆所在日（--gold）是各風格自己的顏色，圈內數字用主文字色。行程十六色見
+     EVENT_COLOR_THEME_IDS。 */
+  [data-theme="garden-tea"]{
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --body-bg:#E5E5DE;
+    --paper:#F4F4EC;
+    --paper-deep:#DDDCD6;
+    --line:#5E4F75;
+    --line-soft:#5E4F75;
+    --grid-line:#B0AAB6;
+    --grid-line-sub:#B0AAB6;
+    --ink:#290848;
+    --ink-soft:#5E4F75;
+    --ink-faint:#5E4F75;
+    --btn-coffee:#290848;
+    --btn-brown:#3F4C42;
+    --btn-face:#F4F4EC;
+    --btn-relief:0 3px 8px rgba(63,76,66,0.34), 0 1px 3px rgba(63,76,66,0.22);
+    --btn-face-pressed:#DDDCD6;
+    --btn-relief-pressed:inset 0 1px 3px rgba(63,76,66,0.32), 0 0 0 rgba(63,76,66,0);
+    --red:#F1407F;
+    --red-deep:#AE2E5B;
+    --card:#FFFFF7;
+    --date-bg:#FEFFFF;
+    --shadow:rgba(41,8,72,0.22);
+    --gold:#94C1A0;
+    --gold-fg:var(--ink); /* 月曆所在日圓圈裡的數字：用主文字色，淺色底上才看得清楚 */
+  }
+
+  /* ============ 個人化主題：莓果野餐 ============
+     各分類的顏色由使用者逐項指定（變數意義同美式復古那段）。「線條」類（線條、
+     淡橫條紋、次要文字、提示文字）共用色卡上的「次要文字」色，時間軸橫線再往
+     手帳底色混淡一些。月曆所在日（--gold）是各風格自己的顏色，圈內數字用主文字色。行程十六色見
+     EVENT_COLOR_THEME_IDS。 */
+  [data-theme="berry-picnic"]{
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --body-bg:#E6E5E2;
+    --paper:#F5F4F0;
+    --paper-deep:#E6E5E1;
+    --line:#8BA7C8;
+    --line-soft:#8BA7C8;
+    --grid-line:#C5D1DE;
+    --grid-line-sub:#C5D1DE;
+    --ink:#245A7A;
+    --ink-soft:#8BA7C8;
+    --ink-faint:#8BA7C8;
+    --btn-coffee:#245A7A;
+    --btn-brown:#44677B;
+    --btn-face:#F5F4F0;
+    --btn-relief:0 3px 8px rgba(68,103,123,0.34), 0 1px 3px rgba(68,103,123,0.22);
+    --btn-face-pressed:#E6E5E1;
+    --btn-relief-pressed:inset 0 1px 3px rgba(68,103,123,0.32), 0 0 0 rgba(68,103,123,0);
+    --red:#E12032;
+    --red-deep:#A21724;
+    --card:#FFFFFE;
+    --date-bg:#FEFEFE;
+    --shadow:rgba(36,90,122,0.22);
+    --gold:#A3BFE0;
+    --gold-fg:var(--ink); /* 月曆所在日圓圈裡的數字：用主文字色，淺色底上才看得清楚 */
   }
 
   /* 現在時間線最左端的圓點改成小星星。 */
@@ -458,14 +522,16 @@
   /* 「個人化」選單裡的主題色票：一顆圓形分成三色（該主題的卡片底色／
      主色／強調金色），底下配文字標籤。選到的那個用外框圈起來，跟
      .nav-row.current 用同一套「選到了就描邊」語彙。 */
-  .theme-swatch-row{display:flex; flex-wrap:wrap; gap:14px; padding:2px 0;}
+  /* 一排剛好三個（每個佔三分之一寬）、整排置中；第四個自己一排也置中。 */
+  .theme-swatch-row{display:flex; flex-wrap:wrap; justify-content:center; gap:10px 4px; padding:2px 0;}
   .theme-swatch{
-    display:flex; flex-direction:column; align-items:center; gap:6px;
-    background:none; border:none; padding:2px; cursor:pointer;
-    font-family:'Noto Sans TC', sans-serif; font-size:11.5px; color:var(--ink-soft);
+    flex:0 0 calc((100% - 8px) / 3); min-width:0; box-sizing:border-box;
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    background:none; border:none; padding:2px 0; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; font-size:10.5px; white-space:nowrap; color:var(--ink-soft);
   }
   .theme-swatch-dot{
-    width:42px; height:42px; border-radius:50%;
+    width:34px; height:34px; border-radius:50%;
     border:2px solid transparent;
     box-shadow:0 2px 5px rgba(0,0,0,.2);
     background:conic-gradient(from -30deg, var(--sw-c1) 0 33.34%, var(--sw-c2) 33.34% 66.67%, var(--sw-c3) 66.67% 100%);
@@ -814,7 +880,7 @@
   }
   .date-display .weekday{
     display:block;
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:12px;
     letter-spacing:.12em;
     color:var(--ink-faint);
@@ -895,7 +961,7 @@
   .hour-row .hlabel{
     position:absolute;
     left:6px; top:-7px;
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:12.5px;
     color:var(--ink-faint);
     background:var(--paper);
@@ -1027,7 +1093,7 @@
     overflow:hidden;
   }
   .event-card .ecard-time{
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:9.5px;
     color:var(--ecard-text-soft, var(--ink-soft));
     margin-top:1px;
@@ -1572,7 +1638,7 @@
     justify-content:center;
   }
   .selection-box .selection-label{
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-weight:700;
     font-size:11px;
     color:var(--red-deep);
@@ -1739,7 +1805,7 @@
     position:absolute;
     transform:translate(-50%,-50%);
     font-size:13px; color:var(--ink-faint);
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     text-align:center;
     white-space:nowrap;
     pointer-events:none;
@@ -1753,7 +1819,7 @@
     border-bottom:1px solid var(--line);
   }
   .edit-title-label{
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:12.5px;
     letter-spacing:.18em;
     color:var(--ink-faint);
@@ -1807,7 +1873,7 @@
   }
   .field-lock-hint[hidden]{display:none;}
   .field-label{
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:12px;
     letter-spacing:.14em;
     color:var(--ink-faint);
@@ -1877,7 +1943,7 @@
     border-left:1px dashed var(--line);
   }
   .time-trio label{
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:11px;
     letter-spacing:.08em;
     color:var(--ink-faint);
@@ -1886,7 +1952,7 @@
   .time-trio input{
     border:none;
     background:transparent;
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-weight:700;
     font-size:15px;
     color:var(--ink);
@@ -1926,7 +1992,7 @@
     display:block;
     border:none;
     background:transparent;
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-weight:700;
     font-size:15px;
     color:var(--ink);
@@ -1999,7 +2065,7 @@
     display:flex; align-items:baseline; gap:6px;
   }
   .picker-cal-title .picker-cal-year{
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:14px;
     color:var(--ink-faint);
   }
@@ -2011,7 +2077,7 @@
   }
   .picker-cal-weekdays{
     display:grid; grid-template-columns:repeat(7,1fr);
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:12.5px;
     color:var(--ink-faint);
     text-align:center;
@@ -2046,7 +2112,7 @@
   .picker-cal-cell{
     aspect-ratio:1;
     display:flex; align-items:center; justify-content:center;
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:14px;
     color:var(--ink);
     border-radius:50%;
@@ -2081,7 +2147,7 @@
 
   .picker-time-title{
     text-align:center;
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:12.5px;
     letter-spacing:.14em;
     color:var(--ink-faint);
@@ -2107,7 +2173,7 @@
     height:40px;
     display:flex; align-items:center; justify-content:center;
     scroll-snap-align:center;
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:19px;
     color:var(--ink-faint);
   }
@@ -2117,7 +2183,7 @@
     font-size:24px;
   }
   .picker-wheel-colon{
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:20px;
     font-weight:700;
     color:var(--ink);
@@ -2329,7 +2395,7 @@
   .month-weekdays{
     display:grid; grid-template-columns:repeat(7,1fr);
     padding:2px 8px 3px 8px;
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:11px;
     color:var(--ink-faint);
     text-align:center;
@@ -2393,7 +2459,7 @@
   .month-cell.outside-month{opacity:.4;}
   .month-cell .cell-date{
     flex:0 0 auto;
-    font-family:'JetBrains Mono', monospace;
+    font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
     font-size:11px;
     color:var(--ink);
     text-align:center;
@@ -3115,7 +3181,7 @@
 
   <!-- ============ 共用元件：自訂日期／時間選擇器 ============
        取代原生 input[type=date] / input[type=time]，套用手帳曆本身的紙感
-       配色與字體（JetBrains Mono 數字、Noto Serif TC 標題）。放在 #phone
+       配色與字體（數字用 Noto Sans TC 等寬數字、Noto Serif TC 標題）。放在 #phone
        這一層、兩個 .page 之外，這樣不管目前在時間軸頁還是編輯頁，都能疊在
        最上層（#phone 本身是 position:relative + overflow:hidden，這個
        overlay 用 position:absolute; inset:0 剛好貼齊整個手機畫面）。
@@ -4037,7 +4103,41 @@
     {id:'fo-mistrose', name:'粉霧米', hex:'#E2D0C2'},
     {id:'fo-rosebrown', name:'玫瑰褐', hex:'#907C73'},
     {id:'fo-chestgrey', name:'灰栗褐', hex:'#5C534E'},
-    {id:'fo-bark', name:'深樹皮', hex:'#3E3725'}
+    {id:'fo-bark', name:'深樹皮', hex:'#3E3725'},
+    // ---- 花園午茶 ----（取自使用者提供的色卡，由左到右、由上到下）
+    {id:'gt-rose', name:'玫瑰粉', hex:'#F75D93'},
+    {id:'gt-blossom', name:'櫻花粉', hex:'#FF9CA8'},
+    {id:'gt-dustrose', name:'霧玫瑰', hex:'#EDC5BD'},
+    {id:'gt-latte', name:'奶茶杏', hex:'#EFDAC7'},
+    {id:'gt-lemon', name:'檸檬黃', hex:'#F3C623'},
+    {id:'gt-tangerine', name:'蜜橘', hex:'#F69932'},
+    {id:'gt-pumpkin', name:'南瓜橘', hex:'#FA6638'},
+    {id:'gt-mint', name:'薄荷綠', hex:'#95C1A0'},
+    {id:'gt-garden', name:'園林綠', hex:'#2E5A43'},
+    {id:'gt-cornflower', name:'矢車菊藍', hex:'#226194'},
+    {id:'gt-sky', name:'晴空藍', hex:'#2289B2'},
+    {id:'gt-mistlake', name:'霧湖藍', hex:'#9AC1C6'},
+    {id:'gt-iris', name:'鳶尾淡藍', hex:'#BEC9E9'},
+    {id:'gt-lilac', name:'淡紫', hex:'#DCCEF1'},
+    {id:'gt-lavender', name:'薰衣草紫', hex:'#B694F2'},
+    {id:'gt-pearl', name:'珍珠粉灰', hex:'#EBE0E6'},
+    // ---- 莓果野餐 ----（取自使用者提供的色卡，由左到右、由上到下）
+    {id:'bp-coral', name:'珊瑚紅', hex:'#FF7777'},
+    {id:'bp-berry', name:'莓果紅', hex:'#EF283B'},
+    {id:'bp-tomato', name:'番茄紅', hex:'#E14337'},
+    {id:'bp-orange', name:'橘紅', hex:'#FB693A'},
+    {id:'bp-peach', name:'蜜桃', hex:'#FFBC97'},
+    {id:'bp-mistblue', name:'霧藍白', hex:'#D6DFF0'},
+    {id:'bp-sky', name:'天空藍', hex:'#A3C0E0'},
+    {id:'bp-denim', name:'丹寧藍', hex:'#668EB2'},
+    {id:'bp-slate', name:'灰藍', hex:'#4A7892'},
+    {id:'bp-navy', name:'深海藍', hex:'#225978'},
+    {id:'bp-meadow', name:'淡草綠', hex:'#D9E3CA'},
+    {id:'bp-sage', name:'灰綠', hex:'#B7C4B2'},
+    {id:'bp-moss', name:'苔綠', hex:'#7EA58A'},
+    {id:'bp-pine', name:'深松綠', hex:'#2A6551'},
+    {id:'bp-oat', name:'燕麥', hex:'#EAE3C9'},
+    {id:'bp-cream', name:'奶油黃', hex:'#FEEDC1'}
   ];
   const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
   const rawEventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
@@ -4055,7 +4155,9 @@
     'default':          ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
     'american-vintage': ['av-wine','av-rust','av-pumpkin','av-yolk','av-greyolive','av-mistteal','av-inkteal','av-pine','av-slateteal','av-navy','av-ivory','av-camel','av-amber','av-chestnut','av-prune','av-darkolive'],
     'showa':            ['sw-sienna','sw-brick','sw-vermil','sw-amber','sw-wheat','sw-matcha','sw-greymoss','sw-moss','sw-turquoise','sw-jade','sw-greyteal','sw-leadblue','sw-nightpurple','sw-cocoa','sw-coffee','sw-terra'],
-    'forest':           ['fo-khaki','fo-asholive','fo-moss','fo-deepcedar','fo-forest','fo-leaf','fo-sagegrey','fo-oat','fo-cream','fo-sand','fo-greige','fo-darkolive','fo-mistrose','fo-rosebrown','fo-chestgrey','fo-bark']
+    'forest':           ['fo-khaki','fo-asholive','fo-moss','fo-deepcedar','fo-forest','fo-leaf','fo-sagegrey','fo-oat','fo-cream','fo-sand','fo-greige','fo-darkolive','fo-mistrose','fo-rosebrown','fo-chestgrey','fo-bark'],
+    'garden-tea': ['gt-rose','gt-blossom','gt-dustrose','gt-latte','gt-lemon','gt-tangerine','gt-pumpkin','gt-mint','gt-garden','gt-cornflower','gt-sky','gt-mistlake','gt-iris','gt-lilac','gt-lavender','gt-pearl'],
+    'berry-picnic': ['bp-coral','bp-berry','bp-tomato','bp-orange','bp-peach','bp-mistblue','bp-sky','bp-denim','bp-slate','bp-navy','bp-meadow','bp-sage','bp-moss','bp-pine','bp-oat','bp-cream']
   };
   // 舊版配色（已被取代）用過的 id：照原本所在的位置對應到新色票的同一格，
   // 這樣舊行程不會因為換了色票就全部變成同一種顏色。
@@ -4108,6 +4210,16 @@
     return '#' + [dr,dg,db].map(v => v.toString(16).padStart(2,'0')).join('');
   }
 
+  // 「已完成」底色／分隔線的顏色：一般行程比格子本身略深；但格子本身已經很深
+  // （深紅、深藍、深棕這類）時再調深就接近全黑，改成往白色調淺一點。
+  function doneSepHex(hex){
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    const yiq = (r*299 + g*587 + b*114) / 1000;
+    if(yiq >= 100) return darkenHex(hex, 0.28);
+    const m = 0.30;
+    return '#' + [r,g,b].map(v => Math.round(v + (255 - v)*m).toString(16).padStart(2,'0')).join('');
+  }
+
   // 套用行程自訂顏色到卡片：整個格子填滿該色，並依明暗決定文字用黑或白。
   function applyEventColor(card, colorId){
     const c = eventColorById(colorId);
@@ -4116,8 +4228,8 @@
     card.style.setProperty('--ecard-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
     card.style.setProperty('--ecard-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
     card.style.setProperty('--ecard-handle-color', darkenHex(c.hex, 0.22));
-    card.style.setProperty('--ecard-sep', darkenHex(c.hex, 0.28));
-    card.style.setProperty('--ecard-sep-text', isLightColor(darkenHex(c.hex, 0.28)) ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
+    card.style.setProperty('--ecard-sep', doneSepHex(c.hex));
+    card.style.setProperty('--ecard-sep-text', isLightColor(doneSepHex(c.hex)) ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
   }
 
   function colIndex(colId){
@@ -5095,8 +5207,8 @@
       const colorInfo = eventColorById(item.color);
       const light = isLightColor(colorInfo.hex);
       btn.style.setProperty('--item-bg', colorInfo.hex);
-      btn.style.setProperty('--item-sep', darkenHex(colorInfo.hex, 0.28));
-      btn.style.setProperty('--item-sep-text', isLightColor(darkenHex(colorInfo.hex, 0.28)) ? '#1e1a16' : '#ffffff');
+      btn.style.setProperty('--item-sep', doneSepHex(colorInfo.hex));
+      btn.style.setProperty('--item-sep-text', isLightColor(doneSepHex(colorInfo.hex)) ? '#1e1a16' : '#ffffff');
       btn.style.setProperty('--item-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
       btn.style.setProperty('--item-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
       btn.querySelector('.cluster-title').textContent = item.title;
@@ -9314,9 +9426,11 @@
   const THEME_STORAGE_KEY = 'plannerTheme';
   const THEMES = [
     { id: 'default', name: '經典', colors: ['#FBD3C4', '#8FA1B0', '#FCEFB4'] },
-    { id: 'american-vintage', name: '美式復古', colors: ['#7E0003', '#1E2343', '#F8EDDB'] },
+    { id: 'american-vintage', name: '美式復古', colors: ['#99341D', '#25353C', '#5A8A7F'] },
     { id: 'showa', name: '昭和懷舊', colors: ['#861108', '#317B6A', '#DE942B'] },
-    { id: 'forest', name: '森林手札', colors: ['#616543', '#A39F7D', '#D7CBB3'] }
+    { id: 'forest', name: '森林手札', colors: ['#616543', '#A39F7D', '#D7CBB3'] },
+    { id: 'garden-tea', name: '花園午茶', colors: ['#FF9CA8', '#F3C622', '#2289B1'] },
+    { id: 'berry-picnic', name: '莓果野餐', colors: ['#F22B3E', '#D8E2F3', '#DCE6CD'] }
   ];
   let currentTheme = 'default';
   (function initTheme(){
