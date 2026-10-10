@@ -41,6 +41,7 @@
     --sage:#7C8F6A;
     --dusk:#6E7FA3;
     --blush:#C77B6C;
+    --col-w:25%; --cols-w:100%; --cols-x:0px; /* 欄位寬度／全部欄位總寬／橫向捲動位移，由 JS（applyColLayout）更新 */
     --cell-px:16.67; /* 「格子」時間軸背景的單格邊長（px，不含單位），跟 --hour-px 一樣由 JS 在縮放時更新 */
     --hour-px:50; /* 每小時的高度（px，不含單位），縮放時由 JS 更新這個變數，
                      所有跟每小時高度成比例的地方（格線、卡片容器）都跟著變 */
@@ -796,8 +797,7 @@
      優先權不夠高蓋不過去，要自己補一條規則，[hidden] 才會真的讓按鍵消失
      （這裡踩到跟 .select-delete-btn/.select-move-btn 一樣的坑，做法一致）。 */
   .add-col-btn[hidden]{display:none;}
-  /* 達到 4 人上限時：按鍵不隱藏，改成顏色變淡（看起來像不能按），
-     但還是能點——點下去會跳提示小卡片說明原因（見 showToast 呼叫處）。 */
+  /* （已不再有人數上限，.is-maxed 目前沒有地方會套用，保留樣式以免舊程式碼殘留引用出錯。） */
   .add-col-btn.is-maxed{opacity:0.4;}
   .add-col-btn.is-maxed:active{
     /* 保留一樣的視覺，不要有「按下去」的凹陷回饋，減少誤以為真的加成功的感覺 */
@@ -978,7 +978,7 @@
   }
   .timeline-grid, .day-preview-panel{
     position:absolute;
-    top:110px; left:0; right:16px;
+    top:110px; left:0; right:0; /* 原本右邊留了 16px 空白用不到，攤開給欄位用 */
     height:calc(var(--hour-px) * 24px);
     will-change:transform;
   }
@@ -1046,7 +1046,6 @@
   }
   .events-layer{
     position:absolute; inset:0;
-    left:58px; right:14px;
     z-index:2;
   }
   .event-card{
@@ -1642,12 +1641,12 @@
 
   /* 底部懸浮橫排：選取、上一步、下一步、新增行程(鉛筆) 由左到右排成一列，
      整排貼齊畫面下緣，橫向置中對齊「右側格線區域」的正中央——用
-     left:52px／right:16px 卡出跟時間軸格線本身完全一樣的可視範圍（扣掉
-     最左邊時間刻度欄、右邊留白），裡面再用 justify-content:center 置中，
+     left:52px／right:0 卡出跟時間軸格線本身完全一樣的可視範圍（扣掉
+     最左邊時間刻度欄），裡面再用 justify-content:center 置中，
      不用自己算螢幕寬度、也不會佔到時間刻度欄的位置。 */
   .bottom-action-bar{
     position:absolute;
-    left:52px; right:16px; bottom:22px;
+    left:52px; right:0; bottom:22px;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -1749,25 +1748,61 @@
   }
   .notebook-name-text:active{opacity:.6;}
 
-  .column-header-row{
-    display:flex;
-    padding:4.5px 14px 3.5px 58px; /* 原本 10px/8px 再打 2/3，欄位名稱列整體再變矮 */
+  /* ---- 欄位標題列（可左右捲動）----
+     .col-head-bar：整條標題列的外觀（底色、底線、左側時間刻度欄的留白 58px、右邊 6px）。
+     .col-head-viewport：真正的「可視範圍」，超出的欄位被裁掉，只能靠左右滑動（見
+     initColHeadGestures）露出來。
+     #columnHeaderRow（.column-header-row）：寬度 = 全部欄位加總（--cols-w），用
+     translateX(--cols-x) 跟著捲動位置位移；時間軸本體的欄位分隔線、行程卡片用同一組
+     變數位移，所以標題跟下面的欄位永遠對齊。 */
+  .col-head-bar{
     background:var(--paper);
     border-bottom:1px solid var(--line);
-    gap:0;
+    padding:0 6px 0 58px; /* 左右內距要跟 .cols-clip（left:58px／right:6px）完全一致 */
     position:relative;
     z-index:3; /* 跟 .planner-header 同一層，兩者都要蓋在拖曳中的 .card-ghost（z-index:2）上面 */
   }
+  .col-head-viewport{
+    overflow:hidden;
+    touch-action:none; /* 左右滑動、長按拖移都由 JS 處理，不要讓瀏覽器接管手勢 */
+  }
+  .column-header-row{
+    display:flex;
+    position:relative;
+    width:var(--cols-w, 100%);
+    transform:translateX(var(--cols-x, 0px));
+    will-change:transform;
+  }
   .column-header-row .col-head{
-    flex:1 1 0;
+    flex:0 0 var(--col-w, 25%);
+    box-sizing:border-box;
     min-width:0;
     text-align:center;
-    padding:0 4px;
+    padding:4.5px 4px 3.5px; /* 上下內距放在每一欄自己身上（不是整列），分隔線才能從最上拉到最下 */
+  }
+  /* 欄位之間的分隔線延伸到標題列：跟時間軸本體的 .col-div-line 在同一個 x 位置 */
+  .column-header-row .col-head + .col-head{
+    border-left:1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  }
+  /* 長按分隔線拖移調整欄位寬度時：被拖的那條線標紅加粗（標題列跟時間軸本體各一條） */
+  .column-header-row .col-head.div-active{border-left:2px solid var(--red);}
+  .col-div-line.div-active{background:var(--red); width:2px; opacity:1;}
+  /* 長按欄位名稱拖移排序：被拖的那一欄浮起來，目的地用淡色塊標示 */
+  .column-header-row .col-head.reordering{
+    z-index:6; background:var(--card); border-radius:8px;
+    box-shadow:0 3px 10px var(--shadow);
+    transition:none;
+  }
+  .col-drop-mark{
+    position:absolute; top:0; bottom:0;
+    background:color-mix(in srgb, var(--red) 14%, transparent);
+    border-radius:8px; pointer-events:none;
   }
   .col-head .col-name{
     font-family:'Noto Sans TC', sans-serif;
     font-weight:700;
-    font-size:13px;
+    display:block; /* 要讓 overflow／ellipsis 真的生效，也才能量得出名稱有沒有超出欄寬 */
+    font-size:var(--col-name-px, 13px); /* 由 fitColumnNames() 統一調整：所有欄位同一個大小 */
     line-height:16.65px; /* 字放大了，但行高固定成原本 11.5px 字體的行高，欄位名稱列高度不變 */
     color:var(--ink-soft);
     white-space:nowrap;
@@ -1838,9 +1873,22 @@
   .col-dividers{
     position:absolute;
     inset:0;
-    left:58px; right:14px;
     z-index:1;
     pointer-events:none;
+  }
+  /* 欄位分隔線層、行程卡片層都放在 .cols-clip 裡：.cols-clip 是固定的「可視範圍」
+     （左邊留 58px 給時間刻度、右邊 6px），裡面兩層的寬度是全部欄位加總，用
+     translateX 跟著標題列的捲動位置一起位移。 */
+  .cols-clip{
+    position:absolute;
+    top:0; bottom:0; left:58px; right:6px;
+    overflow:hidden;
+  }
+  .cols-clip .col-dividers,
+  .cols-clip .events-layer{
+    left:0; right:auto;
+    width:var(--cols-w, 100%);
+    transform:translateX(var(--cols-x, 0px));
   }
   .col-dividers .col-div-line{
     position:absolute;
@@ -3011,14 +3059,20 @@
       </div>
     </header>
 
-    <div class="column-header-row" id="columnHeaderRow"></div>
+    <div class="col-head-bar">
+      <div class="col-head-viewport" id="colHeadViewport">
+        <div class="column-header-row" id="columnHeaderRow"></div>
+      </div>
+    </div>
     <div class="timeline-scroll" id="timelineScroll">
       <div class="day-slider" id="daySlider">
         <div class="timeline-grid" id="timelineGrid">
           <div class="margin-rule"></div>
           <!-- hour-row 由 JS 產生 -->
-          <div class="col-dividers" id="colDividers"></div>
-          <div class="events-layer" id="eventsLayer"></div>
+          <div class="cols-clip" id="colsClip">
+            <div class="col-dividers" id="colDividers"></div>
+            <div class="events-layer" id="eventsLayer"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -3880,8 +3934,7 @@
   }
   // 這支裝置名下沒有任何欄位就沒有「身分」可以新增行程（或匯入行程），
   // 跳個小卡片提醒，不強行跳出對話框打斷操作——使用者自己知道要去按
-  // 「新增欄位」（欄位已滿 4 個的話，那顆鍵本身也會用同一套小卡片提示
-  // 「已達欄位上限」，兩邊的提示是一致的）。
+  // 「新增欄位」。
   function promptNeedOwnColumn(){
     showToast('目前沒有可用欄位\n請先建立屬於自己的欄位', 1800);
   }
@@ -5478,6 +5531,8 @@
   const timelineGrid = document.getElementById('timelineGrid');
   const eventsLayer = document.getElementById('eventsLayer');
   const colDividers = document.getElementById('colDividers');
+  const colsClip = document.getElementById('colsClip');
+  const colHeadViewport = document.getElementById('colHeadViewport');
   const columnHeaderRow = document.getElementById('columnHeaderRow');
   const weekdayLabel = document.getElementById('weekdayLabel');
   const dateLabel = document.getElementById('dateLabel');
@@ -5730,7 +5785,7 @@
       validate: function(value){
         const v = (value || '').trim();
         if(!v || v === col.name) return '';
-        return columns.some(c => c.id !== col.id && c.name === v) ? '名稱已被使用' : '';
+        return nameLengthError(v) || (columns.some(c => c.id !== col.id && c.name === v) ? '名稱已被使用' : '');
       }
     });
   }
@@ -5906,75 +5961,355 @@
     return owners.indexOf(col.ownerId || '') % 4;
   }
 
+
+  // ============ 欄位名稱：字數上限 + 統一縮放 ============
+  // 一個欄位的寬度大約只有 (螢幕寬 - 64) / 4，名稱太長放不下，所以：
+  //  1. 名稱字數有上限（NAME_MAX_UNITS，中文字算 1、英數字算 0.5）；
+  //  2. 放不下時「所有欄位一起」縮小字體（不是只縮長名字的那一欄，不然大小不均
+  //     很怪），字體有下限 COL_NAME_MIN_PX，縮到下限還放不下的舊資料才用「…」截斷。
+  // 字數上限 6 個字在最小字體 10px 時剛好放得進最窄的欄寬（4 欄、360px 寬的手機）。
+  const NAME_MAX_UNITS = 6;
+  const COL_NAME_MAX_PX = 13;
+  const COL_NAME_MIN_PX = 10;
+  function nameUnits(str){
+    let u = 0;
+    for(const ch of Array.from(str || '')) u += (ch.charCodeAt(0) < 0x2E80) ? 0.5 : 1; // 半形（英數、標點）0.5，其他（中日韓字、全形）1
+    return u;
+  }
+  function nameLengthError(str){
+    return nameUnits(str) > NAME_MAX_UNITS ? '名稱最多 ' + NAME_MAX_UNITS + ' 個字（英文、數字兩個算一個字）' : '';
+  }
+  function fitColumnNames(){
+    const names = Array.from(columnHeaderRow.querySelectorAll('.col-name'));
+    if(!names.length) return;
+    let size = COL_NAME_MAX_PX;
+    columnHeaderRow.style.setProperty('--col-name-px', size + 'px');
+    if(!names[0].clientWidth) return; // 這一頁目前沒顯示，量不到寬度；下次顯示時 resize／重繪會再跑
+    while(size > COL_NAME_MIN_PX && names.some(el => el.scrollWidth > el.clientWidth + 0.5)){
+      size -= 0.5;
+      columnHeaderRow.style.setProperty('--col-name-px', size + 'px');
+    }
+  }
+  window.addEventListener('resize', fitColumnNames);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitColumnNames); // 網路字體載入前後字寬不同，載完要再量一次
+
+
+  // ============ 欄位橫向捲動、調寬、排序 ============
+  // 欄位人數沒有上限。標題列可以左右滑動（時間軸本體的欄位跟著一起動）：
+  //  - 不調整時，單頁預設最多顯示兩欄（每欄寬 = 可視範圍的一半），多的用滑的；
+  //  - 長按「兩欄之間的分隔線」左右拖移，可以改變欄寬；單頁最多顯示五欄（欄寬
+  //    不小於可視範圍的 1/5），最寬一欄佔滿一頁；
+  //  - 長按欄位名稱後拖移，可以改變欄位左右排列順序（只存在這支裝置，不影響別人）。
+  // 欄寬是「所有欄位共用的一個寬度」（存成可視範圍的比例），所以時間軸本體裡每一欄的
+  // 百分比位置計算（idx / n）完全不用改：只要把欄位層整個加寬成全部欄位加總的寬度。
+  const COL_FRAC_DEFAULT = 0.5;   // 預設：每欄佔可視範圍的一半（單頁兩人）
+  const COL_FRAC_MIN = 0.2;       // 欄寬下限：可視範圍的 1/5（單頁最多五人）
+  const COL_FRAC_MAX = 1;         // 欄寬上限：佔滿一頁
+  const COL_FRAC_KEY = 'plannerColFrac';
+  const COL_ORDER_KEY_PREFIX = 'plannerColOrder:';
+  let colFracPref = null;         // 使用者調整過的欄寬比例；null＝沒調整過，用預設
+  try{
+    const f = parseFloat(localStorage.getItem(COL_FRAC_KEY));
+    if(isFinite(f)) colFracPref = Math.max(COL_FRAC_MIN, Math.min(COL_FRAC_MAX, f));
+  }catch(err){}
+  let colW = 0, colsTotalW = 0, colViewW = 0, colScrollX = 0;
+
+  function setColScroll(x){
+    const max = Math.max(0, colsTotalW - colViewW);
+    colScrollX = Math.max(0, Math.min(max, x));
+    document.documentElement.style.setProperty('--cols-x', (-colScrollX) + 'px');
+  }
+  function applyColLayout(){
+    const viewW = colHeadViewport.clientWidth;
+    if(!viewW) return; // 這一頁目前沒顯示，量不到寬度；顯示出來時 ResizeObserver 會再跑一次
+    const n = Math.max(1, columns.length);
+    let frac = 1;
+    if(n > 1){
+      frac = colFracPref != null ? colFracPref : COL_FRAC_DEFAULT;
+      frac = Math.max(COL_FRAC_MIN, Math.min(COL_FRAC_MAX, frac));
+      frac = Math.max(frac, 1 / n); // 欄位太少、不夠鋪滿一頁時，平均分攤，右邊不留空白
+    }
+    colViewW = viewW;
+    colW = viewW * frac;
+    colsTotalW = colW * n;
+    const root = document.documentElement.style;
+    root.setProperty('--col-w', colW + 'px');
+    root.setProperty('--cols-w', colsTotalW + 'px');
+    setColScroll(colScrollX); // 欄位數／欄寬改變後，捲動位置要重新夾回合法範圍
+    fitColumnNames();
+  }
+  if(window.ResizeObserver){
+    let lastViewW = 0;
+    new ResizeObserver(function(){
+      const w = colHeadViewport.clientWidth;
+      if(!w) return;
+      applyColLayout();
+      if(lastViewW && Math.abs(lastViewW - w) > 1){
+        try{ if(NOTEBOOK) renderEvents(); }catch(err){} // 欄寬隨畫面寬度改變，卡片內的文字要重新排版
+      }
+      lastViewW = w;
+    }).observe(colHeadViewport);
+  }
+
+  // 本機的欄位排列順序（只存在這支裝置、依手帳分開存，不會同步給其他共編者）
+  function colOrderKey(){ return COL_ORDER_KEY_PREFIX + (NOTEBOOK ? NOTEBOOK.id : ''); }
+  function applyLocalColumnOrder(){
+    let ids = null;
+    try{ ids = JSON.parse(localStorage.getItem(colOrderKey()) || 'null'); }catch(err){}
+    if(!Array.isArray(ids)) return;
+    const pos = new Map(ids.map((id, i) => [id, i]));
+    const next = columns.map((c, i) => ({c: c, p: pos.has(c.id) ? pos.get(c.id) : 1e9 + i}))
+      .sort((a, b) => a.p - b.p).map(x => x.c);
+    if(next.some((c, i) => c !== columns[i])) columns.splice(0, columns.length, ...next);
+  }
+  function saveLocalColumnOrder(){
+    try{ localStorage.setItem(colOrderKey(), JSON.stringify(columns.map(c => c.id))); }catch(err){}
+  }
+
+  function onColHeadTap(col){
+    if(selectMode){
+      if(!canSelectColumn(col)) return;
+      if(selectedColumnIds.has(col.id)) selectedColumnIds.delete(col.id);
+      else selectedColumnIds.add(col.id);
+      renderColumnHeader();
+      renderColumnDividers();
+      updateDeleteButtonState();
+      return;
+    }
+    renameColumn(col);
+  }
+
+  function initColHeadGestures(){
+    const vp = colHeadViewport;
+    const MOVE_TOL = 8, LONG_MS = 450, DIV_HIT = 14;
+    let g = null;
+    let momentumRaf = 0, edgeRaf = 0;
+
+    function vpLeft(){ return vp.getBoundingClientRect().left; }
+    function contentX(clientX){ return clientX - vpLeft() + colScrollX; }
+    function dividerAt(clientX){
+      if(columns.length < 2 || !colW) return -1;
+      const cx = contentX(clientX);
+      const i = Math.round(cx / colW);
+      if(i < 1 || i > columns.length - 1) return -1;
+      return Math.abs(cx - i * colW) <= DIV_HIT ? i : -1;
+    }
+    function bodyDividerEl(i){
+      return colDividers.querySelectorAll('.col-div-line')[i - 1] || null;
+    }
+    function stopMomentum(){ if(momentumRaf){ cancelAnimationFrame(momentumRaf); momentumRaf = 0; } }
+    function stopEdge(){ if(edgeRaf){ cancelAnimationFrame(edgeRaf); edgeRaf = 0; } }
+
+    function longPress(){
+      if(!g || g.mode !== 'pending' || selectMode) return;
+      g.timer = 0;
+      if(g.divider > 0){
+        g.mode = 'resize';
+        const cells = columnHeaderRow.children;
+        if(cells[g.divider]) cells[g.divider].classList.add('div-active');
+        const bl = bodyDividerEl(g.divider);
+        if(bl) bl.classList.add('div-active');
+        zoomFastMode = true; // 拖移中卡片只更新位置和大小、不排版文字（跟雙指縮放同一套省效能做法）
+        return;
+      }
+      if(g.cellEl){
+        g.mode = 'armed';
+        const col = columns.find(c => c.id === g.cellEl.dataset.colId);
+        if(col && canSelectColumn(col)){
+          const nameEl = g.cellEl.querySelector('.col-name');
+          if(nameEl) openColMenu(nameEl, col); // 跟以前一樣：長按先跳出「刪除」小框框
+        }
+      }
+    }
+
+    // ---- 排序拖移 ----
+    function startReorder(){
+      closeCardMenu(); // 開始拖移就不再需要「刪除」小框框
+      g.mode = 'reorder';
+      g.fromIdx = columns.findIndex(c => c.id === g.cellEl.dataset.colId);
+      g.toIdx = g.fromIdx;
+      g.startContentX = g.startContentXAtDown;
+      g.cellEl.classList.add('reordering');
+      g.mark = document.createElement('div');
+      g.mark.className = 'col-drop-mark';
+      columnHeaderRow.insertBefore(g.mark, columnHeaderRow.firstChild);
+      updateReorder();
+      edgeLoop();
+    }
+    function updateReorder(){
+      const cx = contentX(g.lastX);
+      g.cellEl.style.transform = 'translateX(' + (cx - g.startContentX) + 'px)';
+      const n = columns.length;
+      g.toIdx = Math.max(0, Math.min(n - 1, Math.floor(cx / colW)));
+      g.mark.style.left = (g.toIdx * colW) + 'px';
+      g.mark.style.width = colW + 'px';
+    }
+    function edgeLoop(){
+      // 手指拖到可視範圍左右邊緣時，自動往那個方向捲，才能把欄位拖到看不見的位置
+      stopEdge();
+      const step = function(){
+        if(!g || g.mode !== 'reorder'){ edgeRaf = 0; return; }
+        const r = vp.getBoundingClientRect();
+        let v = 0;
+        if(g.lastX < r.left + 28) v = -7;
+        else if(g.lastX > r.right - 28) v = 7;
+        if(v){ setColScroll(colScrollX + v); updateReorder(); }
+        edgeRaf = requestAnimationFrame(step);
+      };
+      edgeRaf = requestAnimationFrame(step);
+    }
+    function finishReorder(commit){
+      stopEdge();
+      const from = g.fromIdx, to = g.toIdx;
+      g.cellEl.classList.remove('reordering');
+      g.cellEl.style.transform = '';
+      if(g.mark && g.mark.parentNode) g.mark.parentNode.removeChild(g.mark);
+      if(commit && from !== to && from >= 0){
+        const moved = columns.splice(from, 1)[0];
+        columns.splice(to, 0, moved);
+        saveLocalColumnOrder();
+        renderColumnHeader();
+        renderColumnDividers();
+        renderEvents();
+      }
+    }
+
+    // ---- 調寬拖移 ----
+    let resizeRaf = 0;
+    function updateResize(){
+      const i = g.divider;
+      const cx = contentX(g.lastX);
+      let frac = (cx / i) / colViewW;
+      frac = Math.max(COL_FRAC_MIN, Math.min(COL_FRAC_MAX, frac));
+      colFracPref = frac;
+      applyColLayout();
+      // 讓被拖的那條線留在手指底下：算出新欄寬後，反推捲動位置
+      setColScroll(i * colW - (g.lastX - vpLeft()));
+      if(!resizeRaf){
+        resizeRaf = requestAnimationFrame(function(){
+          resizeRaf = 0;
+          try{ renderEvents(); }catch(err){}
+        });
+      }
+    }
+    function finishResize(){
+      const cells = columnHeaderRow.children;
+      Array.from(cells).forEach(c => c.classList.remove('div-active'));
+      colDividers.querySelectorAll('.col-div-line.div-active').forEach(el => el.classList.remove('div-active'));
+      zoomFastMode = false;
+      try{ localStorage.setItem(COL_FRAC_KEY, String(colFracPref)); }catch(err){}
+      applyColLayout();
+      renderEvents(); // 放手後整組重排一次文字
+    }
+
+    // ---- 左右滑動 + 慣性 ----
+    function startMomentum(v){
+      stopMomentum();
+      let last = performance.now();
+      const step = function(now){
+        const dt = now - last; last = now;
+        setColScroll(colScrollX + v * dt);
+        v *= Math.pow(0.94, dt / 16.7);
+        const max = Math.max(0, colsTotalW - colViewW);
+        if(Math.abs(v) < 0.02 || colScrollX <= 0 || colScrollX >= max){ momentumRaf = 0; return; }
+        momentumRaf = requestAnimationFrame(step);
+      };
+      momentumRaf = requestAnimationFrame(step);
+    }
+
+    vp.addEventListener('pointerdown', function(e){
+      if(e.pointerType === 'mouse' && e.button !== 0) return;
+      if(g) return; // 已經有一根手指在操作，其他手指忽略
+      stopMomentum();
+      const cellEl = e.target.closest ? e.target.closest('.col-head') : null;
+      g = {
+        id: e.pointerId, mode: 'pending',
+        startX: e.clientX, startY: e.clientY, lastX: e.clientX,
+        startScroll: colScrollX, startContentXAtDown: contentX(e.clientX),
+        cellEl: cellEl, divider: dividerAt(e.clientX),
+        vel: 0, lastT: performance.now(), timer: 0
+      };
+      g.timer = setTimeout(longPress, LONG_MS);
+      try{ vp.setPointerCapture(e.pointerId); }catch(err){}
+    });
+    vp.addEventListener('pointermove', function(e){
+      if(!g || e.pointerId !== g.id) return;
+      g.lastX = e.clientX;
+      const dx = e.clientX - g.startX, dy = e.clientY - g.startY;
+      const moved = Math.hypot(dx, dy) > MOVE_TOL;
+      if(g.mode === 'pending'){
+        if(!moved) return;
+        clearTimeout(g.timer); g.timer = 0;
+        g.mode = 'scroll';
+      }
+      if(g.mode === 'armed'){
+        if(moved) startReorder();
+        return;
+      }
+      if(g.mode === 'reorder'){ updateReorder(); return; }
+      if(g.mode === 'resize'){ updateResize(); return; }
+      if(g.mode === 'scroll'){
+        const now = performance.now();
+        const before = colScrollX;
+        setColScroll(g.startScroll - dx);
+        const dt = Math.max(1, now - g.lastT);
+        g.vel = 0.8 * g.vel + 0.2 * ((colScrollX - before) / dt); // 捲動位置的變化速度（px/ms）：往左滑（內容往右露出更多欄）為正
+        g.lastT = now;
+      }
+    });
+    function end(e, cancelled){
+      if(!g || e.pointerId !== g.id) return;
+      clearTimeout(g.timer);
+      const gg = g;
+      try{ vp.releasePointerCapture(e.pointerId); }catch(err){}
+      if(gg.mode === 'reorder') finishReorder(!cancelled);
+      else if(gg.mode === 'resize') finishResize();
+      else if(gg.mode === 'scroll'){ if(!cancelled && Math.abs(gg.vel) > 0.05) startMomentum(gg.vel); }
+      else if(gg.mode === 'pending' && !cancelled && gg.cellEl){
+        const col = columns.find(c => c.id === gg.cellEl.dataset.colId);
+        if(col) onColHeadTap(col);
+      }
+      g = null;
+    }
+    vp.addEventListener('pointerup', function(e){ end(e, false); });
+    vp.addEventListener('pointercancel', function(e){ end(e, true); });
+  }
+  initColHeadGestures();
+
   function renderColumnHeader(){
+    applyLocalColumnOrder(); // 排列順序只存在這支裝置：每次重畫前都先照本機記住的順序排好
     captureUndoCheckpoint();
     renderNotebookNameBar();
     columnHeaderRow.innerHTML = '';
     columns.forEach((col, idx) => {
       const cell = document.createElement('div');
       cell.className = 'col-head';
+      cell.dataset.colId = col.id;
       cell.innerHTML = '<span class="col-name"></span>';
       cell.querySelector('.col-name').textContent = col.name;
       cell.querySelector('.col-name').dataset.ul = String(deviceLineStyle(col));
 
       if(selectMode){
-        const pickable = canSelectColumn(col);
-        if(pickable){
+        // 選取狀態下，欄位標題也是可點擊的選取對象（點擊由 initColHeadGestures 統一處理）
+        if(canSelectColumn(col)){
           cell.classList.add('select-pickable');
           if(selectedColumnIds.has(col.id)) cell.classList.add('select-picked');
-          cell.addEventListener('click', function(){
-            if(selectedColumnIds.has(col.id)) selectedColumnIds.delete(col.id);
-            else selectedColumnIds.add(col.id);
-            renderColumnHeader();
-            renderColumnDividers();
-            updateDeleteButtonState();
-          });
         } else {
           cell.classList.add('select-locked');
         }
       } else {
-        // 非選取狀態下，點擊欄位上方的姓名可以直接修改欄位名稱
-        // （包含一開始就有的「我」，以及後來透過「新增共編者」加入的人）。
-        // 長按同一個姓名會先跳出跟行程卡片一樣的小框框（只有「刪除」），
-        // 按下去才跳二次確認彈窗，省得為了刪一個人特地切進選取模式。
-        const nameEl = cell.querySelector('.col-name');
-        nameEl.classList.add('col-name-editable');
-
-        let longPressTimer = null;
-        let longPressFired = false;
-        let pressStart = null;
-
-        nameEl.addEventListener('pointerdown', function(e){
-          longPressFired = false;
-          pressStart = {x:e.clientX, y:e.clientY};
-          clearTimeout(longPressTimer);
-          longPressTimer = setTimeout(function(){
-            longPressFired = true;
-            if(!canSelectColumn(col)) return; // 不是自己的欄位不給刪
-            openColMenu(nameEl, col);
-          }, 500);
-        });
-        nameEl.addEventListener('pointermove', function(e){
-          if(!pressStart) return;
-          const dx = e.clientX - pressStart.x, dy = e.clientY - pressStart.y;
-          if(Math.hypot(dx, dy) > 10) clearTimeout(longPressTimer); // 手指滑動視為取消長按
-        });
-        nameEl.addEventListener('pointerup', function(){ clearTimeout(longPressTimer); });
-        nameEl.addEventListener('pointercancel', function(){ clearTimeout(longPressTimer); });
-        nameEl.addEventListener('click', function(e){
-          e.stopPropagation();
-          if(longPressFired){ longPressFired = false; return; } // 長按已經處理過，放開手指帶出的這次 click 不要再跳去改名
-          renameColumn(col);
-        });
+        // 非選取狀態：點姓名＝改名；長按＝刪除小框框；長按後拖移＝調整排列順序。
+        // 這些手勢全部在 initColHeadGestures() 統一處理（標題列本身還要能左右滑動、
+        // 長按分隔線調寬，不能各欄自己綁自己的）。
+        cell.querySelector('.col-name').classList.add('col-name-editable');
       }
 
       columnHeaderRow.appendChild(cell);
     });
-    // 達到 4 人上限時，「新增欄位」按鍵不隱藏，改成顏色變淡（看起來
-    // 不能按，但其實還是能點）——點下去會跳提示小卡片說「已達欄位上限」。
-    // 這個共編行事曆本來就是設計給小圈子（2-4人）用的並排欄位排版，
-    // 欄位刪到低於 4 人時按鍵自動恢復原本顏色。
-    document.getElementById('btnAddColumn').classList.toggle('is-maxed', columns.length >= 4);
+    applyColLayout();
+    fitColumnNames();
+    // 欄位人數不再有上限（太多時左右滑動標題列查看），按鍵永遠維持正常顏色。
+    document.getElementById('btnAddColumn').classList.remove('is-maxed');
   }
 
   function renderColumnDividers(){
@@ -6008,7 +6343,7 @@
       row.style.top = (h*hourPx)+'px';
       row.innerHTML = '<span class="hlabel">'+pad2(h)+':00</span><span class="half-tick"></span>'+
         '<span class="quarter-tick" style="top:'+(hourPx*0.25)+'px"></span><span class="quarter-tick" style="top:'+(hourPx*0.75)+'px"></span>';
-      timelineGrid.insertBefore(row, eventsLayer);
+      timelineGrid.insertBefore(row, colsClip);
     }
   }
 
@@ -6062,7 +6397,7 @@
     const line = document.createElement('div');
     line.className = 'now-line';
     line.style.top = (min/60*hourPx)+'px';
-    timelineGrid.insertBefore(line, eventsLayer);
+    timelineGrid.insertBefore(line, colsClip);
   }
 
   // hint-empty 已經跳出 timeline-scroll，變成 #page-timeline 的兄弟元素，
@@ -6509,7 +6844,10 @@
       line.style.left = (i/n*100)+'%';
       dividers.appendChild(line);
     }
-    panel.appendChild(dividers);
+    const previewClip = document.createElement('div');
+    previewClip.className = 'cols-clip';
+    previewClip.appendChild(dividers);
+    panel.appendChild(previewClip);
 
     // 如果預覽的這一天剛好是「今天」，直接把紅色的目前時間格線也畫進這個
     // 唯讀預覽面板——不然滑動轉場的過程中會看不到這條線，要等轉場動畫
@@ -6561,7 +6899,7 @@
         layer.appendChild(card);
       });
     });
-    panel.appendChild(layer);
+    previewClip.appendChild(layer);
     return panel;
   }
 
@@ -7949,7 +8287,6 @@
 
   document.getElementById('btnAddColumn').addEventListener('click', function(){
     if(selectMode) return;
-    if(columns.length >= 4){ showToast('已達欄位上限', 1400); return; } // 按鍵這時候是淡色但還是按得到，跳提示卡片說明
     showPromptDialog('新增欄位', '', function(value){
       const name = (value || '').trim();
       if(!name) return;
@@ -7964,7 +8301,7 @@
       validate: function(value){
         const v = (value || '').trim();
         if(!v) return '';
-        return columns.some(c => c.name === v) ? '名稱已被使用' : '';
+        return nameLengthError(v) || (columns.some(c => c.name === v) ? '名稱已被使用' : '');
       }
     });
   });
@@ -9115,6 +9452,7 @@
     const notebookName = nbCreateNotebookName.value.trim();
     const name = nbCreateName.value.trim();
     if(!name){ setNbError('nbCreateError', '請輸入使用者名稱'); return; }
+    if(nameLengthError(name)){ setNbError('nbCreateError', nameLengthError(name)); return; }
     nbCreateSubmit.disabled = true;
     try{
       let nb = null;
@@ -9154,10 +9492,6 @@
         await enterNotebook(nb, remote, null);
         return;
       }
-      if(remote.columns.length >= 4){
-        setNbError('nbJoinError', '這本手帳已經有 4 位共編者，加不進去了');
-        return;
-      }
       pendingJoin = {nb: nb, remote: remote};
       showNbStep('joinName');
     }catch(err){
@@ -9172,6 +9506,7 @@
     if(!pendingJoin){ showNbStep('choice'); return; }
     const name = nbJoinName.value.trim();
     if(!name){ setNbError('nbJoinNameError', '請輸入使用者名稱'); return; }
+    if(nameLengthError(name)){ setNbError('nbJoinNameError', nameLengthError(name)); return; }
     if(pendingJoin.remote.columns.some(c => c.name === name)){ setNbError('nbJoinNameError', '名稱已被使用'); return; }
     nbJoinNameSubmit.disabled = true;
     try{
