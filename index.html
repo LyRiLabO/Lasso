@@ -157,7 +157,7 @@
     --blush:#813E29;
   }
 
-  /* ============ 個人化主題：花園茶會 ============
+  /* ============ 個人化主題：花園派對 ============
      各分類的顏色由使用者逐項指定（變數意義同美式復古那段）。「線條」類（線條、
      淡橫條紋、次要文字、提示文字）共用色卡上的「次要文字」色，時間軸橫線再往
      手帳底色混淡一些。月曆所在日（--gold）是各風格自己的顏色，圈內數字用主文字色。行程十六色見
@@ -1754,7 +1754,8 @@
 
   /* ---- 分隔線上的小膠囊（提示：這裡可以長按拖移調欄寬）---- */
   .column-header-row .col-head{position:relative;}
-  .column-header-row .col-head + .col-head::before{
+  /* 三欄以上才有「可拖移調欄寬」的把手（兩欄時先不出現，見 renderColumnHeader 設的 .has-resize） */
+  .column-header-row.has-resize .col-head + .col-head::before{
     content:"";
     position:absolute; left:-2.5px; top:0; bottom:0; /* 上下端貼齊標題列的上下橫線，所以看不到原本的直線 */
     width:5px;
@@ -4320,7 +4321,7 @@
     {id:'fo-rosebrown', name:'玫瑰褐', hex:'#907C73'},
     {id:'fo-chestgrey', name:'灰栗褐', hex:'#5C534E'},
     {id:'fo-bark', name:'深樹皮', hex:'#3E3725'},
-    // ---- 花園茶會 ----（取自使用者提供的色卡，由左到右、由上到下）
+    // ---- 花園派對 ----（取自使用者提供的色卡，由左到右、由上到下）
     {id:'gt-rose', name:'玫瑰粉', hex:'#F75D93'},
     {id:'gt-blossom', name:'櫻花粉', hex:'#FF9CA8'},
     {id:'gt-dustrose', name:'霧玫瑰', hex:'#EDC5BD'},
@@ -6149,7 +6150,8 @@
     new ResizeObserver(function(){
       const w = colHeadViewport.clientWidth;
       if(!w) return;
-      applyColLayout();
+      columnHeaderRow.classList.toggle('has-resize', columns.length >= 3);
+    applyColLayout();
       if(lastViewW && Math.abs(lastViewW - w) > 1){
         try{ if(NOTEBOOK) renderEvents(); }catch(err){} // 欄寬隨畫面寬度改變，卡片內的文字要重新排版
       }
@@ -6218,7 +6220,7 @@
     function vpLeft(){ return vp.getBoundingClientRect().left; }
     function contentX(clientX){ return clientX - vpLeft() + colScrollX; }
     function dividerAt(clientX){
-      if(columns.length < 2 || !colW) return -1;
+      if(columns.length < 3 || !colW) return -1; // 兩欄時不能調欄寬（把手也不顯示）
       const cx = contentX(clientX);
       const i = Math.round(cx / colW);
       if(i < 1 || i > columns.length - 1) return -1;
@@ -6477,20 +6479,17 @@
     try{ return rawEventColorById(pairedEventColorId(colorId || themeDefaultEventColor())).hex; }
     catch(err){ return '#888888'; }
   }
-  // 同一個裝置＝同一個使用者：這個使用者名下不管有幾個欄位，都用同一組圖示＋顏色。
-  // 欄位自己沒存圖示時，借用同一位使用者（同 ownerId）其他欄位上的。
-  function userIconOf(col, list){
-    if(col.icon) return {icon: col.icon, color: col.iconColor};
-    if(!col.ownerId) return null;
-    const o = (list || columns).find(c => c.ownerId === col.ownerId && c.icon);
-    return o ? {icon: o.icon, color: o.iconColor} : null;
+  // 圖示是每個欄位各自一個：同一個使用者的不同欄位可以用不同圖示，自己名下的欄位
+  // 之間撞到也沒關係；只有「跟其他使用者撞到」才會被擋（見 findIconComboUser）。
+  function userIconOf(col){
+    return col.icon ? {icon: col.icon, color: col.iconColor} : null;
   }
   // 別人（不同使用者）已經用了的「圖示＋顏色」：回傳那位使用者的欄位（找不到回 null）。
   // excludeOwnerId＝不算進去的使用者（改自己的圖示時傳自己的 ownerId，自己名下的欄位不算衝突）。
   function findIconComboUser(list, sel, excludeOwnerId){
     return (list || []).find(function(c){
       if(excludeOwnerId && c.ownerId === excludeOwnerId) return false;
-      const u = userIconOf(c, list);
+      const u = userIconOf(c);
       return !!u && u.icon === sel.icon && pairedEventColorId(u.color) === pairedEventColorId(sel.color);
     }) || null;
   }
@@ -6566,8 +6565,7 @@
       initial: cur ? {icon: cur.icon, color: cur.color} : null,
       usedCols: columns, excludeOwnerId: col.ownerId,
       onConfirm: function(sel){
-        // 同一個使用者名下的所有欄位一起換成同一組圖示
-        columns.forEach(function(c){ if(c.ownerId === col.ownerId){ c.icon = sel.icon; c.iconColor = sel.color; } });
+        col.icon = sel.icon; col.iconColor = sel.color; // 只換這一欄；同一使用者的其他欄位不受影響
         scheduleSaveToStorage();
         renderColumnHeader();
       }
@@ -8607,9 +8605,10 @@
       if(!name) return;
       const id = newColumnId();
       animateColumnChange(function(){
-        const mineIcon = userIconOf({ownerId: DEVICE_ID});
+        // 新欄位先沿用自己現有欄位的圖示（之後想換可以點圖示改；自己的欄位之間撞圖示沒關係）
+        const mineIcon = userIconOf(columns.find(c => c.ownerId === DEVICE_ID && c.icon) || {});
         const newCol = {id, name, ownerId: DEVICE_ID};
-        if(mineIcon){ newCol.icon = mineIcon.icon; newCol.iconColor = mineIcon.color; } // 同一個使用者的欄位用同一組圖示
+        if(mineIcon){ newCol.icon = mineIcon.icon; newCol.iconColor = mineIcon.color; }
         columns.push(newCol);
         renderColumnHeader();
         renderEvents(); // 欄位數變了，行程的寬度/位置要重新計算
@@ -10190,7 +10189,7 @@
     { id: 'american-vintage', name: '美式復古', colors: ['#99341D', '#25353C', '#5A8A7F'] },
     { id: 'showa', name: '昭和懷舊', colors: ['#861108', '#317B6A', '#DE942B'] },
     { id: 'forest', name: '森林手札', colors: ['#616543', '#A39F7D', '#D7CBB3'] },
-    { id: 'garden-tea', name: '花園茶會', colors: ['#F75D93', '#BEC9EA', '#F3C624'] },
+    { id: 'garden-tea', name: '花園派對', colors: ['#F75D93', '#BEC9EA', '#F3C624'] },
     { id: 'berry-picnic', name: '春日野餐', colors: ['#F0284E', '#FF7780', '#D5DFEF'] }
   ];
   let currentTheme = 'default';
