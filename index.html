@@ -1813,6 +1813,11 @@
   .icon-picker-card > *{flex:0 0 auto;}
   .icon-picker-scroll{flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin:0 -6px; padding:2px 6px;}
   .icon-picker-title{font-size:16px; font-weight:700; margin-bottom:2px;}
+  .icon-picker-input{
+    width:100%; box-sizing:border-box; font-family:'Noto Serif TC', serif; font-size:17px; color:var(--ink);
+    border:none; border-bottom:1.5px solid var(--line); background:transparent; padding:4px 2px 8px; outline:none;
+    border-radius:0;
+  }
   .icon-picker-sub{font-size:12px; color:var(--ink-faint); margin-bottom:10px;}
   .icon-picker-label{font-size:12px; color:var(--ink-faint); margin:10px 0 6px;}
   /* minmax(0,1fr)：欄寬不被內容撐開；方形格子用「height:0 + padding-bottom:100%」做，
@@ -1868,7 +1873,7 @@
     position:relative;
     z-index:3; /* 跟 .planner-header 同一層，兩者都要蓋在拖曳中的 .card-ghost（z-index:2）上面 */
   }
-  /* 欄位多到要捲動時，標題列邊緣出現單色（格線顏色）漸層暗示「那邊還有欄位」：
+  /* 欄位多到要捲動時，標題列邊緣出現單色（手帳底色）漸層暗示「那邊還有欄位」：
      右邊還有 → 螢幕右邊緣漸層（越靠右越不透明，往左漸漸消失）；
      左邊被捲走 → 左邊緣漸層。捲到最右邊時只剩左邊的。 */
   .col-head-bar::before, .col-head-bar::after{
@@ -1876,10 +1881,20 @@
     pointer-events:none; opacity:0; transition:opacity .18s;
     z-index:4;
   }
-  .col-head-bar::after{ right:0; background:linear-gradient(to left, var(--grid-line), transparent); }
-  .col-head-bar::before{ left:54px; background:linear-gradient(to right, var(--grid-line), transparent); }
+  .col-head-bar::after{ right:0; background:linear-gradient(to left, var(--paper), transparent); }
+  .col-head-bar::before{ left:54px; background:linear-gradient(to right, var(--paper), transparent); }
   .col-head-bar.fade-right::after{opacity:1;}
   .col-head-bar.fade-left::before{opacity:1;}
+  /* 漸層上的小箭頭（實心三角形，格線顏色）：右邊還有欄位 → 指右；左邊被捲走 → 指左 */
+  .scroll-hint-arrow{
+    position:absolute; top:50%; width:0; height:0; margin-top:-4px;
+    border-top:4px solid transparent; border-bottom:4px solid transparent;
+    pointer-events:none; opacity:0; transition:opacity .18s; z-index:5;
+  }
+  .scroll-hint-arrow.sha-right{ right:2px; border-left:5px solid var(--grid-line); }
+  .scroll-hint-arrow.sha-left{ left:56px; border-right:5px solid var(--grid-line); }
+  .col-head-bar.fade-right .sha-right{opacity:1;}
+  .col-head-bar.fade-left .sha-left{opacity:1;}
   .col-head-viewport{
     overflow:hidden;
     touch-action:none; /* 左右滑動、長按拖移都由 JS 處理，不要讓瀏覽器接管手勢 */
@@ -3186,6 +3201,8 @@
       <div class="col-head-viewport" id="colHeadViewport">
         <div class="column-header-row" id="columnHeaderRow"></div>
       </div>
+      <span class="scroll-hint-arrow sha-left" aria-hidden="true"></span>
+      <span class="scroll-hint-arrow sha-right" aria-hidden="true"></span>
     </div>
     <div class="timeline-scroll" id="timelineScroll">
       <div class="day-slider" id="daySlider">
@@ -6257,7 +6274,9 @@
       updateDeleteButtonState();
       return;
     }
-    renameColumn(col);
+    if(!col.ownerId){ renameColumn(col); return; } // 還沒有主人的舊欄位：先走「認領」確認
+    if(col.ownerId !== DEVICE_ID) return;           // 別人的欄位，只有主人能改
+    openColumnEditDialog(col);
   }
 
   function initColHeadGestures(){
@@ -6461,8 +6480,9 @@
       else if(gg.mode === 'pending' && !cancelled && gg.cellEl){
         const col = columns.find(c => c.id === gg.cellEl.dataset.colId);
         if(col){
-          if(!selectMode && gg.target && gg.target.closest && gg.target.closest('.col-icon') && col.ownerId === DEVICE_ID) openColumnIconPicker(col);
-          else onColHeadTap(col);
+          // 單擊欄位任何位置都開彈窗，唯獨正好按在調欄寬的把手（那條小膠囊）上時不開
+          const onHandle = !selectMode && gg.divider > 0 && Math.abs(gg.startContentXAtDown - gg.divider * colW) <= 10;
+          if(!onHandle) onColHeadTap(col);
         }
       }
       g = null;
@@ -6568,8 +6588,9 @@
     const overlay = document.createElement('div');
     overlay.className = 'icon-picker-overlay';
     overlay.innerHTML = '<div class="icon-picker-card" role="dialog" aria-modal="true">' +
-      '<div class="icon-picker-title">選擇你的圖示</div>' +
-      '<div class="icon-picker-sub">會顯示在你的欄位名稱後面。圖示與顏色的組合在同一本手帳裡不能跟別人重複。</div>' +
+      '<div class="icon-picker-title">' + (opts.title || '選擇你的圖示') + '</div>' +
+      '<div class="icon-picker-sub">' + (opts.sub || '會顯示在你的欄位名稱後面。圖示與顏色的組合在同一本手帳裡不能跟別人重複。') + '</div>' +
+      (opts.nameField ? '<div class="icon-picker-label" style="margin-top:0">名稱</div><input type="text" class="icon-picker-input" id="ipName" autocomplete="off">' : '') +
       '<div class="icon-picker-label">圖示</div><div class="icon-picker-scroll"><div class="icon-picker-grid" id="ipIcons"></div></div>' +
       '<div class="icon-picker-label">顏色</div><div class="icon-picker-colors" id="ipColors"></div>' +
       '<div class="icon-picker-error" id="ipError"></div>' +
@@ -6577,6 +6598,14 @@
       '</div>';
     document.body.appendChild(overlay);
     const iconsEl = overlay.querySelector('#ipIcons'), colorsEl = overlay.querySelector('#ipColors'), errEl = overlay.querySelector('#ipError');
+    const nameInput = overlay.querySelector('#ipName');
+    if(nameInput){
+      nameInput.value = opts.nameField.value || '';
+      // 名稱每次輸入都即時檢查（重複、太長、空白），有問題就在下方顯示訊息
+      nameInput.addEventListener('input', function(){
+        errEl.textContent = (opts.nameField.validate && opts.nameField.validate(nameInput.value)) || '';
+      });
+    }
     function hexOf(id){ return rawEventColorById(id).hex; }
     function draw(){
       iconsEl.innerHTML = '';
@@ -6602,23 +6631,50 @@
     overlay.querySelector('#ipCancel').addEventListener('click', close);
     overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
     overlay.querySelector('#ipOk').addEventListener('click', function(){
-      if(!sel.icon){ errEl.textContent = '請先選一個圖示'; return; }
-      const used = findIconComboUser(opts.usedCols, sel, opts.excludeOwnerId);
-      if(used){ errEl.textContent = '這個圖示與顏色已經被「' + used.name + '」使用了，\n請換一個圖示或顏色。'; return; }
+      let name;
+      if(nameInput){
+        name = nameInput.value.trim();
+        const nerr = (opts.nameField.validate && opts.nameField.validate(name)) || '';
+        if(nerr){ errEl.textContent = nerr; return; }
+      }
+      if(!sel.icon){
+        if(!opts.iconOptional){ errEl.textContent = '請先選一個圖示'; return; } // 合併彈窗裡圖示可以不選（只改名字）
+      } else {
+        const used = findIconComboUser(opts.usedCols, sel, opts.excludeOwnerId);
+        if(used){ errEl.textContent = '這個圖示與顏色已經被「' + used.name + '」使用了，\n請換一個圖示或顏色。'; return; }
+      }
       close();
-      opts.onConfirm({icon: sel.icon, color: sel.color});
+      opts.onConfirm({icon: sel.icon, color: sel.color, name: name});
     });
   }
-  // 自己欄位的圖示：點欄位名稱後面的圖示（還沒設定過的會顯示一個虛線小圓圈）來修改
-  function openColumnIconPicker(col){
+  // 自己欄位的「修改名稱＋選圖示與顏色」合併彈窗：單擊欄位標題的任何位置（把手除外）就會跳出。
+  function openColumnEditDialog(col){
     const cur = userIconOf(col);
     openIconPicker({
+      title: '編輯欄位',
+      sub: '修改欄位名稱，並選擇顯示在名稱後面的圖示與顏色。圖示與顏色的組合在同一本手帳裡不能跟別人重複。',
+      nameField: {
+        value: col.name,
+        // 名稱不能跟「別的」欄位重複；改回自己原本的名字（等於沒改）不算重複。
+        validate: function(value){
+          const v = (value || '').trim();
+          if(!v) return '請輸入名稱';
+          if(v === col.name) return '';
+          return nameLengthError(v) || (columns.some(c => c.id !== col.id && c.name === v) ? '名稱已被使用' : '');
+        }
+      },
+      iconOptional: true,
       initial: cur ? {icon: cur.icon, color: cur.color} : null,
       usedCols: columns, excludeOwnerId: col.ownerId,
       onConfirm: function(sel){
-        col.icon = sel.icon; col.iconColor = sel.color; // 只換這一欄；同一使用者的其他欄位不受影響
+        let nameChanged = false, changed = false;
+        if(sel.name && sel.name !== col.name){ col.name = sel.name; nameChanged = changed = true; }
+        // 只換這一欄；同一使用者的其他欄位不受影響。沒選圖示就維持原本的
+        if(sel.icon && (sel.icon !== col.icon || sel.color !== col.iconColor)){ col.icon = sel.icon; col.iconColor = sel.color; changed = true; }
+        if(!changed) return;
         scheduleSaveToStorage();
         renderColumnHeader();
+        if(nameChanged) renderEvents(); // 行程卡片上顯示的參與者名字也要跟著更新
       }
     });
   }
