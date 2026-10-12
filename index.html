@@ -41,6 +41,7 @@
     --sage:#7C8F6A;
     --dusk:#6E7FA3;
     --blush:#C77B6C;
+    --col-div:color-mix(in srgb, var(--grid-line-sub) 80%, var(--ink-faint)); /* 欄位分隔線：跟各風格自己的格線同色系、稍深一點點 */
     --col-w:25%; --cols-w:100%; --cols-x:0px; /* 欄位寬度／全部欄位總寬／橫向捲動位移，由 JS（applyColLayout）更新 */
     --cell-px:16.67; /* 「格子」時間軸背景的單格邊長（px，不含單位），跟 --hour-px 一樣由 JS 在縮放時更新 */
     --hour-px:50; /* 每小時的高度（px，不含單位），縮放時由 JS 更新這個變數，
@@ -163,6 +164,7 @@
      手帳底色混淡一些。月曆所在日（--gold）是各風格自己的顏色，圈內數字用主文字色。行程十六色見
      EVENT_COLOR_THEME_IDS。 */
   [data-theme="garden-tea"]{
+    --col-div:color-mix(in srgb, var(--line) 62%, var(--ink));
     --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
     --body-bg:#E5E5DE;
     --paper:#F4F4EC;
@@ -195,6 +197,7 @@
      手帳底色混淡一些。月曆所在日（--gold）是各風格自己的顏色，圈內數字用主文字色。行程十六色見
      EVENT_COLOR_THEME_IDS。 */
   [data-theme="berry-picnic"]{
+    --col-div:color-mix(in srgb, var(--line) 62%, var(--ink));
     --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
     --body-bg:#E6E5E2;
     --paper:#F5F4F0;
@@ -1069,7 +1072,7 @@
     background:var(--ecard-color, var(--card));
     background:color-mix(in srgb, var(--ecard-color, var(--card)) var(--ecard-alpha-pct, 100%), transparent); /* 「個人化」滑軸調的底色不透明度；不支援 color-mix 的舊瀏覽器就用上一行的不透明底色 */
     border-radius:8px;
-    box-shadow:0 2px 6px var(--shadow);
+    box-shadow:var(--ecard-shadow, 0 2px 6px var(--shadow));
     padding:5px 10px;
     overflow:hidden;
     cursor:pointer;
@@ -1777,7 +1780,7 @@
   }
   /* 兩欄（以下）時沒有把手、不能調欄寬，標題列欄位之間只畫一條跟時間軸本體一樣的細分隔線 */
   .column-header-row:not(.has-resize) .col-head + .col-head{
-    border-left:1px solid color-mix(in srgb, var(--line) 62%, var(--ink)); /* 跟時間軸本體的欄位分隔線同色 */
+    border-left:1px solid var(--col-div); /* 跟時間軸本體的欄位分隔線同色 */
   }
   /* 手指碰到把手（還沒長按成功）：顏色變深、稍微變寬一點點，讓使用者知道按對地方了 */
   .column-header-row.has-resize .col-head.div-press::before{
@@ -2032,7 +2035,7 @@
     top:0; bottom:0;
     width:1px;
     background:var(--line);
-    background:color-mix(in srgb, var(--line) 62%, var(--ink)); /* 比背景的時間格線（--grid-line）更深、更明顯 */
+    background:var(--col-div); /* 跟各風格的時間格線同色系 */
   }
 
   .hint-empty{
@@ -2821,7 +2824,11 @@
     border:2px solid transparent;
     cursor:pointer;
     position:relative;
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06), 0 2px 4px rgba(32,38,58,0.22); /* 每一顆底下都有一圈柔和的投影 */
+  }
+  /* 淺色的色票（淺黃、淺卡其、淡紫…）跟紙面太接近，邊框加深一點、投影加重，才看得出圓形 */
+  .color-swatch.swatch-light{
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.20), 0 2px 5px rgba(32,38,58,0.40), 0 1px 1px rgba(32,38,58,0.30);
   }
   .color-swatch.selected{
     border-color:var(--ink);
@@ -2854,6 +2861,27 @@
     background:var(--red);
     color:#fff;
   }
+
+  /* 重複範圍（從哪天到哪天／無限期）：選了任何一個星期才會出現 */
+  .recur-range{
+    margin-top:14px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .recur-range[hidden]{display:none;}
+  .recur-range-row{
+    display:flex; align-items:flex-end; gap:10px;
+  }
+  .recur-range-label{
+    flex:0 0 auto;
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13px; font-weight:700;
+    color:var(--ink-faint);
+    padding-bottom:11px;
+    min-width:2.2em;
+  }
+  .recur-range-row .date-value-btn{flex:1 1 auto; width:auto; min-width:0;}
+  .recur-range-row .date-value-btn.disabled{font-size:17px; color:var(--ink-faint);}
+  .recur-range .sync-toggle{margin-top:6px; font-size:15px;}
 
   .sync-toggle{
     display:flex; align-items:center; gap:9px;
@@ -3368,6 +3396,21 @@
       <div class="field">
         <span class="field-label">重複</span>
         <div class="weekday-box" id="weekdayBox"></div>
+        <div class="recur-range" id="recurRange" hidden>
+          <div class="recur-range-row">
+            <span class="recur-range-label">從</span>
+            <button type="button" id="recurFromBtn" class="date-value-btn">—</button>
+          </div>
+          <div class="recur-range-row">
+            <span class="recur-range-label">到</span>
+            <button type="button" id="recurUntilBtn" class="date-value-btn">—</button>
+          </div>
+          <label class="sync-toggle">
+            <input type="checkbox" id="recurForever" checked>
+            <span class="toggle-switch" aria-hidden="true"></span>
+            <span>無限期（一直重複下去）</span>
+          </label>
+        </div>
       </div>
 
       <div class="field" id="syncField" style="display:none;">
@@ -4512,6 +4555,9 @@
     card.style.setProperty('--ecard-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
     card.style.setProperty('--ecard-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
     card.style.setProperty('--ecard-handle-color', darkenHex(c.hex, 0.22));
+    // 淺色的行程卡片跟紙面太接近：陰影加重，再加一圈很細的暗邊
+    if(light) card.style.setProperty('--ecard-shadow', '0 2px 6px rgba(32,38,58,0.38), 0 0 0 1px rgba(32,38,58,0.14)');
+    else card.style.removeProperty('--ecard-shadow');
     card.style.setProperty('--ecard-sep', doneSepHex(c.hex));
     card.style.setProperty('--ecard-sep-text', isLightColor(doneSepHex(c.hex)) ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
   }
@@ -5076,6 +5122,7 @@
       if(ev.recurrence){
         const excluded = ev.excluded || [];
         if(dateStr >= ev.date &&
+           (!ev.recurrence.until || dateStr <= ev.recurrence.until) &&
            ev.recurrence.weekdays.includes(weekdayOf(dateStr)) &&
            excluded.indexOf(dateStr) === -1){
           const ov = (ev.overrides && ev.overrides[dateStr]) || {};
@@ -5190,24 +5237,34 @@
     notifyPlacementChange(splitId, targetDate, master, before, homeDate, targetDate, newStart, newEnd, newParticipants);
   }
 
-  // 複製這一次行程：在同一天建立一個內容完全一樣、獨立不重複的新行程
+  // 複製這一次行程：建立一個內容一樣的新行程（重複規則、重複範圍都跟著複製）。
+  // 新卡片的時間往後挪 15 分鐘（往下），畫面上同欄重疊的卡片會再往右偏一點
+  // （見 renderEvents 的 stackDepth），一眼就看得出是複製出來的。
+  const DUPLICATE_SHIFT_MIN = 15;
   function duplicateInstance(masterId, instanceDate){
     const inst = getInstancesForDate(instanceDate).find(i => i.masterId === masterId);
     if(!inst) return;
+    const master = events.find(e => e.id === masterId);
     const creatorId = pickMyColumnId(inst.participants);
     if(!creatorId){ promptNeedOwnColumn(); return; }
     const newId = 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+    const sMin = timeToMinutes(inst.start), eMin = timeToMinutes(inst.end);
+    const shift = Math.max(0, Math.min(DUPLICATE_SHIFT_MIN, 1440 - eMin)); // 已經貼近 24:00 就不再往後挪
+    const hh = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+    const rec = inst.isRecurring && master && master.recurrence
+      ? Object.assign({weekdays: master.recurrence.weekdays.slice()}, master.recurrence.until ? {until: master.recurrence.until} : {})
+      : null;
     events.push({
       id: newId,
       title: inst.title,
-      date: instanceDate,
-      start: inst.start,
-      end: inst.end,
+      date: rec ? master.date : instanceDate, // 重複行程：起始日跟原本的系列一樣
+      start: shift ? hh(sMin + shift) : inst.start,
+      end: shift ? hh(eMin + shift) : inst.end,
       notes: inst.notes,
       participants: (inst.participants||[]).slice(),
       creatorId: creatorId,
       color: inst.color,
-      recurrence: null
+      recurrence: rec
     });
     justCreatedEventId = newId; // 複製出來的也是一張全新的卡片，一樣套用「捲軸攤開」進場動畫
   }
@@ -6916,6 +6973,26 @@
     // 才能正確判斷哪些會疊在一起、需要合併成「N 項行程」（見 renderFloatLabels）。
     const floatCandidates = [];
 
+    // 同一欄、時間又重疊的卡片（例如剛複製出來的）：後面的卡片每層往右縮進一點點，
+    // 才不會完全蓋在前一張上面。stackDepth 的 key = masterId|起始欄|結束欄。
+    const stackDepth = {};
+    (function(){
+      const placed = [];
+      insts.map(inst => ({inst: inst, idx: events.findIndex(e => e.id === inst.masterId)}))
+        .sort((a,b) => (timeToMinutes(a.inst.start) - timeToMinutes(b.inst.start)) || (a.idx - b.idx))
+        .forEach(item => {
+          const s0 = timeToMinutes(item.inst.start), e0 = timeToMinutes(item.inst.end);
+          eventColRuns(item.inst).forEach(([rMin, rMax]) => {
+            let depth = 0;
+            placed.forEach(p => {
+              if(p.rMin <= rMax && rMin <= p.rMax && s0 < p.e && p.s < e0) depth = Math.max(depth, p.depth + 1);
+            });
+            placed.push({rMin:rMin, rMax:rMax, s:s0, e:e0, depth:depth});
+            stackDepth[item.inst.masterId + '|' + rMin + '|' + rMax] = depth;
+          });
+        });
+    })();
+
     insts.forEach(inst => {
       const startMin = timeToMinutes(inst.start);
       const endMin = timeToMinutes(inst.end);
@@ -6944,8 +7021,9 @@
         applyEventColor(card, inst.color);
         card.style.top = top+'px';
         card.style.height = height+'px';
-        card.style.left = 'calc(' + leftPct + '% + 3px)';
-        card.style.width = 'calc(' + widthPct + '% - 6px)';
+        const indentPx = Math.min(stackDepth[inst.masterId + '|' + runMin + '|' + runMax] || 0, 3) * 9;
+        card.style.left = 'calc(' + leftPct + '% + ' + (3 + indentPx) + 'px)';
+        card.style.width = 'calc(' + widthPct + '% - ' + (6 + indentPx) + 'px)';
         card.dataset.masterId = inst.masterId;
         card.dataset.date = inst.instanceDate;
 
@@ -8891,7 +8969,7 @@
     colorBox.innerHTML = '';
     themeEventColorList().forEach(c => {
       const sw = document.createElement('div');
-      sw.className = 'color-swatch' + (selectedColor === c.id ? ' selected' : '');
+      sw.className = 'color-swatch' + (isLightColor(c.hex) ? ' swatch-light' : '') + (selectedColor === c.id ? ' selected' : '');
       sw.style.background = c.hex;
       sw.title = c.name;
       sw.addEventListener('click', function(){
@@ -8975,6 +9053,44 @@
     });
   }
 
+  // ---- 重複範圍：起始日、結束日（或無限期）----
+  const recurRange = document.getElementById('recurRange');
+  const recurFromBtn = document.getElementById('recurFromBtn');
+  const recurUntilBtn = document.getElementById('recurUntilBtn');
+  const recurForever = document.getElementById('recurForever');
+  let recurFromVal = '';
+  let recurUntilVal = '';
+  let recurFromTouched = false; // 使用者有沒有自己改過起始日（沒改的話，單一行程改日期時起始日跟著走）
+  function syncRecurRangeUI(){
+    recurRange.hidden = selectedWeekdays.size === 0;
+    recurFromBtn.textContent = formatDateForDisplay(recurFromVal);
+    recurUntilBtn.textContent = recurForever.checked ? '永遠（沒有結束日）' : formatDateForDisplay(recurUntilVal);
+    recurUntilBtn.classList.toggle('disabled', recurForever.checked);
+  }
+  recurFromBtn.addEventListener('click', function(){
+    openDatePicker(recurFromVal || fieldDate.value, function(dateStr){
+      recurFromVal = dateStr;
+      recurFromTouched = true;
+      if(!recurForever.checked && recurUntilVal && recurUntilVal < dateStr) recurUntilVal = dateStr; // 結束日不能早於起始日
+      syncRecurRangeUI();
+    });
+  });
+  recurUntilBtn.addEventListener('click', function(){
+    if(recurForever.checked) return;
+    openDatePicker(recurUntilVal || recurFromVal, function(dateStr){
+      recurUntilVal = dateStr;
+      syncRecurRangeUI();
+    });
+  });
+  recurForever.addEventListener('change', function(){
+    if(!recurForever.checked && !recurUntilVal) recurUntilVal = dateByOffset(recurFromVal || fieldDate.value || todayStr(), 90);
+    syncRecurRangeUI();
+  });
+  // 單一行程（日期欄位沒鎖）改日期時，沒手動動過的起始日跟著走
+  fieldDate.addEventListener('change', function(){
+    if(!recurFromTouched){ recurFromVal = fieldDate.value; syncRecurRangeUI(); }
+  });
+
   function renderWeekdayChips(weekdays){
     selectedWeekdays = new Set(weekdays||[]);
     weekdayBox.innerHTML = '';
@@ -8986,9 +9102,11 @@
         if(selectedWeekdays.has(idx)) selectedWeekdays.delete(idx);
         else selectedWeekdays.add(idx);
         chip.classList.toggle('selected', selectedWeekdays.has(idx));
+        syncRecurRangeUI();
       });
       weekdayBox.appendChild(chip);
     });
+    syncRecurRangeUI();
   }
 
   function fillEditForm(data, dateStr, isRecurring){
@@ -9039,8 +9157,13 @@
       date: instanceDate, start: data.start, end: data.end,
       title: data.title || '', notes: data.notes || '',
       color: data.color || master.color || DEFAULT_EVENT_COLOR,
-      weekdays: master.recurrence ? master.recurrence.weekdays.slice().sort((a,b)=>a-b).join(',') : ''
+      weekdays: master.recurrence ? master.recurrence.weekdays.slice().sort((a,b)=>a-b).join(',') : '',
+      recurRange: master.recurrence ? (master.date + '|' + (master.recurrence.until || '')) : ''
     };
+    recurFromVal = master.recurrence ? master.date : instanceDate;
+    recurUntilVal = (master.recurrence && master.recurrence.until) || '';
+    recurForever.checked = !recurUntilVal;
+    recurFromTouched = false;
     fillEditForm(data, instanceDate, !!master.recurrence);
     renderWeekdayChips(master.recurrence ? master.recurrence.weekdays : []);
     syncField.style.display = master.recurrence ? 'flex' : 'none';
@@ -9535,6 +9658,12 @@
     }
 
     const newWeekdays = Array.from(selectedWeekdays).sort((a,b)=>a-b);
+    const newFrom = recurFromVal || checkDate;
+    const newUntil = recurForever.checked ? null : (recurUntilVal || null);
+    if(newWeekdays.length && newUntil && newUntil < newFrom){
+      showConfirmDialog('重複的結束日期不能早於起始日期', function(){}, {okLabel:'知道了', hideCancel:true});
+      return;
+    }
     const wasRecurring = !!master.recurrence;
     const syncOn = fieldSyncEdit.checked;
 
@@ -9546,7 +9675,8 @@
     if(newStart !== o.start || newEnd !== o.end) changeLabels.push('時間');
     if(newNotes !== (o.notes || '')) changeLabels.push('備註');
     if(selectedColor !== pairedEventColorId(o.color)) changeLabels.push('顏色');
-    if(newWeekdays.join(',') !== o.weekdays) changeLabels.push('重複');
+    const newRangeSig = newWeekdays.length ? (newFrom + '|' + (newUntil || '')) : '';
+    if(newWeekdays.join(',') !== o.weekdays || newRangeSig !== o.recurRange) changeLabels.push('重複');
 
     // 顏色是整個行程系列共用的分類標籤，不像時間/備註那樣需要區分「只改這一天」，
     // 一律直接寫回本體，不放進 override。
@@ -9554,7 +9684,8 @@
     if(!master.color || selectedColor !== pairedEventColorId(master.color)) master.color = selectedColor;
 
     // 「重複」規則永遠套用到整個系列，跟同步編輯開關無關（單一日期沒有自己的重複規則）
-    master.recurrence = newWeekdays.length ? {weekdays:newWeekdays} : null;
+    master.recurrence = newWeekdays.length ? (newUntil ? {weekdays:newWeekdays, until:newUntil} : {weekdays:newWeekdays}) : null;
+    if(master.recurrence) master.date = newFrom; // 重複行程的「起始日」就是本體的 date
 
     if(!wasRecurring && !master.recurrence){
       // 原本就是單一行程，也沒有設定重複：直接改本體（含日期）
@@ -9589,6 +9720,11 @@
     }
 
     currentDate = master.recurrence ? editingInstanceDate : master.date;
+    if(master.recurrence){
+      // 這一天如果被新的範圍排除在外，就跳到範圍內最近的一天，不要停在一個空白的日子
+      if(currentDate < master.date) currentDate = master.date;
+      else if(master.recurrence.until && currentDate > master.recurrence.until) currentDate = master.recurrence.until;
+    }
 
     // 通知：把「其他人」加進來 -> 通知那些人；把「自己」加進一個本來
     // 別人建立/共同的行程 -> 通知原本就在的人「我加入了」；移除了誰 ->
@@ -10116,6 +10252,7 @@
   function expandMasterOn(ev, dateStr){
     if(ev.recurrence){
       if(dateStr < ev.date) return null;
+      if(ev.recurrence.until && dateStr > ev.recurrence.until) return null;
       if(!(ev.recurrence.weekdays || []).includes(weekdayOf(dateStr))) return null;
       if((ev.excluded || []).indexOf(dateStr) !== -1) return null;
       const ov = (ev.overrides && ev.overrides[dateStr]) || {};
@@ -10138,7 +10275,7 @@
         notes: ev.notes || '',
         participants: [tgtColId], creatorId: tgtColId,
         color: ev.color || '',
-        recurrence: ev.recurrence ? {weekdays: (ev.recurrence.weekdays || []).slice()} : null,
+        recurrence: ev.recurrence ? Object.assign({weekdays: (ev.recurrence.weekdays || []).slice()}, ev.recurrence.until ? {until: ev.recurrence.until} : {}) : null,
         excluded: ev.excluded ? ev.excluded.slice() : null,
         overrides: null
       };
