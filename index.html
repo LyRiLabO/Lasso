@@ -568,6 +568,9 @@
 
   /* 「個人化」裡的時間軸背景選項（橫線／格子），跟色票用同一套選到就描邊的語彙 */
   .timegrid-title{font-size:12.5px; font-weight:700; color:var(--ink); margin-top:4px;}
+  .card-alpha-row{display:flex; align-items:center; gap:10px; padding:4px 2px 2px;}
+  .card-alpha-row input[type=range]{flex:1; min-width:0; height:24px; margin:0; accent-color:var(--ink-soft);}
+  .card-alpha-val{min-width:36px; text-align:right; font-size:11.5px; color:var(--ink-soft); font-variant-numeric:tabular-nums;}
   .timegrid-row{display:flex; justify-content:center; gap:4px;} /* 跟上面色票同樣的欄寬（三分之一），兩個選項整排置中 */
   .timegrid-opt{
     flex:0 0 calc((100% - 8px) / 3); min-width:0; box-sizing:border-box;
@@ -1064,6 +1067,7 @@
     min-height:8px;
     touch-action:none;
     background:var(--ecard-color, var(--card));
+    background:color-mix(in srgb, var(--ecard-color, var(--card)) var(--ecard-alpha-pct, 100%), transparent); /* 「個人化」滑軸調的底色不透明度；不支援 color-mix 的舊瀏覽器就用上一行的不透明底色 */
     border-radius:8px;
     box-shadow:0 2px 6px var(--shadow);
     padding:5px 10px;
@@ -1153,7 +1157,7 @@
   }
   .event-card .ecard-time{
     font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums;
-    font-size:9.5px;
+    font-size:11.5px;
     color:var(--ecard-text-soft, var(--ink-soft));
     margin-top:1px;
   }
@@ -1773,7 +1777,7 @@
   }
   /* 兩欄（以下）時沒有把手、不能調欄寬，標題列欄位之間只畫一條跟時間軸本體一樣的細分隔線 */
   .column-header-row:not(.has-resize) .col-head + .col-head{
-    border-left:1px solid color-mix(in srgb, var(--line) 80%, transparent);
+    border-left:1px solid color-mix(in srgb, var(--line) 62%, var(--ink)); /* 跟時間軸本體的欄位分隔線同色 */
   }
   /* 手指碰到把手（還沒長按成功）：顏色變深、稍微變寬一點點，讓使用者知道按對地方了 */
   .column-header-row.has-resize .col-head.div-press::before{
@@ -1881,18 +1885,18 @@
     pointer-events:none; opacity:0; transition:opacity .18s;
     z-index:4;
   }
-  .col-head-bar::after{ right:0; background:linear-gradient(to left, var(--paper), transparent); }
-  .col-head-bar::before{ left:54px; background:linear-gradient(to right, var(--paper), transparent); }
+  .col-head-bar::after{ right:0; background:linear-gradient(to left, var(--paper) 45%, transparent); } /* 前 45% 是完全不透明的底色，才擋得住底下的欄位文字、讓暗示更明顯 */
+  .col-head-bar::before{ left:54px; background:linear-gradient(to right, var(--paper) 45%, transparent); }
   .col-head-bar.fade-right::after{opacity:1;}
   .col-head-bar.fade-left::before{opacity:1;}
-  /* 漸層上的小箭頭（實心三角形，用比格線深的 --line 色）：右邊還有欄位 → 指右；左邊被捲走 → 指左 */
+  /* 漸層上的小箭頭（實心三角形，用 --line 混入較多文字色的深色）：右邊還有欄位 → 指右；左邊被捲走 → 指左 */
   .scroll-hint-arrow{
     position:absolute; top:50%; width:0; height:0; margin-top:-4px;
     border-top:4px solid transparent; border-bottom:4px solid transparent;
     pointer-events:none; opacity:0; transition:opacity .18s; z-index:5;
   }
-  .scroll-hint-arrow.sha-right{ right:2px; border-left:5px solid var(--line); }
-  .scroll-hint-arrow.sha-left{ left:56px; border-right:5px solid var(--line); }
+  .scroll-hint-arrow.sha-right{ right:5px; border-left:5px solid var(--ink-soft); border-left-color:color-mix(in srgb, var(--line) 35%, var(--ink)); }
+  .scroll-hint-arrow.sha-left{ left:59px; border-right:5px solid var(--ink-soft); border-right-color:color-mix(in srgb, var(--line) 35%, var(--ink)); }
   .col-head-bar.fade-right .sha-right{opacity:1;}
   .col-head-bar.fade-left .sha-left{opacity:1;}
   .col-head-viewport{
@@ -2028,7 +2032,7 @@
     top:0; bottom:0;
     width:1px;
     background:var(--line);
-    opacity:.8;
+    background:color-mix(in srgb, var(--line) 62%, var(--ink)); /* 比背景的時間格線（--grid-line）更深、更明顯 */
   }
 
   .hint-empty{
@@ -2925,6 +2929,8 @@
       const saved = localStorage.getItem('plannerTheme');
       if(saved && saved !== 'default') document.documentElement.setAttribute('data-theme', saved);
       if(localStorage.getItem('plannerTimeGrid') === 'cells') document.documentElement.setAttribute('data-timegrid', 'cells');
+      const a = parseInt(localStorage.getItem('plannerCardAlpha'), 10);
+      if(a >= 10 && a < 100) document.documentElement.style.setProperty('--ecard-alpha-pct', a + '%');
     }catch(err){}
   })();
 </script>
@@ -3116,6 +3122,11 @@
           <div class="theme-swatch-row" id="themeSwatchRow"></div>
           <div class="timegrid-title">背景格線</div>
           <div class="timegrid-row" id="timeGridRow"></div>
+          <div class="timegrid-title">行程卡片底色不透明度</div>
+          <div class="card-alpha-row">
+            <input type="range" id="cardAlphaRange" min="10" max="100" step="5" value="100" aria-label="行程卡片底色不透明度">
+            <span class="card-alpha-val" id="cardAlphaVal">100%</span>
+          </div>
         </div>
       </div>
     </div>
@@ -6539,11 +6550,22 @@
   Object.keys(COL_ICON_ALIASES).forEach(function(k){ COL_ICON_MAP[k] = COL_ICON_MAP[COL_ICON_ALIASES[k]]; });
   // 前 29 個圖示是從使用者提供的圖描出來的輪廓（fill:true，用填色畫出線條）；
   // 其餘（圓、方、三角、菱形）是真正的線條（stroke，可用 sw 指定線寬）。兩種都只有一種顏色。
+  // 顏色太淺（黃、白、灰、米白、淡粉、淺橘……）、跟手帳底色很接近時，線條會糊在背景裡：
+  // 在線條下方墊一層輕輕的陰影（順著圖案輪廓，不是方框），看得清楚就好、不要太重。
+  function isLightIconColor(hex){
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+    if(!m) return false;
+    const n = parseInt(m[1], 16);
+    const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.6; // 簡單的亮度判斷（沒做伽瑪換算，剛好把黃色也算進淺色）
+  }
+  const LIGHT_ICON_SHADOW = 'filter:drop-shadow(0 0 0.6px rgba(70,55,40,.6)) drop-shadow(0 0.6px 0.9px rgba(70,55,40,.28));';
   function colIconSvg(iconId, color){
     const ic = COL_ICON_MAP[iconId];
     if(!ic) return '';
-    if(ic.fill) return '<svg viewBox="0 0 24 24" fill="' + color + '" stroke="none" aria-hidden="true">' + ic.svg + '</svg>';
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="' + (ic.sw || 1.7) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ic.svg + '</svg>';
+    const sh = isLightIconColor(color) ? ' style="' + LIGHT_ICON_SHADOW + '"' : '';
+    if(ic.fill) return '<svg viewBox="0 0 24 24" fill="' + color + '" stroke="none"' + sh + ' aria-hidden="true">' + ic.svg + '</svg>';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="' + (ic.sw || 1.7) + '" stroke-linecap="round" stroke-linejoin="round"' + sh + ' aria-hidden="true">' + ic.svg + '</svg>';
   }
   // 圖示顏色（hex）：存的是色 id，換算成「目前主題同一格」的顏色
   function colIconHex(colorId){
@@ -6572,7 +6594,10 @@
       const u = col ? userIconOf(col) : null;
       if(svg && u){
         // 填色型圖示換 fill、線條型圖示換 stroke
-        svg.setAttribute(svg.getAttribute('stroke') === 'none' ? 'fill' : 'stroke', colIconHex(u.color));
+        const hex = colIconHex(u.color);
+        svg.setAttribute(svg.getAttribute('stroke') === 'none' ? 'fill' : 'stroke', hex);
+        // 換主題後顏色可能從深變淺（或相反），淺色才墊陰影
+        if(isLightIconColor(hex)) svg.setAttribute('style', LIGHT_ICON_SHADOW); else svg.removeAttribute('style');
       }
     });
   }
@@ -10382,6 +10407,28 @@
       row.appendChild(btn);
     });
   }
+  // ============ 個人化：行程卡片底色不透明度 ============
+  // 一樣只存在這支裝置（不同步給共編者）。只改卡片的「底色」，文字跟陰影不變；
+  // 純 CSS 變數，拖動時不用重畫任何卡片，畫面上的卡片會即時跟著變。
+  const CARD_ALPHA_KEY = 'plannerCardAlpha';
+  function applyCardAlpha(pct){
+    pct = Math.max(10, Math.min(100, Math.round(pct)));
+    document.documentElement.style.setProperty('--ecard-alpha-pct', pct + '%');
+    return pct;
+  }
+  function initCardAlphaControl(){
+    const range = document.getElementById('cardAlphaRange'), val = document.getElementById('cardAlphaVal');
+    if(!range || !val) return;
+    let saved = 100;
+    try{ const n = parseInt(localStorage.getItem(CARD_ALPHA_KEY), 10); if(n >= 10 && n <= 100) saved = n; }catch(err){}
+    range.value = String(applyCardAlpha(saved));
+    val.textContent = range.value + '%';
+    range.addEventListener('input', function(){
+      const v = applyCardAlpha(parseInt(range.value, 10));
+      val.textContent = v + '%';
+      try{ localStorage.setItem(CARD_ALPHA_KEY, String(v)); }catch(err){}
+    });
+  }
   function renderThemeSwatches(){
     const row = document.getElementById('themeSwatchRow');
     if(!row) return;
@@ -10536,6 +10583,7 @@
   function renderDrawerContents(){
     renderThemeSwatches(); // 跟通知面板無關的個人設定，不用等 NOTEBOOK 載入也能顯示
     renderTimeGridOptions();
+    initCardAlphaControl();
     if(!NOTEBOOK) return;
     navCode.textContent = formatJoinCode(NOTEBOOK.code);
     navCopy.textContent = '複製';
