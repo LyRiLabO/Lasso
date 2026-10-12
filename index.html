@@ -1016,8 +1016,8 @@
     border-top:1px solid var(--grid-line);
   }
   .hour-row:first-child{border-top:none;}
-  /* 00:00 那條線比其他整點線稍微明顯一點（一天的起點） */
-  .hour-row.first-hour{border-top:1.5px solid var(--line);}
+  /* 00:00 那條線比其他整點線稍微明顯一點（一天的起點）；24:00（一天的終點）的線同樣粗 */
+  .hour-row.first-hour, .hour-row.last-hour{border-top:1.5px solid var(--line);}
   .hour-row .hlabel{
     position:absolute;
     left:6px; top:-7px;
@@ -1868,16 +1868,16 @@
     position:relative;
     z-index:3; /* 跟 .planner-header 同一層，兩者都要蓋在拖曳中的 .card-ghost（z-index:2）上面 */
   }
-  /* 欄位多到要捲動時，標題列邊緣出現單色（手帳底色）漸層暗示「那邊還有欄位」：
+  /* 欄位多到要捲動時，標題列邊緣出現單色（格線顏色）漸層暗示「那邊還有欄位」：
      右邊還有 → 螢幕右邊緣漸層（越靠右越不透明，往左漸漸消失）；
      左邊被捲走 → 左邊緣漸層。捲到最右邊時只剩左邊的。 */
   .col-head-bar::before, .col-head-bar::after{
-    content:""; position:absolute; top:0; bottom:0; width:34px;
+    content:""; position:absolute; top:0; bottom:0; width:17px;
     pointer-events:none; opacity:0; transition:opacity .18s;
     z-index:4;
   }
-  .col-head-bar::after{ right:0; background:linear-gradient(to left, var(--paper), transparent); }
-  .col-head-bar::before{ left:54px; background:linear-gradient(to right, var(--paper), transparent); }
+  .col-head-bar::after{ right:0; background:linear-gradient(to left, var(--grid-line), transparent); }
+  .col-head-bar::before{ left:54px; background:linear-gradient(to right, var(--grid-line), transparent); }
   .col-head-bar.fade-right::after{opacity:1;}
   .col-head-bar.fade-left::before{opacity:1;}
   .col-head-viewport{
@@ -6708,15 +6708,15 @@
     const frag = document.createDocumentFragment();
     function addRow(h, withLabel){
       const row = document.createElement('div');
-      row.className = 'hour-row' + (h === 0 ? ' first-hour' : '') + (withLabel ? '' : ' buffer-row');
+      row.className = 'hour-row' + (h === 0 ? ' first-hour' : '') + (h === 24 ? ' last-hour' : '') + (withLabel ? '' : ' buffer-row');
       row.style.top = (h*hourPx)+'px';
       row.innerHTML = (withLabel ? '<span class="hlabel">'+pad2(h)+':00</span>' : '') + '<span class="half-tick"></span>'+
         '<span class="quarter-tick" style="top:'+(hourPx*0.25)+'px"></span><span class="quarter-tick" style="top:'+(hourPx*0.75)+'px"></span>';
       frag.appendChild(row);
     }
     for(let h=-bufRows; h<0; h++) addRow(h, false);
-    for(let h=0; h<24; h++) addRow(h, true);
-    for(let h=24; h<24+bufRows; h++) addRow(h, false);
+    for(let h=0; h<=24; h++) addRow(h, true); // 含 24:00 這條一天終點的線與標籤
+    for(let h=25; h<24+bufRows; h++) addRow(h, false);
     timelineGrid.insertBefore(frag, colsClip);
   }
 
@@ -7204,14 +7204,14 @@
     const previewBufRows = Math.ceil((TIMELINE_BUFFER_PX + viewInsetTop()) / hourPx);
     function addPreviewRow(h, withLabel){
       const row = document.createElement('div');
-      row.className = 'hour-row' + (h === 0 ? ' first-hour' : '') + (withLabel ? '' : ' buffer-row');
+      row.className = 'hour-row' + (h === 0 ? ' first-hour' : '') + (h === 24 ? ' last-hour' : '') + (withLabel ? '' : ' buffer-row');
       row.style.top = (h*hourPx)+'px';
       row.innerHTML = (withLabel ? '<span class="hlabel">'+pad2(h)+':00</span>' : '') + '<span class="half-tick"></span>';
       panel.appendChild(row);
     }
     for(let h=-previewBufRows; h<0; h++) addPreviewRow(h, false);
-    for(let h=0; h<24; h++) addPreviewRow(h, true);
-    for(let h=24; h<24+previewBufRows; h++) addPreviewRow(h, false);
+    for(let h=0; h<=24; h++) addPreviewRow(h, true);
+    for(let h=25; h<24+previewBufRows; h++) addPreviewRow(h, false);
 
     const n = Math.max(1, columns.length);
     const dividers = document.createElement('div');
