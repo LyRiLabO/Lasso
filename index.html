@@ -1072,7 +1072,7 @@
     background:var(--ecard-color, var(--card));
     background:color-mix(in srgb, var(--ecard-color, var(--card)) var(--ecard-alpha-pct, 100%), transparent); /* 「個人化」滑軸調的底色不透明度；不支援 color-mix 的舊瀏覽器就用上一行的不透明底色 */
     border-radius:8px;
-    box-shadow:var(--ecard-shadow, 0 2px 6px var(--shadow));
+    box-shadow:0 2px 6px var(--shadow);
     padding:5px 10px;
     overflow:hidden;
     cursor:pointer;
@@ -2824,11 +2824,7 @@
     border:2px solid transparent;
     cursor:pointer;
     position:relative;
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06), 0 2px 4px rgba(32,38,58,0.22); /* 每一顆底下都有一圈柔和的投影 */
-  }
-  /* 淺色的色票（淺黃、淺卡其、淡紫…）跟紙面太接近，邊框加深一點、投影加重，才看得出圓形 */
-  .color-swatch.swatch-light{
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.20), 0 2px 5px rgba(32,38,58,0.40), 0 1px 1px rgba(32,38,58,0.30);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06);
   }
   .color-swatch.selected{
     border-color:var(--ink);
@@ -4555,9 +4551,6 @@
     card.style.setProperty('--ecard-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
     card.style.setProperty('--ecard-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
     card.style.setProperty('--ecard-handle-color', darkenHex(c.hex, 0.22));
-    // 淺色的行程卡片跟紙面太接近：陰影加重，再加一圈很細的暗邊
-    if(light) card.style.setProperty('--ecard-shadow', '0 2px 6px rgba(32,38,58,0.38), 0 0 0 1px rgba(32,38,58,0.14)');
-    else card.style.removeProperty('--ecard-shadow');
     card.style.setProperty('--ecard-sep', doneSepHex(c.hex));
     card.style.setProperty('--ecard-sep-text', isLightColor(doneSepHex(c.hex)) ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
   }
@@ -6616,7 +6609,8 @@
     const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.6; // 簡單的亮度判斷（沒做伽瑪換算，剛好把黃色也算進淺色）
   }
-  const LIGHT_ICON_SHADOW = 'filter:drop-shadow(0 0 0.6px rgba(70,55,40,.6)) drop-shadow(0 0.6px 0.9px rgba(70,55,40,.28));';
+  // 順著圖案輪廓的陰影：貼邊一圈細的深色暈邊（讓線條邊緣清楚）＋ 下方兩層由近到遠的柔和投影。
+  const LIGHT_ICON_SHADOW = 'filter:drop-shadow(0 0 0.7px rgba(60,45,32,.9)) drop-shadow(0 1px 1.2px rgba(60,45,32,.6)) drop-shadow(0 1.5px 2.5px rgba(60,45,32,.35));';
   function colIconSvg(iconId, color){
     const ic = COL_ICON_MAP[iconId];
     if(!ic) return '';
@@ -8969,7 +8963,7 @@
     colorBox.innerHTML = '';
     themeEventColorList().forEach(c => {
       const sw = document.createElement('div');
-      sw.className = 'color-swatch' + (isLightColor(c.hex) ? ' swatch-light' : '') + (selectedColor === c.id ? ' selected' : '');
+      sw.className = 'color-swatch' + (selectedColor === c.id ? ' selected' : '');
       sw.style.background = c.hex;
       sw.title = c.name;
       sw.addEventListener('click', function(){
