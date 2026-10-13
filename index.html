@@ -485,7 +485,7 @@
   .nav-overlay.open{opacity:1; visibility:visible; transition:opacity .25s ease;}
   .nav-drawer{
     position:absolute; top:0; right:0; bottom:0; z-index:66;
-    width:44.4444%; /* 畫面總寬的 4/9 */ min-width:164px; /* 至少 164px：「匯入其他手帳資料」幾個字要能一行放下，不會掉一個字到下一行 */
+    width:50%; /* 畫面總寬的一半 */ min-width:164px; /* 至少 164px：「匯入其他手帳資料」幾個字要能一行放下，不會掉一個字到下一行 */
     background:var(--paper);
     box-shadow:-6px 0 22px rgba(32,38,58,0.28);
     padding:calc(env(safe-area-inset-top, 0px) + 14px) 0 16px;
@@ -1911,6 +1911,7 @@
   .col-head-bar.fade-right .sha-right{opacity:1;}
   .col-head-bar.fade-left .sha-left{opacity:1;}
   .col-head-viewport{
+    position:relative;
     overflow:hidden;
     touch-action:none; /* 左右滑動、長按拖移都由 JS 處理，不要讓瀏覽器接管手勢 */
   }
@@ -1918,8 +1919,16 @@
     display:flex;
     position:relative;
     width:var(--cols-w, 100%);
-    transform:translateX(var(--cols-x, 0px));
+    transform:translateX(calc(var(--cols-x, 0px) + var(--head-slide-x, 0px))); /* --head-slide-x：左右滑動換日時，標題列跟著一起滑 */
     will-change:transform;
+  }
+  /* 換日滑動時，從旁邊滑進來的那一份標題列（欄位每天都一樣，所以是目前標題列的複製品） */
+  .column-header-row.head-preview{
+    position:absolute; top:0; left:0;
+    pointer-events:none;
+  }
+  .col-head-viewport.head-animating .column-header-row{
+    transition:transform .3s cubic-bezier(.2,.7,.3,1);
   }
   .column-header-row .col-head{
     flex:0 0 var(--col-w, 25%);
@@ -6631,14 +6640,25 @@
     const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.6; // 簡單的亮度判斷（沒做伽瑪換算，剛好把黃色也算進淺色）
   }
-  // 順著圖案輪廓的陰影：貼邊一圈細的暈邊（讓線條邊緣清楚）＋ 下方一層柔和投影。
-  const LIGHT_ICON_SHADOW = 'filter:drop-shadow(0 0 0.6px rgba(60,45,32,.68)) drop-shadow(0 0.8px 1.2px rgba(60,45,32,.34));';
+  // 淺色圖示的輪廓：不用陰影，改成在圖案外圍描一圈「同色系、深一階」的細邊
+  // （像貼紙邊緣），顏色還是原本選的那一色，只是邊緣變清楚。做法是同一個圖案畫兩層：
+  // 底層用深色、加寬一圈，上層才是原本的顏色。顏色夠深的圖示完全不加。
+  const ICON_OUTLINE_EXTRA = 1.7; // 底層比上層寬多少（viewBox 24 的單位），外側每邊約 0.85
   function colIconSvg(iconId, color){
     const ic = COL_ICON_MAP[iconId];
     if(!ic) return '';
-    const sh = isLightIconColor(color) ? ' style="' + LIGHT_ICON_SHADOW + '"' : '';
-    if(ic.fill) return '<svg viewBox="0 0 24 24" fill="' + color + '" stroke="none"' + sh + ' aria-hidden="true">' + ic.svg + '</svg>';
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="' + (ic.sw || 1.7) + '" stroke-linecap="round" stroke-linejoin="round"' + sh + ' aria-hidden="true">' + ic.svg + '</svg>';
+    const light = isLightIconColor(color);
+    const edge = light ? darkenHex(color, 0.42) : null;
+    if(ic.fill){
+      if(!light) return '<svg viewBox="0 0 24 24" fill="' + color + '" stroke="none" aria-hidden="true">' + ic.svg + '</svg>';
+      return '<svg viewBox="0 0 24 24" stroke="none" aria-hidden="true">' +
+        '<g fill="' + edge + '" stroke="' + edge + '" stroke-width="' + ICON_OUTLINE_EXTRA + '" stroke-linejoin="round">' + ic.svg + '</g>' +
+        '<g fill="' + color + '">' + ic.svg + '</g></svg>';
+    }
+    const sw = ic.sw || 1.7;
+    const lines = (c, w) => '<g fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round">' + ic.svg + '</g>';
+    return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+      (light ? lines(edge, sw + ICON_OUTLINE_EXTRA) : '') + lines(color, sw) + '</svg>';
   }
   // 圖示顏色（hex）：存的是色 id，換算成「目前主題同一格」的顏色
   function colIconHex(colorId){
@@ -6663,14 +6683,11 @@
   function refreshColumnIconColors(){
     Array.from(columnHeaderRow.querySelectorAll('.col-head')).forEach(function(cell){
       const col = columns.find(c => c.id === cell.dataset.colId);
-      const svg = cell.querySelector('.col-icon:not(.col-icon-empty) svg');
+      const iconEl = cell.querySelector('.col-icon:not(.col-icon-empty)');
       const u = col ? userIconOf(col) : null;
-      if(svg && u){
-        // 填色型圖示換 fill、線條型圖示換 stroke
-        const hex = colIconHex(u.color);
-        svg.setAttribute(svg.getAttribute('stroke') === 'none' ? 'fill' : 'stroke', hex);
-        // 換主題後顏色可能從深變淺（或相反），淺色才墊陰影
-        if(isLightIconColor(hex)) svg.setAttribute('style', LIGHT_ICON_SHADOW); else svg.removeAttribute('style');
+      if(iconEl && u){
+        // 換主題後顏色可能從深變淺（或相反），輪廓也要跟著增減，直接整個重畫
+        iconEl.innerHTML = colIconSvg(u.icon, colIconHex(u.color));
       }
     });
   }
@@ -7482,6 +7499,53 @@
     return panel;
   }
 
+  /* ---------------- 欄位名稱那一排：左右滑動換日時跟著一起滑走 ----------------
+     欄位每一天都一樣，所以「從旁邊滑進來的那一排」就是目前標題列的複製品；
+     真正的標題列用 --head-slide-x 位移，位移量跟時間軸（timelineGrid）完全相同，
+     標題列自己的欄位捲動位置（--cols-x）不受影響。 */
+  let headPreviewEl = null;
+  let headPreviewDir = null;
+  function removeHeadPreview(){
+    if(headPreviewEl){ headPreviewEl.remove(); headPreviewEl = null; headPreviewDir = null; }
+  }
+  function ensureHeadPreview(direction, w){
+    if(headPreviewEl && headPreviewDir === direction) return headPreviewEl;
+    removeHeadPreview();
+    const el = columnHeaderRow.cloneNode(true);
+    el.removeAttribute('id');
+    el.classList.add('head-preview');
+    el.setAttribute('aria-hidden', 'true');
+    el.style.setProperty('--head-slide-x', (direction === 'next' ? w : -w) + 'px');
+    colHeadViewport.appendChild(el);
+    void el.offsetWidth; // 先讓瀏覽器量過一次起始位置，之後的動畫才有起點
+    headPreviewEl = el; headPreviewDir = direction;
+    return el;
+  }
+  function updateHeadSlide(dx, w){
+    const direction = dx < 0 ? 'next' : 'prev';
+    const el = ensureHeadPreview(direction, w);
+    const clamped = Math.max(-w, Math.min(w, dx));
+    columnHeaderRow.style.setProperty('--head-slide-x', clamped + 'px');
+    el.style.setProperty('--head-slide-x', ((direction === 'next' ? w : -w) + clamped) + 'px');
+  }
+  // commit：true＝真的換日（滑完），false＝彈回原位。direction 是手勢方向（'next'＝往左滑）
+  function endHeadSlide(commit, direction, w){
+    const el = ensureHeadPreview(direction, w);
+    colHeadViewport.classList.add('head-animating');
+    if(commit){
+      columnHeaderRow.style.setProperty('--head-slide-x', (direction === 'next' ? -w : w) + 'px');
+      el.style.setProperty('--head-slide-x', '0px');
+    } else {
+      columnHeaderRow.style.setProperty('--head-slide-x', '0px');
+      el.style.setProperty('--head-slide-x', (direction === 'next' ? w : -w) + 'px');
+    }
+    setTimeout(function(){
+      colHeadViewport.classList.remove('head-animating');
+      removeHeadPreview();
+      columnHeaderRow.style.removeProperty('--head-slide-x');
+    }, 300);
+  }
+
   // 手勢進行中：即時跟著手指位移量(dx，往左滑為負值)平移兩塊面板
   function updateDaySlide(dx){
     // 「本日尚未安排行程」是跟 timeline-scroll 對齊置中的固定提示，不會
@@ -7496,6 +7560,7 @@
     timelineGrid.style.transform = 'translateX(' + clamped + 'px)';
     const base = direction === 'next' ? w : -w;
     previewPanel.style.transform = 'translateX(' + (base + clamped) + 'px)';
+    updateHeadSlide(dx, w);
     updateDateScreenSlide(dx, w);
   }
 
@@ -7506,6 +7571,7 @@
     const commit = Math.abs(dx) > threshold && previewPanel;
     daySlider.classList.add('animating');
     endDateScreenSlide(commit, dx < 0 ? 'next' : 'prev');
+    endHeadSlide(!!commit, previewDirection || (dx < 0 ? 'next' : 'prev'), w);
 
     if(commit){
       const delta = dx < 0 ? 1 : -1;
@@ -7612,7 +7678,9 @@
     const screenW = dateDisplayBtn.clientWidth || 1;
     daySlider.classList.add('animating');
     dateDisplayBtn.classList.add('animating');
+    ensureHeadPreview(direction, w);
     requestAnimationFrame(function(){
+      endHeadSlide(true, direction, w);
       timelineGrid.style.transform = 'translateX(' + (direction === 'next' ? -w : w) + 'px)';
       panel.style.transform = 'translateX(0px)';
       dateContentCurrent.style.transform = 'translateX(' + (direction === 'next' ? -screenW : screenW) + 'px)';
