@@ -1919,17 +1919,19 @@
     display:flex;
     position:relative;
     width:var(--cols-w, 100%);
-    transform:translateX(calc(var(--cols-x, 0px) + var(--head-slide-x, 0px))); /* --head-slide-x：左右滑動換日時，標題列跟著一起滑 */
+    transform:translateX(var(--cols-x, 0px));
     will-change:transform;
   }
-  /* 換日滑動時，從旁邊滑進來的那一份標題列（欄位每天都一樣，所以是目前標題列的複製品） */
-  .column-header-row.head-preview{
-    position:absolute; top:0; left:0;
+  /* 左右滑動換日時，整條標題列（底色、上下的線、欄位名稱）當成一整塊，跟時間軸一起滑走；
+     從旁邊滑進來的是另一天的標題列（欄位每天都一樣，所以是目前標題列的複製品）。 */
+  .col-head-bar.head-preview{
+    position:absolute; left:0; right:0;
     pointer-events:none;
   }
-  .col-head-viewport.head-animating .column-header-row{
+  .col-head-bar.head-animating{
     transition:transform .3s cubic-bezier(.2,.7,.3,1);
   }
+  .zoom-inner.head-sliding{ clip-path:inset(0); } /* 滑動中，滑出畫面的部分要裁掉 */
   .column-header-row .col-head{
     flex:0 0 var(--col-w, 25%);
     box-sizing:border-box;
@@ -7499,24 +7501,30 @@
     return panel;
   }
 
-  /* ---------------- 欄位名稱那一排：左右滑動換日時跟著一起滑走 ----------------
-     欄位每一天都一樣，所以「從旁邊滑進來的那一排」就是目前標題列的複製品；
-     真正的標題列用 --head-slide-x 位移，位移量跟時間軸（timelineGrid）完全相同，
-     標題列自己的欄位捲動位置（--cols-x）不受影響。 */
+  /* ---------------- 欄位名稱那一排：左右滑動換日時，整條標題列黏在頁面上一起滑走 ----------------
+     不只是裡面的欄位名稱：整條 .col-head-bar（底色、上下邊線、欄位名稱）一起位移，
+     位移量跟時間軸（timelineGrid）完全相同。欄位每一天都一樣，所以「從旁邊滑進來的那一條」
+     就是目前標題列的複製品。標題列自己的欄位捲動位置（--cols-x）不受影響。 */
   let headPreviewEl = null;
   let headPreviewDir = null;
+  function headBarEl(){ return colHeadViewport.parentElement; } // .col-head-bar
   function removeHeadPreview(){
     if(headPreviewEl){ headPreviewEl.remove(); headPreviewEl = null; headPreviewDir = null; }
   }
   function ensureHeadPreview(direction, w){
     if(headPreviewEl && headPreviewDir === direction) return headPreviewEl;
     removeHeadPreview();
-    const el = columnHeaderRow.cloneNode(true);
+    const bar = headBarEl();
+    const el = bar.cloneNode(true);
     el.removeAttribute('id');
+    el.querySelectorAll('[id]').forEach(function(n){ n.removeAttribute('id'); });
     el.classList.add('head-preview');
+    el.classList.remove('head-animating');
     el.setAttribute('aria-hidden', 'true');
-    el.style.setProperty('--head-slide-x', (direction === 'next' ? w : -w) + 'px');
-    colHeadViewport.appendChild(el);
+    el.style.top = bar.offsetTop + 'px';
+    el.style.transform = 'translateX(' + (direction === 'next' ? w : -w) + 'px)';
+    bar.parentNode.appendChild(el);
+    bar.parentNode.classList.add('head-sliding');
     void el.offsetWidth; // 先讓瀏覽器量過一次起始位置，之後的動畫才有起點
     headPreviewEl = el; headPreviewDir = direction;
     return el;
@@ -7525,24 +7533,27 @@
     const direction = dx < 0 ? 'next' : 'prev';
     const el = ensureHeadPreview(direction, w);
     const clamped = Math.max(-w, Math.min(w, dx));
-    columnHeaderRow.style.setProperty('--head-slide-x', clamped + 'px');
-    el.style.setProperty('--head-slide-x', ((direction === 'next' ? w : -w) + clamped) + 'px');
+    headBarEl().style.transform = 'translateX(' + clamped + 'px)';
+    el.style.transform = 'translateX(' + ((direction === 'next' ? w : -w) + clamped) + 'px)';
   }
   // commit：true＝真的換日（滑完），false＝彈回原位。direction 是手勢方向（'next'＝往左滑）
   function endHeadSlide(commit, direction, w){
     const el = ensureHeadPreview(direction, w);
-    colHeadViewport.classList.add('head-animating');
+    const bar = headBarEl();
+    bar.classList.add('head-animating');
+    el.classList.add('head-animating');
     if(commit){
-      columnHeaderRow.style.setProperty('--head-slide-x', (direction === 'next' ? -w : w) + 'px');
-      el.style.setProperty('--head-slide-x', '0px');
+      bar.style.transform = 'translateX(' + (direction === 'next' ? -w : w) + 'px)';
+      el.style.transform = 'translateX(0px)';
     } else {
-      columnHeaderRow.style.setProperty('--head-slide-x', '0px');
-      el.style.setProperty('--head-slide-x', (direction === 'next' ? w : -w) + 'px');
+      bar.style.transform = 'translateX(0px)';
+      el.style.transform = 'translateX(' + (direction === 'next' ? w : -w) + 'px)';
     }
     setTimeout(function(){
-      colHeadViewport.classList.remove('head-animating');
+      bar.classList.remove('head-animating');
+      bar.style.transform = '';
+      bar.parentNode.classList.remove('head-sliding');
       removeHeadPreview();
-      columnHeaderRow.style.removeProperty('--head-slide-x');
     }, 300);
   }
 
