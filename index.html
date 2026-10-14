@@ -1151,6 +1151,21 @@
     transform:scale(0.3);
     opacity:0;
   }
+  /* 底色不透明度 <= 15%（html[data-ecard-faint]）時，底色幾乎透明，深色卡片上的白字
+     會糊在淺色背景裡：文字自動換成深色。亮／暗兩組顏色由 applyEventColor 寫在卡片上。 */
+  .event-card{
+    --ecard-text:var(--ecard-text-hi, var(--ink));
+    --ecard-text-soft:var(--ecard-text-soft-hi, var(--ink-soft));
+  }
+  html[data-ecard-faint] .event-card{
+    --ecard-text:var(--ecard-text-lo, var(--ink));
+    --ecard-text-soft:var(--ecard-text-soft-lo, var(--ink-soft));
+  }
+  /* 「N 項行程」浮動標籤自己有不透明底色，文字維持原本的亮／暗配色 */
+  .event-card .ecard-solo{
+    --ecard-text:var(--ecard-text-hi, var(--paper));
+    --ecard-text-soft:var(--ecard-text-soft-hi, var(--ink-soft));
+  }
   .event-card .ecard-title{
     font-family:'Noto Sans TC', sans-serif;
     font-weight:700;
@@ -1219,6 +1234,8 @@
   .event-card.resizing{
     box-shadow:0 10px 26px var(--shadow);
     z-index:12;
+    /* 吸附到刻度／欄線時用很短的過渡，跳格不會太生硬 */
+    transition:transform .15s ease, box-shadow .15s ease, top .07s ease-out, height .07s ease-out, left .1s ease-out, width .1s ease-out;
   }
   .event-card.card-tapped-feedback{
     filter:brightness(0.82);
@@ -2940,13 +2957,21 @@
     opacity: 1;
   }
 
-  .ecard-recur-tag{
-    float:right;
-    font-size:22px;
-    line-height:0.7;
+  /* 重複標籤：固定在卡片右下角。用偽元素畫，卡片內容被重寫（縮字、只留標題、
+     拖曳預覽）也不會跟著不見；滑動換日的預覽面板、拖曳分身也都靠同一個 class。 */
+  .event-card.has-recur::after{
+    content:'↻';
+    position:absolute;
+    right:5px; bottom:2px;
+    font-size:14px;
+    line-height:1;
     color:var(--ecard-text-soft, var(--ink-soft));
-    margin-left:4px;
+    pointer-events:none;
+    z-index:1;
   }
+  .event-card.has-recur .ecard-notes{ padding-right:14px; }
+  .event-card.has-recur.compact{ padding-right:22px; }
+  .event-card.label-floated.has-recur::after{ display:none; } /* 純色塊／N 項行程：沒有文字，標籤一併隱藏 */
   .ecard-recur-inline{
     font-size:1.7em;
     line-height:0;
@@ -2974,6 +2999,7 @@
       if(localStorage.getItem('plannerTimeGrid') === 'cells') document.documentElement.setAttribute('data-timegrid', 'cells');
       const a = parseInt(localStorage.getItem('plannerCardAlpha'), 10);
       if(a >= 10 && a < 100) document.documentElement.style.setProperty('--ecard-alpha-pct', a + '%');
+      if(a >= 10 && a <= 15) document.documentElement.setAttribute('data-ecard-faint', '');
       const rd = parseInt(localStorage.getItem('plannerCardRadius'), 10);
       if(rd >= 0 && rd <= 20) document.documentElement.style.setProperty('--ecard-radius', rd + 'px');
     }catch(err){}
@@ -4581,8 +4607,10 @@
     const c = eventColorById(colorId);
     const light = isLightColor(c.hex);
     card.style.setProperty('--ecard-color', c.hex);
-    card.style.setProperty('--ecard-text', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
-    card.style.setProperty('--ecard-text-soft', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
+    card.style.setProperty('--ecard-text-hi', light ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
+    card.style.setProperty('--ecard-text-soft-hi', light ? 'rgba(30,26,22,0.68)' : 'rgba(255,255,255,0.78)');
+    card.style.setProperty('--ecard-text-lo', 'rgba(30,26,22,0.92)');      // 底色很淡時一律用深色字
+    card.style.setProperty('--ecard-text-soft-lo', 'rgba(30,26,22,0.68)');
     card.style.setProperty('--ecard-handle-color', darkenHex(c.hex, 0.22));
     card.style.setProperty('--ecard-sep', doneSepHex(c.hex));
     card.style.setProperty('--ecard-sep-text', isLightColor(doneSepHex(c.hex)) ? 'rgba(30,26,22,0.92)' : '#FFFFFF');
@@ -6645,19 +6673,29 @@
   // 淺色圖示的輪廓：不用陰影，改成在圖案外圍描一圈「同色系、深一階」的細邊
   // （像貼紙邊緣），顏色還是原本選的那一色，只是邊緣變清楚。做法是同一個圖案畫兩層：
   // 底層用深色、加寬一圈，上層才是原本的顏色。顏色夠深的圖示完全不加。
-  const ICON_OUTLINE_EXTRA = 1.7; // 底層比上層寬多少（viewBox 24 的單位），外側每邊約 0.85
+  const ICON_OUTLINE_EXTRA = 0.6; // 底層比上層寬多少（viewBox 24 的單位），外側每邊約 0.3（原本 1.7，太粗）
+  const ICON_LIGHT_THIN = 0.6;    // 淺色圖示本身線條要削掉多少（總量，每側 0.3）：用遮罩把填色圖案往內縮
+  const ICON_LIGHT_SW_SCALE = 0.65; // 淺色的真線條圖示（圓、方…）線寬縮成原本的幾倍
+  const ICON_EDGE_DARKEN = 0.12;  // 輪廓色比圖示色深多少（原本 0.22，太深）
+  let iconMaskSeq = 0;
   function colIconSvg(iconId, color){
     const ic = COL_ICON_MAP[iconId];
     if(!ic) return '';
     const light = isLightIconColor(color);
-    const edge = light ? darkenHex(color, 0.42) : null;
+    const edge = light ? darkenHex(color, ICON_EDGE_DARKEN) : null;
     if(ic.fill){
       if(!light) return '<svg viewBox="0 0 24 24" fill="' + color + '" stroke="none" aria-hidden="true">' + ic.svg + '</svg>';
+      // 上層：先畫滿圖案，再用黑色描邊「挖掉」邊緣一圈 → 線條變細；底層：原圖案稍微加寬 → 細輪廓
+      const mid = 'icm' + (++iconMaskSeq);
       return '<svg viewBox="0 0 24 24" stroke="none" aria-hidden="true">' +
+        '<defs><mask id="' + mid + '" maskUnits="userSpaceOnUse" x="-2" y="-2" width="28" height="28">' +
+          '<g fill="#fff" stroke="none">' + ic.svg + '</g>' +
+          '<g fill="none" stroke="#000" stroke-width="' + ICON_LIGHT_THIN + '" stroke-linejoin="round">' + ic.svg + '</g>' +
+        '</mask></defs>' +
         '<g fill="' + edge + '" stroke="' + edge + '" stroke-width="' + ICON_OUTLINE_EXTRA + '" stroke-linejoin="round">' + ic.svg + '</g>' +
-        '<g fill="' + color + '">' + ic.svg + '</g></svg>';
+        '<g fill="' + color + '" mask="url(#' + mid + ')">' + ic.svg + '</g></svg>';
     }
-    const sw = ic.sw || 1.7;
+    const sw = (ic.sw || 1.7) * (light ? ICON_LIGHT_SW_SCALE : 1);
     const lines = (c, w) => '<g fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round">' + ic.svg + '</g>';
     return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
       (light ? lines(edge, sw + ICON_OUTLINE_EXTRA) : '') + lines(color, sw) + '</svg>';
@@ -7063,7 +7101,7 @@
         for(let attempt = 0; attempt < 2; attempt++){
         const wantCheck = attempt === 0; // 左側按鈕的位置永遠保留，卡片再小也一樣
         const card = document.createElement('div');
-        card.className = 'event-card';
+        card.className = 'event-card' + (inst.isRecurring ? ' has-recur' : '');
         applyEventColor(card, inst.color);
         card.style.top = top+'px';
         card.style.height = height+'px';
@@ -7096,7 +7134,7 @@
           card.classList.add('compact');
           card.innerHTML =
             '<div class="ecard-row">'+
-              '<span class="ecard-title">'+recurMark+title+'</span>'+
+              '<span class="ecard-title">'+title+'</span>'+
               '<span class="ecard-time">'+timeStr+'</span>'+
             '</div>';
         } else {
@@ -7104,7 +7142,6 @@
           // 「誰參與了」，格子裡再重複列一次名字反而佔位置又多餘。
           // 時間下方如果有備註就順便顯示，格子太小裝不下時最優先被拿掉。
           card.innerHTML =
-            (inst.isRecurring ? '<span class="ecard-recur-tag">↻</span>' : '') +
             '<div class="ecard-title">'+title+'</div>'+
             '<div class="ecard-time">'+timeStr+'</div>' +
             (notesHtml ? '<div class="ecard-notes">'+notesHtml+'</div>' : '');
@@ -7134,7 +7171,7 @@
         }
 
         if(tooShortToRead || overflowCheck()){
-          const fitted = tooShortToRead ? false : fitTitleOnly(card, recurMark, title);
+          const fitted = tooShortToRead ? false : fitTitleOnly(card, '', title);
           if(!fitted){
             // 縮到最小字體還是放不下：極端情況下才交給「N 項行程」機制，
             // 跟鄰近同樣放不下的行程合併成一個提示。
@@ -7336,7 +7373,7 @@
     // 左側的垂直中點，不是預設文字排版那種左上（或字體縮小後看起來
     // 像左下）的錨點。
     card.classList.add('title-only');
-    card.innerHTML = '<div class="ecard-title">'+recurMark+title+'</div>';
+    card.innerHTML = '<div class="ecard-title">'+title+'</div>';
     const titleEl = card.querySelector('.ecard-title');
 
     // 名稱會換行：卡片高度放得下幾行就顯示幾行，放不下的行數用刪節號截掉；
@@ -7460,7 +7497,7 @@
 
       runs.forEach(([runMin, runMax]) => {
         const card = document.createElement('div');
-        card.className = 'event-card has-check';
+        card.className = 'event-card has-check' + (inst.isRecurring ? ' has-recur' : '');
         applyEventColor(card, inst.color);
         card.style.top = top+'px';
         card.style.height = height+'px';
@@ -8305,7 +8342,7 @@
     let startX = 0, startY = 0;
     let origHeight = 0, origTop = 0, origWidthPx = 0, origLeftPx = 0;
     let startScrollTop = 0;
-    let finalHeight = 0, finalWidthPx = 0;
+    let finalHeight = 0, finalWidthPx = 0, finalSpanCols = null; // finalSpanCols：拖曳中已吸附好的欄數
     let cancelledByScroll = false, lastY = 0, lastMoveTime = 0, scrollVelocity = 0;
 
     // 左側「待完成／已完成」按鈕的上下兩端，跟左邊角落把手的觸控範圍重疊
@@ -8348,6 +8385,7 @@
       startScrollTop = timelineScroll.scrollTop;
       finalHeight = origHeight;
       finalWidthPx = origWidthPx;
+      finalSpanCols = null;
       resizing = false;
       cancelledByScroll = false;
       lastY = startY;
@@ -8396,13 +8434,15 @@
         );
 
         // ---- 垂直方向：拖曳的是上緣還是下緣，位移直接跟著手指連續變化，不吸附 ----
+        // 移動的那條邊吸附到 5 分鐘刻度（先吸附再做碰撞夾限，夾限的邊界本身也是刻度，結果仍在刻度上）
+        const minH = fiveMinPx();
         let newTop = origTop, newHeight = origHeight;
         if(vertDir === 'bottom'){
-          newHeight = origHeight + (e2.clientY - startY);
-          newHeight = Math.max(8, Math.min(newHeight, hourPx*24 - origTop));
+          newHeight = snapToFiveMin(origTop + origHeight + (e2.clientY - startY)) - origTop;
+          newHeight = Math.max(minH, Math.min(newHeight, hourPx*24 - origTop));
         } else {
-          newTop = origTop + (e2.clientY - startY);
-          newTop = Math.max(0, Math.min(newTop, origTop + origHeight - 8));
+          newTop = snapToFiveMin(origTop + (e2.clientY - startY));
+          newTop = Math.max(0, Math.min(newTop, origTop + origHeight - minH));
           newHeight = (origTop + origHeight) - newTop;
         }
 
@@ -8438,7 +8478,7 @@
               if(roughColMin <= oMax && oMin <= roughColMax) heightLimit = Math.min(heightLimit, oTop - origTop);
             });
           });
-          newHeight = Math.max(8, Math.min(newHeight, heightLimit));
+          newHeight = Math.max(minH, Math.min(newHeight, heightLimit));
         } else {
           let topLimit = 0;
           const fixedBottomAbs = origTop + origHeight;
@@ -8449,7 +8489,7 @@
               if(roughColMin <= oMax && oMin <= roughColMax) topLimit = Math.max(topLimit, oBottom);
             });
           });
-          newTop = Math.max(topLimit, Math.min(newTop, fixedBottomAbs - 8));
+          newTop = Math.max(topLimit, Math.min(newTop, fixedBottomAbs - minH));
           newHeight = fixedBottomAbs - newTop;
         }
 
@@ -8477,6 +8517,22 @@
           });
           newLeftPx = Math.max(leftLimitPx, Math.min(newLeftPx, fixedRightPx - 20));
           newWidthPx = fixedRightPx - newLeftPx;
+        }
+
+        // ---- 水平吸附：移動的那條邊吸附到欄位分隔線（保留卡片原本跟欄線的內縮距離）----
+        {
+          const leftInset = origLeftPx - runMin * colWidthPxEstimate;
+          const rightInset = (runMax + 1) * colWidthPxEstimate - (origLeftPx + origWidthPx);
+          const rawSpan = (newWidthPx + leftInset + rightInset) / colWidthPxEstimate;
+          let snapSpan;
+          if(horizDir === 'right'){
+            snapSpan = Math.max(1, Math.min(n - runMin, Math.round(rawSpan)));
+          } else {
+            snapSpan = Math.max(1, Math.min(runMax + 1, Math.round(rawSpan)));
+            newLeftPx = (runMax + 1 - snapSpan) * colWidthPxEstimate + leftInset;
+          }
+          newWidthPx = snapSpan * colWidthPxEstimate - leftInset - rightInset;
+          finalSpanCols = snapSpan;
         }
 
         finalHeight = newHeight;
@@ -8528,7 +8584,7 @@
           const evRect = eventsLayer.getBoundingClientRect();
           const n = Math.max(1, columns.length);
           const colWidthPx = evRect.width / n;
-          const spanCols = Math.max(1, Math.round(finalWidthPx / colWidthPx));
+          const spanCols = finalSpanCols != null ? finalSpanCols : Math.max(1, Math.round(finalWidthPx / colWidthPx));
           let pendingRunMin, pendingRunMax;
           if(horizDir === 'right'){
             pendingRunMin = runMin;
@@ -10665,6 +10721,7 @@
   function applyCardAlpha(pct){
     pct = Math.max(10, Math.min(100, Math.round(pct)));
     document.documentElement.style.setProperty('--ecard-alpha-pct', pct + '%');
+    document.documentElement.toggleAttribute('data-ecard-faint', pct <= 15);
     return pct;
   }
   function initCardAlphaControl(){
