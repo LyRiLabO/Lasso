@@ -4801,25 +4801,27 @@
   const colByIndex = idx => PALETTE[((idx%PALETTE.length)+PALETTE.length)%PALETTE.length];
 
   // 行程自訂顏色：莫蘭迪＋馬卡龍色系，讓使用者以顏色為行程分類
+  // （經典十六色依使用者提供的色卡更新；id 沿用原本的色系名稱，舊行程顏色不會跑掉，
+  //  只有選色盤的排列順序改成跟色卡一樣，見 EVENT_COLOR_THEME_IDS['default']）
   // （跟上面 colByIndex 那組「依使用者欄位分色」的邏輯彼此獨立，
   // 欄位標題用 colByIndex，行程卡片本身改用這裡的 EVENT_COLORS）
   const EVENT_COLORS = [
-    {id:'morandi-mauve',  name:'霧霧藕色', hex:'#B79C97'},
-    {id:'morandi-blue',   name:'霧灰藍',   hex:'#8FA1B0'},
-    {id:'morandi-sage',   name:'鼠尾草綠', hex:'#A3AC93'},
-    {id:'morandi-oat',    name:'燕麥杏',   hex:'#CBBBA3'},
-    {id:'morandi-lilac',  name:'霧灰紫',   hex:'#A79BB0'},
-    {id:'morandi-teal',   name:'煙燻藍綠', hex:'#7E9C93'},
-    {id:'morandi-clay',   name:'陶土棕',   hex:'#BA8F76'},
-    {id:'morandi-fog',    name:'霧灰',     hex:'#B7B6AC'},
-    {id:'macaron-peach',  name:'粉桃',     hex:'#FBD3C4'},
-    {id:'macaron-mint',   name:'薄荷綠',   hex:'#CDEBD8'},
-    {id:'macaron-lavender', name:'淡紫',   hex:'#E4D6F5'},
-    {id:'macaron-lemon',  name:'檸檬黃',   hex:'#FCEFB4'},
-    {id:'macaron-sky',    name:'天空藍',   hex:'#CBE6F6'},
-    {id:'macaron-pink',   name:'草莓粉',   hex:'#FBCBD7'},
-    {id:'morandi-charcoal', name:'深灰藍', hex:'#5C6B73'},
-    {id:'morandi-plum',   name:'深梅紫',   hex:'#6E5265'},
+    {id:'morandi-mauve',  name:'霧霧藕色', hex:'#BEA9A4'},
+    {id:'morandi-blue',   name:'霧灰藍',   hex:'#9EABBB'},
+    {id:'morandi-sage',   name:'鼠尾草綠', hex:'#B2B7A1'},
+    {id:'morandi-oat',    name:'燕麥杏',   hex:'#D1C6B2'},
+    {id:'morandi-lilac',  name:'霧灰紫',   hex:'#B0A7B8'},
+    {id:'morandi-teal',   name:'煙燻藍綠', hex:'#90A79F'},
+    {id:'morandi-clay',   name:'陶土棕',   hex:'#BF9C86'},
+    {id:'morandi-fog',    name:'霧灰',     hex:'#C1C1B7'},
+    {id:'macaron-peach',  name:'粉桃',     hex:'#F8DCD0'},
+    {id:'macaron-mint',   name:'薄荷綠',   hex:'#DAEFE0'},
+    {id:'macaron-lavender', name:'淡紫',   hex:'#E7DDF5'},
+    {id:'macaron-lemon',  name:'檸檬黃',   hex:'#FBF3C4'},
+    {id:'macaron-sky',    name:'天空藍',   hex:'#D8EBF9'},
+    {id:'macaron-pink',   name:'草莓粉',   hex:'#F7D6DF'},
+    {id:'morandi-charcoal', name:'深灰藍', hex:'#6A747D'},
+    {id:'morandi-plum',   name:'深梅紫',   hex:'#745D6F'},
     // 「美式復古」「昭和懷舊」主題各自的十六色（取自使用者提供的色卡），跟
     // 上面經典主題的莫蘭迪/馬卡龍色系一樣併在同一份 EVENT_COLORS 裡、id 各
     // 自獨立——行程存的是顏色 id（不隨介面風格改動，共編時對方用哪套風格都
@@ -4876,22 +4878,22 @@
     {id:'fo-chestgrey', name:'灰栗褐', hex:'#5C534E'},
     {id:'fo-bark', name:'深樹皮', hex:'#3E3725'},
     // ---- 花園派對 ----（取自使用者提供的色卡，由左到右、由上到下）
-    {id:'gt-rose', name:'玫瑰粉', hex:'#F75D93'},
-    {id:'gt-blossom', name:'櫻花粉', hex:'#FF9CA8'},
-    {id:'gt-dustrose', name:'霧玫瑰', hex:'#EDC5BD'},
-    {id:'gt-latte', name:'奶茶杏', hex:'#EFDAC7'},
-    {id:'gt-lemon', name:'檸檬黃', hex:'#F3C623'},
-    {id:'gt-tangerine', name:'蜜橘', hex:'#F69932'},
-    {id:'gt-pumpkin', name:'南瓜橘', hex:'#FA6638'},
-    {id:'gt-mint', name:'薄荷綠', hex:'#95C1A0'},
-    {id:'gt-garden', name:'園林綠', hex:'#2E5A43'},
-    {id:'gt-cornflower', name:'矢車菊藍', hex:'#226194'},
-    {id:'gt-sky', name:'晴空藍', hex:'#2289B2'},
-    {id:'gt-mistlake', name:'霧湖藍', hex:'#9AC1C6'},
-    {id:'gt-iris', name:'鳶尾淡藍', hex:'#BEC9E9'},
-    {id:'gt-lilac', name:'淡紫', hex:'#DCCEF1'},
-    {id:'gt-lavender', name:'薰衣草紫', hex:'#B694F2'},
-    {id:'gt-pearl', name:'珍珠粉灰', hex:'#EBE0E6'},
+    {id:'gt-rose', name:'玫瑰粉', hex:'#E66792'},
+    {id:'gt-blossom', name:'櫻花粉', hex:'#F2A1A8'},
+    {id:'gt-dustrose', name:'霧玫瑰', hex:'#E7C6BD'},
+    {id:'gt-latte', name:'奶茶杏', hex:'#ECDBC9'},
+    {id:'gt-lemon', name:'檸檬黃', hex:'#ECC84D'},
+    {id:'gt-tangerine', name:'蜜橘', hex:'#E99C4A'},
+    {id:'gt-pumpkin', name:'南瓜橘', hex:'#E96F46'},
+    {id:'gt-lime', name:'嫩芽綠', hex:'#C5DFA2'},
+    {id:'gt-mint', name:'薄荷綠', hex:'#A4C5AA'},
+    {id:'gt-garden', name:'園林綠', hex:'#395944'},
+    {id:'gt-sky', name:'晴空藍', hex:'#4488AF'},
+    {id:'gt-mistlake', name:'霧湖藍', hex:'#A2C1C6'},
+    {id:'gt-iris', name:'鳶尾淡藍', hex:'#BFC8E5'},
+    {id:'gt-lilac', name:'淡紫', hex:'#D9CEEE'},
+    {id:'gt-lavender', name:'薰衣草紫', hex:'#BCA3F6'},
+    {id:'gt-pearl', name:'淡粉紫', hex:'#EFD9EE'},
     // ---- 春日野餐 ----（取自使用者提供的色卡，由左到右、由上到下）
     {id:'bp-coral', name:'珊瑚紅', hex:'#FF7780'},
     {id:'bp-berry', name:'莓果紅', hex:'#F0284E'},
@@ -5025,11 +5027,11 @@
   // 會從原本風格的第 N 色換成新風格的第 N 色，選色盤的排列位置也一樣。
   // 想調整配對，只要在其中一套裡把兩個 id 對調位置就好。
   const EVENT_COLOR_THEME_IDS = {
-    'default':          ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
+    'default':          ['macaron-pink','macaron-peach','macaron-lemon','macaron-mint','macaron-sky','macaron-lavender','morandi-lilac','morandi-blue','morandi-mauve','morandi-clay','morandi-oat','morandi-sage','morandi-teal','morandi-charcoal','morandi-plum','morandi-fog'],
     'american-vintage': ['av-wine','av-rust','av-pumpkin','av-yolk','av-greyolive','av-mistteal','av-inkteal','av-pine','av-slateteal','av-navy','av-ivory','av-camel','av-amber','av-chestnut','av-prune','av-darkolive'],
     'showa':            ['sw-sienna','sw-brick','sw-vermil','sw-amber','sw-wheat','sw-matcha','sw-greymoss','sw-moss','sw-turquoise','sw-jade','sw-greyteal','sw-leadblue','sw-nightpurple','sw-cocoa','sw-coffee','sw-terra'],
     'forest':           ['fo-khaki','fo-asholive','fo-moss','fo-deepcedar','fo-forest','fo-leaf','fo-sagegrey','fo-oat','fo-cream','fo-sand','fo-greige','fo-darkolive','fo-mistrose','fo-rosebrown','fo-chestgrey','fo-bark'],
-    'garden-tea': ['gt-rose','gt-blossom','gt-dustrose','gt-latte','gt-lemon','gt-tangerine','gt-pumpkin','gt-mint','gt-garden','gt-cornflower','gt-sky','gt-mistlake','gt-iris','gt-lilac','gt-lavender','gt-pearl'],
+    'garden-tea': ['gt-rose','gt-blossom','gt-dustrose','gt-latte','gt-lemon','gt-tangerine','gt-pumpkin','gt-lime','gt-mint','gt-garden','gt-sky','gt-mistlake','gt-iris','gt-lilac','gt-lavender','gt-pearl'],
     'berry-picnic': ['bp-coral','bp-berry','bp-tomato','bp-orange','bp-peach','bp-mistblue','bp-sky','bp-denim','bp-slate','bp-navy','bp-meadow','bp-sage','bp-moss','bp-pine','bp-oat','bp-cream'],
     'sakura-tea': ['st-01','st-02','st-03','st-04','st-05','st-06','st-07','st-08','st-09','st-10','st-11','st-12','st-13','st-14','st-15','st-16'],
     'lemon-soda': ['ls-01','ls-02','ls-03','ls-04','ls-05','ls-06','ls-07','ls-08','ls-09','ls-10','ls-11','ls-12','ls-13','ls-14','ls-15','ls-16'],
@@ -5045,6 +5047,8 @@
   ['showa-brick','showa-water','showa-matcha','showa-greige','showa-coal','showa-moss','showa-amber','showa-lead','showa-terra','showa-olive','showa-salmon','showa-cream','showa-ice','showa-vermil','showa-night','showa-cocoa'].forEach((id,i)=>{ LEGACY_COLOR_SLOTS[id]=i; });
   // 森林手札舊版十六色（已換成新色卡）：照原本位置對應到新色票的同一格。
   ['fr-cocoarose','fr-chestgrey','fr-mist','fr-straw','fr-ebony','fr-cedar','fr-hay','fr-moss','fr-sand','fr-linen','fr-dustrose','fr-honey','fr-forest','fr-clayrose','fr-mossgrey','fr-bark'].forEach((id,i)=>{ LEGACY_COLOR_SLOTS[id]=i; });
+  // 花園派對換色卡時拿掉的「矢車菊藍」：用過它的舊行程改成同色系的晴空藍那一格。
+  LEGACY_COLOR_SLOTS['gt-cornflower']=10;
   LEGACY_COLOR_SLOTS['fo-apricot']=9; LEGACY_COLOR_SLOTS['fo-sandapricot']=10; // 森林手札上一版色卡裡被換掉的兩色
   // 目前的風格 id：直接讀 <html data-theme>（<head> 的小 script 在畫面畫出來前
   // 就設好了，applyTheme 也會同步更新），不依賴後面才宣告的 currentTheme，
