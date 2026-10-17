@@ -474,6 +474,40 @@
     padding:10px; cursor:pointer;
   }
   .nb-link[hidden]{display:none;}
+  .nb-choice-btn[hidden]{display:none;}
+  /* 第一頁「註冊／登入」跟「訪客」中間的分隔線 */
+  .nb-divider{
+    display:flex; align-items:center; gap:12px;
+    margin:14px 2px;
+    color:var(--ink-faint);
+    font-family:'Noto Sans TC', sans-serif; font-size:13px;
+  }
+  .nb-divider::before, .nb-divider::after{
+    content:""; flex:1; height:1px;
+    background:color-mix(in srgb, var(--ink-faint) 45%, transparent);
+  }
+  /* 帳號頁面裡不能編輯的欄位（訪客／email） */
+  .acct-static{
+    box-sizing:border-box; width:100%;
+    padding:10px 12px;
+    border:1.5px solid var(--ink-faint); border-radius:12px;
+    background:var(--card); color:var(--ink); opacity:.8;
+    font-family:'Noto Sans TC', sans-serif; font-size:15px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  /* 行事曆右上角（跟手帳名稱同一排）的帳號頭像圓框 */
+  .account-avatar{
+    flex:0 0 auto; margin-left:auto;
+    width:32px; height:32px; box-sizing:border-box;
+    display:flex; align-items:center; justify-content:center;
+    padding:0; border-radius:50%;
+    border:1.5px solid var(--btn-brown); background:var(--card); color:var(--btn-brown);
+    font-family:'Noto Serif TC', serif; font-weight:700; font-size:15px;
+    cursor:pointer; touch-action:manipulation; overflow:hidden;
+  }
+  .account-avatar[hidden]{display:none;}
+  .account-avatar svg{width:20px; height:20px;}
+  .account-avatar:active{opacity:.6;}
 
   /* 右側選單 */
   .nav-overlay{
@@ -3030,12 +3064,45 @@
      給的密碼加入他的手帳。見 JS 的「開啟網頁：創建新手帳／加入別人的手帳」。 -->
 <div id="notebookStartOverlay" class="device-user-overlay" hidden>
   <div class="device-user-card">
+    <!-- 第一頁：註冊／登入 或 訪客。還沒有登入狀態才會出現。 -->
+    <div class="nb-step" data-step="welcome" hidden>
+      <div class="device-user-title">Lasso-手帳曆</div>
+      <div class="device-user-hint">自由自在的安排時間</div>
+      <div class="device-user-list">
+        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnSignIn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+            <polyline points="3 7 12 13 21 7"></polyline>
+          </svg>
+          <span>註冊／登入</span>
+        </button>
+      </div>
+      <div class="nb-divider"><span>或</span></div>
+      <div class="device-user-list">
+        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnGuest">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"></path>
+          </svg>
+          <span>訪客</span>
+        </button>
+      </div>
+      <div class="device-user-hint" style="margin:10px 0 0">訪客不用註冊就能馬上開始，之後可以在帳號頁面綁定 email 備份。</div>
+      <div class="nb-error" id="nbWelcomeError"></div>
+    </div>
+
+    <!-- 第二頁：我的手帳（有手帳才顯示）／創建新的手帳／加入其他人的手帳 -->
     <div class="nb-step" data-step="choice">
       <div class="device-user-title">Lasso-手帳曆</div>
       <div class="device-user-hint">自由自在的安排時間</div>
       <div class="device-user-list">
-        <!-- 兩顆選項按鍵前面各放一個說明圖示：創建＝一本中間有「＋」的日記書，
-             加入＝一群人（加入別人已經在用的手帳） -->
+        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnMyBooks">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>我的手帳</span>
+        </button>
         <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnCreate">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <!-- 日記書（封面加書脊底下的一條書頁）＋封面中間的「＋」 -->
@@ -3054,21 +3121,6 @@
             <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
           </svg>
           <span>加入其他人的手帳</span>
-        </button>
-        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnMyBooks">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          </svg>
-          <span>我的手帳</span>
-        </button>
-        <!-- 帳號與備份：綁定 email（換手機／清資料也找得回來）、用 email 登入 -->
-        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnAccount">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            <path d="M9 12l2 2 4-4"></path>
-          </svg>
-          <span id="nbAccountLabel">帳號與備份</span>
         </button>
       </div>
       <!-- 已經在某本手帳裡、從選單來「創建／加入另一本」的時候才會出現 -->
@@ -3089,7 +3141,7 @@
       <div class="device-user-hint">建好後會得到一組密碼，可以分享給朋友一起編輯。</div>
       <div class="nb-field-label">手帳名稱</div>
       <input type="text" id="nbCreateNotebookName" class="nb-input" autocomplete="off" placeholder="例如：我們的行程表">
-      <div class="nb-field-label">你的使用者名稱</div>
+      <div class="nb-field-label">你的欄位名稱</div>
       <input type="text" id="nbCreateName" class="nb-input" autocomplete="off">
       <div class="nb-field-label">你的圖示（顯示在欄位名稱後面，用來區分使用者）</div>
       <button type="button" class="icon-pick-btn" id="nbCreateIconBtn"></button>
@@ -3116,7 +3168,7 @@
     <div class="nb-step" data-step="joinName" hidden>
       <div class="device-user-title">你要用什麼名字？</div>
       <div class="device-user-hint">這會是你在這本手帳裡的欄位名稱。</div>
-      <div class="nb-field-label">你的使用者名稱</div>
+      <div class="nb-field-label">你的欄位名稱</div>
       <input type="text" id="nbJoinName" class="nb-input" autocomplete="off">
       <div class="nb-field-label">你的圖示（顯示在欄位名稱後面，用來區分使用者）</div>
       <button type="button" class="icon-pick-btn" id="nbJoinIconBtn"></button>
@@ -3128,48 +3180,24 @@
       </div>
     </div>
 
-    <!-- 帳號與備份：還沒綁定 → 輸入 email；已綁定 → 顯示 email、可登出 -->
-    <div class="nb-step" data-step="account" hidden>
-      <div class="device-user-title">帳號與備份</div>
-      <div id="nbAcctAnon">
-        <div class="device-user-hint">目前這個帳號還沒有綁定 email：換手機或清除瀏覽器資料之後，你的手帳會找不回來。綁定之後，用同一個 email 登入就能找回。</div>
-        <div class="nb-field-label">Email</div>
-        <input type="email" id="nbBindEmail" class="nb-input" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com">
-        <div class="nb-error" id="nbBindError"></div>
-        <div class="device-user-actions">
-          <button type="button" class="device-user-action" data-nb-back>返回</button>
-          <button type="button" class="device-user-action primary" id="nbBindSend">寄送驗證碼</button>
-        </div>
-        <button type="button" class="nb-link" id="nbGoLogin">已經綁定過？用 email 登入</button>
-      </div>
-      <div id="nbAcctBound" hidden>
-        <div class="device-user-hint">已綁定：<b id="nbAcctEmail"></b><br>換手機或清除資料之後，用這個 email 登入就能找回所有手帳。</div>
-        <div class="device-user-actions">
-          <button type="button" class="device-user-action" data-nb-back>返回</button>
-          <button type="button" class="device-user-action" id="nbSignOut">登出</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 用 email 登入（換手機／清資料之後找回帳號） -->
-    <div class="nb-step" data-step="login" hidden>
-      <div class="device-user-title">用 email 登入</div>
-      <div class="device-user-hint">輸入之前綁定的 email，我們會寄一組驗證碼給你。</div>
-      <div class="device-user-hint" id="nbLoginWarn" hidden>注意：登入後，這支裝置目前這個「未綁定」帳號底下的手帳會看不到。要保留的話，請先回上一頁用「寄送驗證碼」綁定 email。</div>
+    <!-- email 註冊／登入（第一頁進來）、註冊並綁定（訪客從帳號頁面進來）共用：先輸入 email -->
+    <div class="nb-step" data-step="authEmail" hidden>
+      <div class="device-user-title" id="nbAuthTitle">註冊／登入</div>
+      <div class="device-user-hint" id="nbAuthHint"></div>
       <div class="nb-field-label">Email</div>
-      <input type="email" id="nbLoginEmail" class="nb-input" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com">
-      <div class="nb-error" id="nbLoginError"></div>
+      <input type="email" id="nbAuthEmail" class="nb-input" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com">
+      <div class="nb-error" id="nbAuthError"></div>
       <div class="device-user-actions">
-        <button type="button" class="device-user-action" id="nbLoginBack">返回</button>
-        <button type="button" class="device-user-action primary" id="nbLoginSend">寄送驗證碼</button>
+        <button type="button" class="device-user-action" id="nbAuthBack">返回</button>
+        <button type="button" class="device-user-action primary" id="nbAuthSend">寄送驗證碼</button>
       </div>
     </div>
 
-    <!-- 輸入信裡的驗證碼（綁定、登入共用） -->
+    <!-- 再輸入信裡的驗證碼 -->
     <div class="nb-step" data-step="authCode" hidden>
       <div class="device-user-title">輸入驗證碼</div>
       <div class="device-user-hint" id="nbCodeHint"></div>
-      <input type="text" id="nbCodeInput" class="nb-input code" inputmode="numeric" maxlength="8" autocomplete="one-time-code" autocorrect="off" spellcheck="false" placeholder="－－－－－－">
+      <input type="text" id="nbCodeInput" class="nb-input code" inputmode="numeric" maxlength="10" autocomplete="one-time-code" autocorrect="off" spellcheck="false" placeholder="－－－－－－－－">
       <div class="nb-error" id="nbCodeError"></div>
       <div class="device-user-actions">
         <button type="button" class="device-user-action" id="nbCodeBack">返回</button>
@@ -3177,6 +3205,31 @@
       </div>
       <button type="button" class="nb-link" id="nbCodeResend">重新寄送</button>
       <button type="button" class="nb-link" id="nbCodeLinkDone">信裡是連結、不是驗證碼？點完連結後按這裡</button>
+    </div>
+
+    <!-- 帳號頁面（點行事曆右上角的頭像進來）：訪客 → 顯示「訪客」＋註冊並綁定；已註冊 → 頭像、帳號名稱、email -->
+    <div class="nb-step" data-step="acct" hidden>
+      <div class="device-user-title">帳號</div>
+      <div id="nbAcctGuest">
+        <div class="nb-field-label">帳號名稱</div>
+        <div class="acct-static">訪客</div>
+        <div class="device-user-hint" style="margin:12px 0">訪客的資料只存在這個瀏覽器，清除瀏覽器資料就找不回來。註冊並綁定 email 之後，目前的手帳和行程都會保留，換手機也能用同一個 email 登入找回。</div>
+        <button type="button" class="device-user-action primary" id="nbAcctBind" style="width:100%">註冊並綁定</button>
+      </div>
+      <div id="nbAcctUser" hidden>
+        <div class="nb-field-label">頭像</div>
+        <button type="button" class="icon-pick-btn" id="nbAcctAvatarBtn"></button>
+        <div class="nb-field-label">帳號名稱</div>
+        <input type="text" id="nbAcctName" class="nb-input" data-nofocus autocomplete="off">
+        <div class="nb-field-label">Email</div>
+        <div class="acct-static" id="nbAcctEmail"></div>
+        <div class="nb-error" id="nbAcctError"></div>
+      </div>
+      <div class="device-user-actions">
+        <button type="button" class="device-user-action" id="nbAcctClose">返回</button>
+        <button type="button" class="device-user-action primary" id="nbAcctSave" hidden>儲存</button>
+      </div>
+      <button type="button" class="nb-link" id="nbAcctSignOut" hidden>登出</button>
     </div>
   </div>
 </div>
@@ -3288,6 +3341,8 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 6 9 12 15 18"></polyline></svg>
       </button>
       <span class="notebook-name-text" id="notebookNameText"></span>
+      <!-- 帳號頭像：訪客顯示人形，已註冊顯示自己選的頭像；點下去進帳號頁面 -->
+      <button type="button" class="account-avatar" id="accountAvatarBtn" aria-label="帳號" hidden></button>
     </div>
     <header class="planner-header">
       <div class="date-center-nav">
@@ -4101,26 +4156,35 @@
     console.error('Supabase client 初始化失敗，退回純本機模式：', err);
   }
 
-  // 登入：有登入狀態就沿用（supabase-js 會自動換新 token），沒有就建立匿名帳號。
-  // 之後所有讀寫都帶這個登入身分，資料庫的 RLS 才認得出「你是誰、你在哪些手帳裡」。
-  // 需要先在 Supabase 後台開啟 Authentication → Sign In / Providers → Allow anonymous sign-ins。
+  // 還原登入狀態（supabase-js 會自動換新 token）。沒有登入狀態時不會自己建立帳號：
+  // 要先在第一頁選「註冊／登入」或「訪客」，訪客才會在按下去的時候建立匿名帳號（見 ensureSession）。
+  // 匿名登入需要先在 Supabase 後台開啟 Authentication → Sign In / Providers → Allow anonymous sign-ins。
   const authReady = (async function(){
     if(!sb) return false;
     try{
       sb.auth.onAuthStateChange(function(ev, sess){ if(sess && sess.user) DEVICE_ID = sess.user.id; });
-      let { data: { session } } = await sb.auth.getSession();
-      if(!session){
-        const r = await sb.auth.signInAnonymously();
-        if(r.error) throw r.error;
-        session = r.data.session;
-      }
+      const r = await sb.auth.getSession();
+      const session = r && r.data ? r.data.session : null;
       if(session && session.user) DEVICE_ID = session.user.id;
       return !!session;
     }catch(err){
-      console.error('登入失敗（網路問題，或 Supabase 沒開匿名登入）：', err);
+      console.error('讀取登入狀態失敗：', err);
       return false;
     }
   })();
+  // 確保現在有登入狀態；沒有的話建立匿名（訪客）帳號。
+  async function ensureSession(){
+    if(!sb) throw new Error('沒有連上雲端');
+    await authReady;
+    let { data: { session } } = await sb.auth.getSession();
+    if(!session){
+      const r = await sb.auth.signInAnonymously();
+      if(r.error) throw r.error;
+      session = r.data.session;
+    }
+    if(session && session.user) DEVICE_ID = session.user.id;
+    return session;
+  }
 
   // App 的 JS 物件（camelCase）跟 Supabase 資料表的欄位（snake_case）
   // 互相轉換，只在同步這一層做轉換，其餘程式碼完全不用管資料庫欄位長怎樣。
@@ -10157,13 +10221,12 @@
   function showNbStep(step){
     nbStartOverlay.querySelectorAll('.nb-step').forEach(el => { el.hidden = el.dataset.step !== step; });
     nbStartOverlay.querySelectorAll('.nb-error').forEach(el => { el.textContent = ''; });
-    const input = nbStartOverlay.querySelector('.nb-step[data-step="'+step+'"] .nb-input');
+    const input = nbStartOverlay.querySelector('.nb-step[data-step="'+step+'"] .nb-input:not([data-nofocus])');
     if(input) setTimeout(function(){ input.focus(); }, 50);
     if(step === 'create') createImport = mountImportBox(document.getElementById('nbCreateImportBox'));
     if(step === 'joinName') joinImport = mountImportBox(document.getElementById('nbJoinImportBox'));
-    if(step === 'choice') updateAccountBadge();
-    if(step === 'account') refreshAccountStep();
-    if(step === 'login') prepareLoginStep();
+    if(step === 'choice') document.getElementById('nbBtnMyBooks').hidden = getNotebookList().length === 0; // 還沒有手帳就不顯示「我的手帳」
+    if(step === 'acct') refreshAcctPage();
   }
   // 從選單來「創建／加入另一本手帳」：蓋上開始畫面，並多一個「返回目前的手帳」。
   function openStartOverlay(step){
@@ -10350,7 +10413,7 @@
   async function submitCreate(){
     const notebookName = nbCreateNotebookName.value.trim();
     const name = nbCreateName.value.trim();
-    if(!name && !createIconSel){ setNbError('nbCreateError', '使用者名稱和圖示至少要有一個'); return; }
+    if(!name && !createIconSel){ setNbError('nbCreateError', '欄位名稱和圖示至少要有一個'); return; }
     if(nameLengthError(name)){ setNbError('nbCreateError', nameLengthError(name)); return; }
     nbCreateSubmit.disabled = true;
     try{
@@ -10408,7 +10471,7 @@
   async function submitJoinName(){
     if(!pendingJoin){ showNbStep('choice'); return; }
     const name = nbJoinName.value.trim();
-    if(!name && !joinIconSel){ setNbError('nbJoinNameError', '使用者名稱和圖示至少要有一個'); return; }
+    if(!name && !joinIconSel){ setNbError('nbJoinNameError', '欄位名稱和圖示至少要有一個'); return; }
     if(nameLengthError(name)){ setNbError('nbJoinNameError', nameLengthError(name)); return; }
     if(name && pendingJoin.remote.columns.some(c => c.name === name)){ setNbError('nbJoinNameError', '名稱已被使用'); return; }
     const taken = joinIconSel ? findIconComboUser(pendingJoin.remote.columns, joinIconSel, null) : null;
@@ -10464,27 +10527,30 @@
     btn.addEventListener('click', function(){ pendingJoin = null; showNbStep('choice'); });
   });
 
-  /* ================= 帳號與備份：綁定 email／用 email 登入 =================
-     用 Supabase Auth 的 email 驗證碼（OTP），不用密碼：
-     - 綁定：把目前的匿名帳號升級成正式帳號（updateUser({email}) → verifyOtp type 'email_change'），
-       user id 不變，所以手帳、欄位、行程都還在。
-     - 登入：換手機／清資料之後（signInWithOtp → verifyOtp type 'email'），登入之後把這個帳號
-       加入過的手帳清單從雲端撈回來，重新載入頁面。
-     驗證信預設是「連結」；要寄 6 碼驗證碼，要在 Supabase 後台的信件範本（Change Email Address、
-     Magic Link）放進 {{ .Token }}（需要先設定自己的 SMTP 才能改範本）。這裡兩種都接得住。 */
-  const AFTER_LOGIN_KEY = 'shared-planner-after-login';
+  /* ================= 帳號：註冊／登入／訪客／帳號頁面 =================
+     第一頁：「註冊／登入」（email 驗證碼，第一次用就自動註冊）或「訪客」（匿名帳號）。
+     行事曆右上角的頭像 → 帳號頁面：
+       訪客：帳號名稱顯示「訪客」，可以「註冊並綁定」（updateUser({email}) → verifyOtp 'email_change'，
+             user id 不變，手帳、欄位、行程都保留）。
+       已註冊：改頭像、帳號名稱（存在 Supabase user_metadata），登出。
+     登入的是另一個帳號，所以訪客的資料不會跟過去——這也是第一頁把「註冊／登入」放在「訪客」前面的原因。
+     驗證信的範本（Confirm sign up、Magic Link、Change Email Address）都要放進 {{ .Token }} 才會寄驗證碼。 */
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  let authFlow = null;       // {mode:'bind'|'login', email}
+  const PERSON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"></path></svg>';
+  let authFlow = null;       // {mode:'login'|'bind', email}
   let resendTimer = null;
   let signOutArmTimer = null;
-  const nbBindEmail = document.getElementById('nbBindEmail');
-  const nbBindSend = document.getElementById('nbBindSend');
-  const nbLoginEmail = document.getElementById('nbLoginEmail');
-  const nbLoginSend = document.getElementById('nbLoginSend');
+  let acctAvatarSel = null;  // 帳號頁面裡正在編輯的頭像 {icon, color}
+  const nbAuthEmail = document.getElementById('nbAuthEmail');
+  const nbAuthSend = document.getElementById('nbAuthSend');
   const nbCodeInput = document.getElementById('nbCodeInput');
   const nbCodeSubmit = document.getElementById('nbCodeSubmit');
   const nbCodeResend = document.getElementById('nbCodeResend');
-  const nbSignOut = document.getElementById('nbSignOut');
+  const nbAcctName = document.getElementById('nbAcctName');
+  const nbAcctSave = document.getElementById('nbAcctSave');
+  const nbAcctSignOut = document.getElementById('nbAcctSignOut');
+  const nbAcctAvatarBtn = document.getElementById('nbAcctAvatarBtn');
+  const accountAvatarBtn = document.getElementById('accountAvatarBtn');
 
   async function currentAuthUser(){
     if(!sb) return null;
@@ -10493,42 +10559,87 @@
       return r && r.data && r.data.session ? r.data.session.user : null;
     }catch(err){ return null; }
   }
-  async function updateAccountBadge(){
-    const btn = document.getElementById('nbBtnAccount');
-    btn.hidden = !sb; // 沒接雲端（純本機模式）就沒有帳號可綁
-    if(!sb) return;
-    const user = await currentAuthUser();
-    document.getElementById('nbAccountLabel').textContent = '帳號與備份' + (user && user.email ? '（已綁定）' : '（尚未綁定）');
+  function isRegistered(user){ return !!(user && user.email); }
+  function accountDisplayName(user){
+    if(!isRegistered(user)) return '訪客';
+    const m = user.user_metadata || {};
+    return (m.display_name && String(m.display_name).trim()) || user.email.split('@')[0];
   }
-  async function refreshAccountStep(){
+  // 行事曆右上角的頭像圓框：訪客＝人形；已註冊＝自己選的頭像，沒選就用名字的第一個字。
+  async function renderAccountAvatar(){
+    if(!sb){ accountAvatarBtn.hidden = true; return; }
     const user = await currentAuthUser();
-    const bound = !!(user && user.email);
-    document.getElementById('nbAcctAnon').hidden = bound;
-    document.getElementById('nbAcctBound').hidden = !bound;
-    document.getElementById('nbAcctEmail').textContent = bound ? user.email : '';
-    nbSignOut.textContent = '登出';
+    accountAvatarBtn.hidden = !user;
+    if(!user) return;
+    const m = user.user_metadata || {};
+    if(isRegistered(user) && m.avatar_icon && COL_ICON_MAP[m.avatar_icon]){
+      let hex = 'currentColor';
+      try{ if(m.avatar_color) hex = rawEventColorById(m.avatar_color).hex; }catch(err){}
+      accountAvatarBtn.innerHTML = colIconSvg(m.avatar_icon, hex);
+    } else if(isRegistered(user)){
+      accountAvatarBtn.textContent = accountDisplayName(user).charAt(0).toUpperCase();
+    } else {
+      accountAvatarBtn.innerHTML = PERSON_SVG;
+    }
+    accountAvatarBtn.setAttribute('aria-label', '帳號：' + accountDisplayName(user));
+  }
+  async function refreshAcctPage(){
+    const user = await currentAuthUser();
+    const reg = isRegistered(user);
+    document.getElementById('nbAcctGuest').hidden = reg;
+    document.getElementById('nbAcctUser').hidden = !reg;
+    nbAcctSave.hidden = !reg;
+    nbAcctSignOut.hidden = !reg;
+    nbAcctSignOut.textContent = '登出';
     clearTimeout(signOutArmTimer);
+    setNbError('nbAcctError', '');
+    if(!reg) return;
+    const m = user.user_metadata || {};
+    nbAcctName.value = m.display_name || '';
+    nbAcctName.placeholder = user.email.split('@')[0];
+    document.getElementById('nbAcctEmail').textContent = user.email;
+    acctAvatarSel = m.avatar_icon && COL_ICON_MAP[m.avatar_icon] ? {icon: m.avatar_icon, color: m.avatar_color} : null;
+    renderIconPickBtn(nbAcctAvatarBtn, acctAvatarSel);
   }
-  function prepareLoginStep(){
-    // 目前是未綁定帳號、而且這支裝置已經有手帳：登入會換成另一個帳號，要先提醒。
-    currentAuthUser().then(function(user){
-      document.getElementById('nbLoginWarn').hidden = !(!(user && user.email) && getNotebookList().length > 0);
-    });
+  async function saveAccount(){
+    const name = nbAcctName.value.trim();
+    const lenErr = name ? nameLengthError(name) : '';
+    if(lenErr){ setNbError('nbAcctError', lenErr); return; }
+    setNbError('nbAcctError', '');
+    nbAcctSave.disabled = true;
+    try{
+      const r = await sb.auth.updateUser({data: {
+        display_name: name || null,
+        avatar_icon: acctAvatarSel ? acctAvatarSel.icon : null,
+        avatar_color: acctAvatarSel ? acctAvatarSel.color : null
+      }});
+      if(r.error) throw r.error;
+      showToast('已儲存');
+      renderAccountAvatar();
+    }catch(err){
+      console.error('儲存帳號資料失敗：', err);
+      setNbError('nbAcctError', '儲存失敗，請再試一次。\n原因：' + describeError(err));
+    }finally{
+      nbAcctSave.disabled = false;
+    }
   }
+
   // 把登入／綁定的各種英文錯誤，翻成使用者看得懂、而且知道下一步怎麼做的話。
   function friendlyAuthError(err, ctx){
     const code = (err && err.code) || '';
     const msg = (err && err.message) || '';
+    if(code === 'anonymous_provider_disabled' || /anonymous sign-ins are disabled/i.test(msg))
+      return '訪客登入沒有開啟：請到 Supabase 後台 Authentication → Sign In / Providers，打開「Allow anonymous sign-ins」。';
+    if(/session missing/i.test(msg))
+      return '目前沒有登入狀態，請重新整理網頁後再試一次。';
     if(code === 'over_email_send_rate_limit' || /rate limit|too many/i.test(msg))
-      return '寄信太頻繁了，請稍等一下再試。\n（Supabase 內建寄信每小時只有 2 封，測試時很容易用完；設定自己的寄信服務就不會。）';
+      return '寄信太頻繁了，請稍等一下再試。';
     if(/not authorized|email_address_not_authorized/i.test(code + ' ' + msg))
-      return '內建寄信服務只能寄給專案團隊成員的 email。\n要寄給其他人，需要先在 Supabase 設定自己的寄信服務（SMTP）。';
+      return '目前的寄信設定只能寄給特定的 email，請檢查 Supabase 的寄信（SMTP）設定。';
     if(code === 'email_address_invalid' || /invalid.*email|email.*invalid/i.test(msg))
       return '這個 email 格式不正確，請再確認一次。';
     if(ctx === 'bind' && (code === 'email_exists' || /already (been )?registered|already exists/i.test(msg)))
-      return '這個 email 已經有帳號了。\n要用它登入，請按下面的「已經綁定過？用 email 登入」。';
-    if(ctx === 'login' && (code === 'otp_disabled' || code === 'user_not_found' || /signups not allowed|not found/i.test(code + ' ' + msg)))
-      return '找不到這個 email 的帳號。\n請確認有沒有打錯；如果還沒綁定過，要在原本的裝置先綁定 email。';
+      return '這個 email 已經註冊過了。訪客的資料沒辦法合併進既有的帳號，請改用另一個 email 綁定。';
     if(ctx === 'verify' && (code === 'otp_expired' || /expired|invalid|token/i.test(code + ' ' + msg)))
       return '驗證碼錯誤或已經過期。請再確認一次，或按下面的「重新寄送」。';
     return '失敗了，請再試一次。\n原因：' + describeError(err);
@@ -10536,9 +10647,14 @@
 
   async function requestAuthCode(mode, email){
     await authReady;
-    const r = mode === 'bind'
-      ? await sb.auth.updateUser({email: email})
-      : await sb.auth.signInWithOtp({email: email, options: {shouldCreateUser: false}});
+    let r;
+    if(mode === 'bind'){
+      if(!(await currentAuthUser())) throw new Error('Auth session missing');
+      r = await sb.auth.updateUser({email: email});
+    } else {
+      // shouldCreateUser（預設 true）：第一次用這個 email 就是註冊，註冊過就是登入
+      r = await sb.auth.signInWithOtp({email: email});
+    }
     if(r.error) throw r.error;
   }
   function startResendCooldown(sec){
@@ -10552,32 +10668,41 @@
       nbCodeResend.textContent = '重新寄送（' + left + '）';
     }, 1000);
   }
-  function openCodeStep(mode, email){
-    authFlow = {mode: mode, email: email};
+  function openAuth(mode){
+    authFlow = {mode: mode, email: ''};
+    document.getElementById('nbAuthTitle').textContent = mode === 'bind' ? '註冊並綁定' : '註冊／登入';
+    document.getElementById('nbAuthHint').textContent = mode === 'bind'
+      ? '輸入 email，目前的手帳和行程都會保留，之後用這個 email 就能在任何裝置登入。'
+      : '輸入 email，我們會寄一組驗證碼給你。第一次使用會自動建立帳號，註冊過就直接登入。';
+    nbAuthEmail.value = '';
+    showNbStep('authEmail');
+  }
+  function openCodeStep(email){
+    authFlow.email = email;
     document.getElementById('nbCodeHint').textContent =
       '已經寄出到 ' + email + '。請輸入信裡的驗證碼；沒收到的話，也看一下垃圾郵件匣。';
     showNbStep('authCode');
     nbCodeInput.value = '';
     startResendCooldown(60); // Supabase 同一個帳號 60 秒內只能寄一封
   }
-
-  async function sendFromStep(mode, inputEl, errId, btn){
-    const email = inputEl.value.trim().toLowerCase();
-    if(!EMAIL_RE.test(email)){ setNbError(errId, '請輸入正確的 email'); return; }
-    setNbError(errId, '');
-    btn.disabled = true;
+  async function sendAuthCode(){
+    if(!authFlow) return;
+    const email = nbAuthEmail.value.trim().toLowerCase();
+    if(!EMAIL_RE.test(email)){ setNbError('nbAuthError', '請輸入正確的 email'); return; }
+    setNbError('nbAuthError', '');
+    nbAuthSend.disabled = true;
     try{
-      await requestAuthCode(mode, email);
-      openCodeStep(mode, email);
+      await requestAuthCode(authFlow.mode, email);
+      openCodeStep(email);
     }catch(err){
       console.error('寄送驗證碼失敗：', err);
-      setNbError(errId, friendlyAuthError(err, mode));
+      setNbError('nbAuthError', friendlyAuthError(err, authFlow.mode));
     }finally{
-      btn.disabled = false;
+      nbAuthSend.disabled = false;
     }
   }
 
-  // 登入成功之後：這個帳號的手帳清單從雲端撈回來，換掉這支裝置原本的本機紀錄，重新載入。
+  // 清掉這支裝置上的手帳本機紀錄（不動登入狀態）。
   function purgeLocalNotebookData(){
     const doomed = [NOTEBOOK_KEY, NOTEBOOKS_KEY, CLAIM_DISMISSED_KEY, PENDING_IMPORT_KEY];
     for(let i = 0; i < localStorage.length; i++){
@@ -10586,36 +10711,50 @@
     }
     doomed.forEach(function(k){ try{ localStorage.removeItem(k); }catch(err){} });
   }
-  async function finishLogin(){
+  // 從雲端撈這個帳號加入過的手帳，寫進這支裝置的「我的手帳」清單。
+  async function loadNotebookListFromCloud(){
     const { data, error } = await sb.from('notebook_members').select('notebook_id, notebooks(id, code, name)');
     if(error) throw error;
-    const list = (data || []).map(r => r.notebooks).filter(Boolean)
+    return (data || []).map(r => r.notebooks).filter(Boolean)
       .map(n => ({id: n.id, code: n.code, name: n.name || ''}));
+  }
+  async function finishLogin(session){
+    if(session && session.user) DEVICE_ID = session.user.id;
+    let list = [];
+    try{ list = await loadNotebookListFromCloud(); }catch(err){ console.error('讀取手帳清單失敗：', err); }
     purgeLocalNotebookData();
     saveNotebookList(list);
-    try{ sessionStorage.setItem(AFTER_LOGIN_KEY, '1'); }catch(err){}
-    location.reload();
+    authFlow = null;
+    clearInterval(resendTimer);
+    renderAccountAvatar();
+    showNbStep('choice'); // 第二頁：有手帳就會看到「我的手帳」
   }
   function finishBind(){
     authFlow = null;
     clearInterval(resendTimer);
-    showToast('已綁定 email，帳號備份完成');
-    showNbStep('account');
+    showToast('已註冊並綁定，帳號備份完成');
+    renderAccountAvatar();
+    showNbStep('acct');
   }
 
   async function submitAuthCode(){
-    if(!authFlow) { showNbStep('choice'); return; }
+    if(!authFlow){ showNbStep('welcome'); return; }
     const token = nbCodeInput.value.replace(/\s/g, '');
-    if(!/^\d{6,8}$/.test(token)){ setNbError('nbCodeError', '請輸入信裡的驗證碼（6～8 位數字）'); return; }
+    if(!/^\d{6,10}$/.test(token)){ setNbError('nbCodeError', '請輸入信裡的驗證碼（全部是數字）'); return; }
     setNbError('nbCodeError', '');
     nbCodeSubmit.disabled = true;
     try{
-      const r = await sb.auth.verifyOtp({
-        email: authFlow.email, token: token,
-        type: authFlow.mode === 'bind' ? 'email_change' : 'email'
-      });
-      if(r.error) throw r.error;
-      if(authFlow.mode === 'bind') finishBind(); else await finishLogin();
+      if(authFlow.mode === 'bind'){
+        const r = await sb.auth.verifyOtp({email: authFlow.email, token: token, type: 'email_change'});
+        if(r.error) throw r.error;
+        finishBind();
+      } else {
+        let r = await sb.auth.verifyOtp({email: authFlow.email, token: token, type: 'email'});
+        // 第一次註冊的驗證碼，有些版本要用 'signup' 這個類型驗證：失敗時再試一次
+        if(r.error) r = await sb.auth.verifyOtp({email: authFlow.email, token: token, type: 'signup'}).then(x => x.error ? r : x);
+        if(r.error) throw r.error;
+        await finishLogin(r.data && r.data.session);
+      }
     }catch(err){
       console.error('驗證失敗：', err);
       setNbError('nbCodeError', friendlyAuthError(err, 'verify'));
@@ -10623,17 +10762,23 @@
       nbCodeSubmit.disabled = false;
     }
   }
-  // 信裡寄來的是連結（還沒改信件範本）：連結在別的分頁／別的 App 點完之後，回來按這個，
-  // 重新跟伺服器核對帳號狀態。
+  // 信裡寄來的是連結（還沒改信件範本）：連結點完之後回來按這個，重新核對帳號狀態。
   async function checkLinkDone(){
     if(!authFlow) return;
     setNbError('nbCodeError', '');
     try{
       await authReady;
-      const r = await sb.auth.refreshSession();
-      const user = r && r.data && r.data.session ? r.data.session.user : null;
+      let user = null, session = null;
+      if(authFlow.mode === 'bind'){
+        const r = await sb.auth.refreshSession();
+        session = r && r.data ? r.data.session : null;
+      } else {
+        const r = await sb.auth.getSession();
+        session = r && r.data ? r.data.session : null;
+      }
+      user = session ? session.user : null;
       if(user && user.email && user.email.toLowerCase() === authFlow.email){
-        if(authFlow.mode === 'bind') finishBind(); else await finishLogin();
+        if(authFlow.mode === 'bind') finishBind(); else await finishLogin(session);
       } else {
         setNbError('nbCodeError', '還沒偵測到驗證完成。請先點信裡的連結，再回來按一次。');
       }
@@ -10652,42 +10797,63 @@
       setNbError('nbCodeError', friendlyAuthError(err, authFlow.mode));
     }
   }
-  // 登出要按兩次（第一次變成「再按一次確認」，4 秒內沒按就恢復），不另外開彈窗，
-  // 才不會被開始畫面蓋住。登出後這支裝置會變成全新的未綁定帳號，要用 email 登入才找得回手帳。
+  // 登出要按兩次（第一次變成「再按一次確認」，4 秒內沒按就恢復），不另外開彈窗，才不會被開始畫面蓋住。
   async function signOutAccount(){
-    if(nbSignOut.textContent === '登出'){
-      nbSignOut.textContent = '再按一次確認登出';
+    if(nbAcctSignOut.textContent === '登出'){
+      nbAcctSignOut.textContent = '再按一次確認登出';
       clearTimeout(signOutArmTimer);
-      signOutArmTimer = setTimeout(function(){ nbSignOut.textContent = '登出'; }, 4000);
+      signOutArmTimer = setTimeout(function(){ nbAcctSignOut.textContent = '登出'; }, 4000);
       return;
     }
-    nbSignOut.disabled = true;
+    nbAcctSignOut.disabled = true;
     try{
       await sb.auth.signOut();
       purgeLocalNotebookData();
-      location.reload();
+      location.reload(); // 重新載入後沒有登入狀態，會回到第一頁
     }catch(err){
       console.error('登出失敗：', err);
       showToast('登出失敗：' + describeError(err));
-      nbSignOut.disabled = false;
-      nbSignOut.textContent = '登出';
+      nbAcctSignOut.disabled = false;
+      nbAcctSignOut.textContent = '登出';
+    }
+  }
+  // 第一頁選「訪客」：建立匿名帳號，進第二頁。
+  async function startGuest(){
+    const btn = document.getElementById('nbBtnGuest');
+    setNbError('nbWelcomeError', '');
+    btn.disabled = true;
+    try{
+      await ensureSession();
+      renderAccountAvatar();
+      showNbStep('choice');
+    }catch(err){
+      console.error('訪客登入失敗：', err);
+      setNbError('nbWelcomeError', friendlyAuthError(err, 'guest'));
+    }finally{
+      btn.disabled = false;
     }
   }
 
-  document.getElementById('nbBtnAccount').addEventListener('click', function(){ showNbStep('account'); });
-  document.getElementById('nbGoLogin').addEventListener('click', function(){ showNbStep('login'); });
-  document.getElementById('nbLoginBack').addEventListener('click', function(){ showNbStep('account'); });
-  document.getElementById('nbCodeBack').addEventListener('click', function(){
-    clearInterval(resendTimer);
-    showNbStep(authFlow && authFlow.mode === 'login' ? 'login' : 'account');
+  document.getElementById('nbBtnSignIn').addEventListener('click', function(){ openAuth('login'); });
+  document.getElementById('nbBtnGuest').addEventListener('click', startGuest);
+  document.getElementById('nbAcctBind').addEventListener('click', function(){ openAuth('bind'); });
+  document.getElementById('nbAuthBack').addEventListener('click', function(){
+    showNbStep(authFlow && authFlow.mode === 'bind' ? 'acct' : 'welcome');
   });
-  nbBindSend.addEventListener('click', function(){ sendFromStep('bind', nbBindEmail, 'nbBindError', nbBindSend); });
-  nbLoginSend.addEventListener('click', function(){ sendFromStep('login', nbLoginEmail, 'nbLoginError', nbLoginSend); });
+  document.getElementById('nbCodeBack').addEventListener('click', function(){ clearInterval(resendTimer); showNbStep('authEmail'); });
+  document.getElementById('nbAcctClose').addEventListener('click', function(){ hideOverlay(); });
+  accountAvatarBtn.addEventListener('click', function(){ openStartOverlay('acct'); });
+  nbAcctAvatarBtn.addEventListener('click', function(){
+    openIconPicker({title: '選擇頭像', sub: '會顯示在行事曆右上角的頭像圓框。', initial: acctAvatarSel, usedCols: [], iconOptional: true,
+      onConfirm: function(sel){ acctAvatarSel = sel && sel.icon ? sel : null; renderIconPickBtn(nbAcctAvatarBtn, acctAvatarSel); }});
+  });
+  nbAuthSend.addEventListener('click', sendAuthCode);
   nbCodeSubmit.addEventListener('click', submitAuthCode);
   nbCodeResend.addEventListener('click', resendCode);
   document.getElementById('nbCodeLinkDone').addEventListener('click', checkLinkDone);
-  nbSignOut.addEventListener('click', signOutAccount);
-  [[nbBindEmail, nbBindSend], [nbLoginEmail, nbLoginSend], [nbCodeInput, nbCodeSubmit]].forEach(function(pair){
+  nbAcctSave.addEventListener('click', saveAccount);
+  nbAcctSignOut.addEventListener('click', signOutAccount);
+  [[nbAuthEmail, nbAuthSend], [nbCodeInput, nbCodeSubmit], [nbAcctName, nbAcctSave]].forEach(function(pair){
     pair[0].addEventListener('keydown', function(e){ if(e.key === 'Enter') pair[1].click(); });
   });
 
@@ -11345,16 +11511,27 @@
   nbAddCancel.addEventListener('click', function(){ hideOverlay(); });
 
   // 開啟網頁：已經有手帳就直接載入；沒有就先問「創建」還是「加入」。
-  authReady.then(function(){
+  authReady.then(async function(hasSession){
+    renderAccountAvatar();
     if(NOTEBOOK){
       bootNotebook(null);
-    } else {
-      nbStartOverlay.hidden = false;
-      let afterLogin = false;
-      try{ afterLogin = sessionStorage.getItem(AFTER_LOGIN_KEY) === '1'; sessionStorage.removeItem(AFTER_LOGIN_KEY); }catch(err){}
-      if(afterLogin){ renderMyBooksList(); showNbStep('mybooks'); } // 剛用 email 登入：直接看找回來的手帳
-      else showNbStep('choice');
+      return;
     }
+    // 已登入、但這個瀏覽器還沒有手帳清單（例如用信裡的連結在新的瀏覽器登入）：
+    // 從雲端把這個帳號加入過的手帳撈回來，連結登入跟輸入驗證碼登入的結果一樣。
+    if(sb && hasSession && getNotebookList().length === 0){
+      try{
+        const user = await currentAuthUser();
+        if(isRegistered(user)){
+          const list = await loadNotebookListFromCloud();
+          if(list.length) saveNotebookList(list);
+        }
+      }catch(err){ console.error('還原手帳清單失敗：', err); }
+    }
+    nbStartOverlay.hidden = false;
+    // 沒有登入狀態 → 第一頁（註冊／登入、訪客）；已經有 → 第二頁（我的手帳／創建／加入）。
+    // 沒接雲端的純本機模式沒有帳號，直接第二頁。
+    showNbStep(sb && !hasSession ? 'welcome' : 'choice');
   });
 
   // 切回這個分頁／從背景回來時，重新整包抓一次雲端資料——這是目前選擇
