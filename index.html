@@ -224,6 +224,210 @@
     --gold-fg:var(--ink); /* 月曆所在日圓圈裡的數字：用主文字色，淺色底上才看得清楚 */
   }
 
+  /* ============ 個人化主題：櫻花果茶 ============
+     各分類的顏色取自使用者提供的色卡（變數意義同美式復古那段）：手帳底色＝色卡背景、
+     按下去的底色＝--paper-deep／--btn-face-pressed、卡片＝--card／--date-bg、主文字＝
+     --ink／--btn-coffee、圖示＝--btn-brown、次要文字＝線條類（--line、--ink-soft、
+     --ink-faint），時間軸橫線是次要文字往手帳底色混淡。強調紅＝--red、月曆所在日＝
+     --gold（圈內數字依底色深淺用主文字色或卡片色）。行程十六色見 EVENT_COLOR_THEME_IDS。 */
+  [data-theme="sakura-tea"]{
+    --col-div:color-mix(in srgb, var(--line) 62%, var(--ink));
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --body-bg:#E2E4D1;
+    --paper:#F0F3DE;
+    --paper-deep:#DCDFCE;
+    --line:#848768;
+    --line-soft:#848768;
+    --grid-line:#D0D3BB;
+    --grid-line-sub:#D0D3BB;
+    --ink:#4B4922;
+    --ink-soft:#848768;
+    --ink-faint:#848768;
+    --btn-coffee:#4B4922;
+    --btn-brown:#595623;
+    --btn-face:#F0F3DE;
+    --btn-relief:0 3px 8px rgba(89,86,35,0.34), 0 1px 3px rgba(89,86,35,0.22);
+    --btn-face-pressed:#DCDFCE;
+    --btn-relief-pressed:inset 0 1px 3px rgba(89,86,35,0.32), 0 0 0 rgba(89,86,35,0);
+    --red:#F47C6B;
+    --red-deep:#B0594D;
+    --card:#FCFFEC;
+    --date-bg:#FCFFEC;
+    --shadow:rgba(75,73,34,0.22);
+    --gold:#CCB95B;
+    --gold-fg:var(--ink); /* 月曆所在日圓圈裡的數字：依圓圈深淺挑看得清楚的顏色 */
+  }
+
+  /* ============ 個人化主題：檸檬蘇打 ============
+     各分類的顏色取自使用者提供的色卡（變數意義同美式復古那段）：手帳底色＝色卡背景、
+     按下去的底色＝--paper-deep／--btn-face-pressed、卡片＝--card／--date-bg、主文字＝
+     --ink／--btn-coffee、圖示＝--btn-brown、次要文字＝線條類（--line、--ink-soft、
+     --ink-faint），時間軸橫線是次要文字往手帳底色混淡。強調紅＝--red、月曆所在日＝
+     --gold（圈內數字依底色深淺用主文字色或卡片色）。行程十六色見 EVENT_COLOR_THEME_IDS。 */
+  [data-theme="lemon-soda"]{
+    --col-div:color-mix(in srgb, var(--line) 62%, var(--ink));
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --body-bg:#DCE9EA;
+    --paper:#EAF8F9;
+    --paper-deep:#D1E6E7;
+    --line:#7CACB6;
+    --line-soft:#7CACB6;
+    --grid-line:#C9E1E5;
+    --grid-line-sub:#C9E1E5;
+    --ink:#225864;
+    --ink-soft:#7CACB6;
+    --ink-faint:#7CACB6;
+    --btn-coffee:#225864;
+    --btn-brown:#659099;
+    --btn-face:#EAF8F9;
+    --btn-relief:0 3px 8px rgba(101,144,153,0.34), 0 1px 3px rgba(101,144,153,0.22);
+    --btn-face-pressed:#D1E6E7;
+    --btn-relief-pressed:inset 0 1px 3px rgba(101,144,153,0.32), 0 0 0 rgba(101,144,153,0);
+    --red:#FF8A30;
+    --red-deep:#B86323;
+    --card:#F9FFFF;
+    --date-bg:#F9FFFF;
+    --shadow:rgba(34,88,100,0.22);
+    --gold:#7DD6E8;
+    --gold-fg:var(--ink); /* 月曆所在日圓圈裡的數字：依圓圈深淺挑看得清楚的顏色 */
+  }
+
+  /* ============ 個人化主題：南瓜拿鐵 ============
+     各分類的顏色取自使用者提供的色卡（變數意義同美式復古那段）：手帳底色＝色卡背景、
+     按下去的底色＝--paper-deep／--btn-face-pressed、卡片＝--card／--date-bg、主文字＝
+     --ink／--btn-coffee、圖示＝--btn-brown、次要文字＝線條類（--line、--ink-soft、
+     --ink-faint），時間軸橫線是次要文字往手帳底色混淡。強調紅＝--red、月曆所在日＝
+     --gold（圈內數字依底色深淺用主文字色或卡片色）。行程十六色見 EVENT_COLOR_THEME_IDS。 */
+  [data-theme="pumpkin-latte"]{
+    --col-div:color-mix(in srgb, var(--line) 62%, var(--ink));
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --body-bg:#DFBE8B;
+    --paper:#EDCA94;
+    --paper-deep:#D5B17F;
+    --line:#8B4D36;
+    --line-soft:#8B4D36;
+    --grid-line:#D0A478;
+    --grid-line-sub:#D0A478;
+    --ink:#521E09;
+    --ink-soft:#8B4D36;
+    --ink-faint:#8B4D36;
+    --btn-coffee:#521E09;
+    --btn-brown:#6B2D16;
+    --btn-face:#EDCA94;
+    --btn-relief:0 3px 8px rgba(107,45,22,0.34), 0 1px 3px rgba(107,45,22,0.22);
+    --btn-face-pressed:#D5B17F;
+    --btn-relief-pressed:inset 0 1px 3px rgba(107,45,22,0.32), 0 0 0 rgba(107,45,22,0);
+    --red:#BE5400;
+    --red-deep:#893C00;
+    --card:#FADAAB;
+    --date-bg:#FADAAB;
+    --shadow:rgba(82,30,9,0.22);
+    --gold:#E99F40;
+    --gold-fg:var(--ink); /* 月曆所在日圓圈裡的數字：依圓圈深淺挑看得清楚的顏色 */
+  }
+
+  /* ============ 個人化主題：可可蘭姆 ============
+     各分類的顏色取自使用者提供的色卡（變數意義同美式復古那段）：手帳底色＝色卡背景、
+     按下去的底色＝--paper-deep／--btn-face-pressed、卡片＝--card／--date-bg、主文字＝
+     --ink／--btn-coffee、圖示＝--btn-brown、次要文字＝線條類（--line、--ink-soft、
+     --ink-faint），時間軸橫線是次要文字往手帳底色混淡。強調紅＝--red、月曆所在日＝
+     --gold（圈內數字依底色深淺用主文字色或卡片色）。行程十六色見 EVENT_COLOR_THEME_IDS。 */
+  [data-theme="cocoa-rum"]{
+    --col-div:color-mix(in srgb, var(--line) 62%, var(--ink));
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --body-bg:#DADBE0;
+    --paper:#E8E9EE;
+    --paper-deep:#D0D4DF;
+    --line:#52515F;
+    --line-soft:#52515F;
+    --grid-line:#BBBBC3;
+    --grid-line-sub:#BBBBC3;
+    --ink:#232439;
+    --ink-soft:#52515F;
+    --ink-faint:#52515F;
+    --btn-coffee:#232439;
+    --btn-brown:#3E3D4F;
+    --btn-face:#E8E9EE;
+    --btn-relief:0 3px 8px rgba(62,61,79,0.34), 0 1px 3px rgba(62,61,79,0.22);
+    --btn-face-pressed:#D0D4DF;
+    --btn-relief-pressed:inset 0 1px 3px rgba(62,61,79,0.32), 0 0 0 rgba(62,61,79,0);
+    --red:#5E100C;
+    --red-deep:#440C09;
+    --card:#F2F3F7;
+    --date-bg:#F2F3F7;
+    --shadow:rgba(35,36,57,0.22);
+    --gold:#FFFBEF;
+    --gold-fg:var(--ink); /* 月曆所在日圓圈裡的數字：依圓圈深淺挑看得清楚的顏色 */
+  }
+
+  /* ============ 個人化主題：英倫學院 ============
+     各分類的顏色取自使用者提供的色卡（變數意義同美式復古那段）：手帳底色＝色卡背景、
+     按下去的底色＝--paper-deep／--btn-face-pressed、卡片＝--card／--date-bg、主文字＝
+     --ink／--btn-coffee、圖示＝--btn-brown、次要文字＝線條類（--line、--ink-soft、
+     --ink-faint），時間軸橫線是次要文字往手帳底色混淡。強調紅＝--red、月曆所在日＝
+     --gold（圈內數字依底色深淺用主文字色或卡片色）。行程十六色見 EVENT_COLOR_THEME_IDS。 */
+  [data-theme="british-academy"]{
+    --col-div:color-mix(in srgb, var(--line) 62%, var(--ink));
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --body-bg:#979488;
+    --paper:#A19D91;
+    --paper-deep:#7A766B;
+    --line:#4F4440;
+    --line-soft:#4F4440;
+    --grid-line:#888279;
+    --grid-line-sub:#888279;
+    --ink:#1D0807;
+    --ink-soft:#4F4440;
+    --ink-faint:#4F4440;
+    --btn-coffee:#1D0807;
+    --btn-brown:#281A0F;
+    --btn-face:#A19D91;
+    --btn-relief:0 3px 8px rgba(40,26,15,0.34), 0 1px 3px rgba(40,26,15,0.22);
+    --btn-face-pressed:#7A766B;
+    --btn-relief-pressed:inset 0 1px 3px rgba(40,26,15,0.32), 0 0 0 rgba(40,26,15,0);
+    --red:#4E1F25;
+    --red-deep:#38161B;
+    --card:#B1AC99;
+    --date-bg:#B1AC99;
+    --shadow:rgba(29,8,7,0.22);
+    --gold:#3E3727;
+    --gold-fg:var(--card); /* 月曆所在日圓圈裡的數字：依圓圈深淺挑看得清楚的顏色 */
+  }
+
+  /* ============ 個人化主題：工業時尚 ============
+     各分類的顏色取自使用者提供的色卡（變數意義同美式復古那段）：手帳底色＝色卡背景、
+     按下去的底色＝--paper-deep／--btn-face-pressed、卡片＝--card／--date-bg、主文字＝
+     --ink／--btn-coffee、圖示＝--btn-brown、次要文字＝線條類（--line、--ink-soft、
+     --ink-faint），時間軸橫線是次要文字往手帳底色混淡。強調紅＝--red、月曆所在日＝
+     --gold（圈內數字依底色深淺用主文字色或卡片色）。行程十六色見 EVENT_COLOR_THEME_IDS。 */
+  [data-theme="industrial-chic"]{
+    --col-div:color-mix(in srgb, var(--line) 62%, var(--ink));
+    --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
+    --body-bg:#D2D0D1;
+    --paper:#DFDDDE;
+    --paper-deep:#CDCBCC;
+    --line:#888C8B;
+    --line-soft:#888C8B;
+    --grid-line:#C5C5C5;
+    --grid-line-sub:#C5C5C5;
+    --ink:#313236;
+    --ink-soft:#888C8B;
+    --ink-faint:#888C8B;
+    --btn-coffee:#313236;
+    --btn-brown:#464A4D;
+    --btn-face:#DFDDDE;
+    --btn-relief:0 3px 8px rgba(70,74,77,0.34), 0 1px 3px rgba(70,74,77,0.22);
+    --btn-face-pressed:#CDCBCC;
+    --btn-relief-pressed:inset 0 1px 3px rgba(70,74,77,0.32), 0 0 0 rgba(70,74,77,0);
+    --red:#482112;
+    --red-deep:#34180D;
+    --card:#EEECED;
+    --date-bg:#EEECED;
+    --shadow:rgba(49,50,54,0.22);
+    --gold:#AEAEAE;
+    --gold-fg:var(--ink); /* 月曆所在日圓圈裡的數字：依圓圈深淺挑看得清楚的顏色 */
+  }
+
   /* 現在時間線最左端的圓點改成小星星。 */
   [data-theme="american-vintage"] .now-line::before{
     width:14px; height:14px; left:-7px; top:-7px;
@@ -4614,25 +4818,27 @@
   const colByIndex = idx => PALETTE[((idx%PALETTE.length)+PALETTE.length)%PALETTE.length];
 
   // 行程自訂顏色：莫蘭迪＋馬卡龍色系，讓使用者以顏色為行程分類
+  // （經典十六色依使用者提供的色卡更新；id 沿用原本的色系名稱，舊行程顏色不會跑掉，
+  //  只有選色盤的排列順序改成跟色卡一樣，見 EVENT_COLOR_THEME_IDS['default']）
   // （跟上面 colByIndex 那組「依使用者欄位分色」的邏輯彼此獨立，
   // 欄位標題用 colByIndex，行程卡片本身改用這裡的 EVENT_COLORS）
   const EVENT_COLORS = [
-    {id:'morandi-mauve',  name:'霧霧藕色', hex:'#B79C97'},
-    {id:'morandi-blue',   name:'霧灰藍',   hex:'#8FA1B0'},
-    {id:'morandi-sage',   name:'鼠尾草綠', hex:'#A3AC93'},
-    {id:'morandi-oat',    name:'燕麥杏',   hex:'#CBBBA3'},
-    {id:'morandi-lilac',  name:'霧灰紫',   hex:'#A79BB0'},
-    {id:'morandi-teal',   name:'煙燻藍綠', hex:'#7E9C93'},
-    {id:'morandi-clay',   name:'陶土棕',   hex:'#BA8F76'},
-    {id:'morandi-fog',    name:'霧灰',     hex:'#B7B6AC'},
-    {id:'macaron-peach',  name:'粉桃',     hex:'#FBD3C4'},
-    {id:'macaron-mint',   name:'薄荷綠',   hex:'#CDEBD8'},
-    {id:'macaron-lavender', name:'淡紫',   hex:'#E4D6F5'},
-    {id:'macaron-lemon',  name:'檸檬黃',   hex:'#FCEFB4'},
-    {id:'macaron-sky',    name:'天空藍',   hex:'#CBE6F6'},
-    {id:'macaron-pink',   name:'草莓粉',   hex:'#FBCBD7'},
-    {id:'morandi-charcoal', name:'深灰藍', hex:'#5C6B73'},
-    {id:'morandi-plum',   name:'深梅紫',   hex:'#6E5265'},
+    {id:'morandi-mauve',  name:'霧霧藕色', hex:'#BEA9A4'},
+    {id:'morandi-blue',   name:'霧灰藍',   hex:'#9EABBB'},
+    {id:'morandi-sage',   name:'鼠尾草綠', hex:'#B2B7A1'},
+    {id:'morandi-oat',    name:'燕麥杏',   hex:'#D1C6B2'},
+    {id:'morandi-lilac',  name:'霧灰紫',   hex:'#B0A7B8'},
+    {id:'morandi-teal',   name:'煙燻藍綠', hex:'#90A79F'},
+    {id:'morandi-clay',   name:'陶土棕',   hex:'#BF9C86'},
+    {id:'morandi-fog',    name:'霧灰',     hex:'#C1C1B7'},
+    {id:'macaron-peach',  name:'粉桃',     hex:'#F8DCD0'},
+    {id:'macaron-mint',   name:'薄荷綠',   hex:'#DAEFE0'},
+    {id:'macaron-lavender', name:'淡紫',   hex:'#E7DDF5'},
+    {id:'macaron-lemon',  name:'檸檬黃',   hex:'#FBF3C4'},
+    {id:'macaron-sky',    name:'天空藍',   hex:'#D8EBF9'},
+    {id:'macaron-pink',   name:'草莓粉',   hex:'#F7D6DF'},
+    {id:'morandi-charcoal', name:'深灰藍', hex:'#6A747D'},
+    {id:'morandi-plum',   name:'深梅紫',   hex:'#745D6F'},
     // 「美式復古」「昭和懷舊」主題各自的十六色（取自使用者提供的色卡），跟
     // 上面經典主題的莫蘭迪/馬卡龍色系一樣併在同一份 EVENT_COLORS 裡、id 各
     // 自獨立——行程存的是顏色 id（不隨介面風格改動，共編時對方用哪套風格都
@@ -4689,22 +4895,22 @@
     {id:'fo-chestgrey', name:'灰栗褐', hex:'#5C534E'},
     {id:'fo-bark', name:'深樹皮', hex:'#3E3725'},
     // ---- 花園派對 ----（取自使用者提供的色卡，由左到右、由上到下）
-    {id:'gt-rose', name:'玫瑰粉', hex:'#F75D93'},
-    {id:'gt-blossom', name:'櫻花粉', hex:'#FF9CA8'},
-    {id:'gt-dustrose', name:'霧玫瑰', hex:'#EDC5BD'},
-    {id:'gt-latte', name:'奶茶杏', hex:'#EFDAC7'},
-    {id:'gt-lemon', name:'檸檬黃', hex:'#F3C623'},
-    {id:'gt-tangerine', name:'蜜橘', hex:'#F69932'},
-    {id:'gt-pumpkin', name:'南瓜橘', hex:'#FA6638'},
-    {id:'gt-mint', name:'薄荷綠', hex:'#95C1A0'},
-    {id:'gt-garden', name:'園林綠', hex:'#2E5A43'},
-    {id:'gt-cornflower', name:'矢車菊藍', hex:'#226194'},
-    {id:'gt-sky', name:'晴空藍', hex:'#2289B2'},
-    {id:'gt-mistlake', name:'霧湖藍', hex:'#9AC1C6'},
-    {id:'gt-iris', name:'鳶尾淡藍', hex:'#BEC9E9'},
-    {id:'gt-lilac', name:'淡紫', hex:'#DCCEF1'},
-    {id:'gt-lavender', name:'薰衣草紫', hex:'#B694F2'},
-    {id:'gt-pearl', name:'珍珠粉灰', hex:'#EBE0E6'},
+    {id:'gt-rose', name:'玫瑰粉', hex:'#E66792'},
+    {id:'gt-blossom', name:'櫻花粉', hex:'#F2A1A8'},
+    {id:'gt-dustrose', name:'霧玫瑰', hex:'#E7C6BD'},
+    {id:'gt-latte', name:'奶茶杏', hex:'#ECDBC9'},
+    {id:'gt-lemon', name:'檸檬黃', hex:'#ECC84D'},
+    {id:'gt-tangerine', name:'蜜橘', hex:'#E99C4A'},
+    {id:'gt-pumpkin', name:'南瓜橘', hex:'#E96F46'},
+    {id:'gt-lime', name:'嫩芽綠', hex:'#C5DFA2'},
+    {id:'gt-mint', name:'薄荷綠', hex:'#A4C5AA'},
+    {id:'gt-garden', name:'園林綠', hex:'#395944'},
+    {id:'gt-sky', name:'晴空藍', hex:'#4488AF'},
+    {id:'gt-mistlake', name:'霧湖藍', hex:'#A2C1C6'},
+    {id:'gt-iris', name:'鳶尾淡藍', hex:'#BFC8E5'},
+    {id:'gt-lilac', name:'淡紫', hex:'#D9CEEE'},
+    {id:'gt-lavender', name:'薰衣草紫', hex:'#BCA3F6'},
+    {id:'gt-pearl', name:'淡粉紫', hex:'#EFD9EE'},
     // ---- 春日野餐 ----（取自使用者提供的色卡，由左到右、由上到下）
     {id:'bp-coral', name:'珊瑚紅', hex:'#FF7780'},
     {id:'bp-berry', name:'莓果紅', hex:'#F0284E'},
@@ -4721,7 +4927,109 @@
     {id:'bp-moss', name:'苔綠', hex:'#7EA58A'},
     {id:'bp-pine', name:'深松綠', hex:'#2A6551'},
     {id:'bp-oat', name:'燕麥', hex:'#EAE3C9'},
-    {id:'bp-cream', name:'奶油黃', hex:'#FEEDC1'}
+    {id:'bp-cream', name:'奶油黃', hex:'#FEEDC1'},
+    // ---- 櫻花果茶 ----（取自使用者提供的色卡，由左到右、由上到下）
+    {id:'st-01', name:'杏桃橙', hex:'#FAD2AF'},
+    {id:'st-02', name:'鮭魚粉', hex:'#FAB7AE'},
+    {id:'st-03', name:'玫瑰粉', hex:'#EE919B'},
+    {id:'st-04', name:'淡櫻粉', hex:'#FCD4D4'},
+    {id:'st-05', name:'藕粉', hex:'#EEC5C9'},
+    {id:'st-06', name:'霧紫粉', hex:'#E3BFCD'},
+    {id:'st-07', name:'草莓粉', hex:'#FAB4BE'},
+    {id:'st-08', name:'莓果紅', hex:'#E4525F'},
+    {id:'st-09', name:'珊瑚橘', hex:'#F7977E'},
+    {id:'st-10', name:'蜜杏黃', hex:'#F9D382'},
+    {id:'st-11', name:'檸檬黃', hex:'#F7E076'},
+    {id:'st-12', name:'芥末黃', hex:'#D4C36B'},
+    {id:'st-13', name:'奶油米', hex:'#E7E0AA'},
+    {id:'st-14', name:'嫩芽綠', hex:'#DBDB79'},
+    {id:'st-15', name:'橄欖綠', hex:'#ABB06E'},
+    {id:'st-16', name:'淡灰綠', hex:'#C8D0A7'},
+    // ---- 檸檬蘇打 ----（取自使用者提供的色卡，由左到右、由上到下）
+    {id:'ls-01', name:'湖水藍', hex:'#5EC2D1'},
+    {id:'ls-02', name:'汽水藍', hex:'#6ED5E6'},
+    {id:'ls-03', name:'天空藍', hex:'#95DDEB'},
+    {id:'ls-04', name:'淡冰藍', hex:'#BAE3E9'},
+    {id:'ls-05', name:'薄荷白', hex:'#D4EEED'},
+    {id:'ls-06', name:'霧青綠', hex:'#B8DACC'},
+    {id:'ls-07', name:'青蘋綠', hex:'#ABD478'},
+    {id:'ls-08', name:'嫩葉綠', hex:'#C7E4A4'},
+    {id:'ls-09', name:'淡萊姆', hex:'#E7F8CC'},
+    {id:'ls-10', name:'奶油黃綠', hex:'#F8FCCA'},
+    {id:'ls-11', name:'淡檸綠', hex:'#E5EC9E'},
+    {id:'ls-12', name:'萊姆黃', hex:'#DFE96E'},
+    {id:'ls-13', name:'檸檬黃', hex:'#FCF698'},
+    {id:'ls-14', name:'向日葵黃', hex:'#FFEC74'},
+    {id:'ls-15', name:'蜜柑橙', hex:'#FFBF55'},
+    {id:'ls-16', name:'香橙', hex:'#FFA63E'},
+    // ---- 南瓜拿鐵 ----（取自使用者提供的色卡，由左到右、由上到下）
+    {id:'pl-01', name:'奶茶棕', hex:'#CD9971'},
+    {id:'pl-02', name:'焦糖杏', hex:'#EAA15D'},
+    {id:'pl-03', name:'肉桂橘', hex:'#D88249'},
+    {id:'pl-04', name:'南瓜橘', hex:'#E77922'},
+    {id:'pl-05', name:'琥珀橘', hex:'#E89120'},
+    {id:'pl-06', name:'蜜橙', hex:'#F3A42D'},
+    {id:'pl-07', name:'楓糖黃', hex:'#E8B24E'},
+    {id:'pl-08', name:'芥末金', hex:'#CE9F4F'},
+    {id:'pl-09', name:'焦糖棕', hex:'#CD8A3C'},
+    {id:'pl-10', name:'紅銅棕', hex:'#B05F2A'},
+    {id:'pl-11', name:'拿鐵褐', hex:'#A97657'},
+    {id:'pl-12', name:'栗子棕', hex:'#874F2E'},
+    {id:'pl-13', name:'深咖啡', hex:'#582E16'},
+    {id:'pl-14', name:'黑咖啡', hex:'#492C1C'},
+    {id:'pl-15', name:'奶泡白', hex:'#F1E0D6'},
+    {id:'pl-16', name:'鮮奶油', hex:'#F4E4CD'},
+    // ---- 可可蘭姆 ----（取自使用者提供的色卡，由左到右、由上到下）
+    {id:'cr-01', name:'磚紅', hex:'#843528'},
+    {id:'cr-02', name:'莓酒紅', hex:'#752437'},
+    {id:'cr-03', name:'酒漬紅', hex:'#5B2934'},
+    {id:'cr-04', name:'黑櫻桃', hex:'#330B0B'},
+    {id:'cr-05', name:'深可可', hex:'#502B25'},
+    {id:'cr-06', name:'巧克力', hex:'#593D2F'},
+    {id:'cr-07', name:'灰可可', hex:'#6C5E55'},
+    {id:'cr-08', name:'灰玫瑰', hex:'#9B847C'},
+    {id:'cr-09', name:'焦糖褐', hex:'#876A58'},
+    {id:'cr-10', name:'奶茶駝', hex:'#C4A98C'},
+    {id:'cr-11', name:'燕麥白', hex:'#EEE6D9'},
+    {id:'cr-12', name:'象牙白', hex:'#FDF7E9'},
+    {id:'cr-13', name:'霧紫白', hex:'#F4F1FA'},
+    {id:'cr-14', name:'霧灰藍', hex:'#8D96A7'},
+    {id:'cr-15', name:'深灰藍', hex:'#39404A'},
+    {id:'cr-16', name:'墨綠', hex:'#333E3A'},
+    // ---- 英倫學院 ----（取自使用者提供的色卡，由左到右、由上到下）
+    {id:'ba-01', name:'深焦褐', hex:'#271813'},
+    {id:'ba-02', name:'煙燻棕', hex:'#3E2F28'},
+    {id:'ba-03', name:'紅木棕', hex:'#563629'},
+    {id:'ba-04', name:'卡其褐', hex:'#8D7960'},
+    {id:'ba-05', name:'麂皮米', hex:'#C9B89A'},
+    {id:'ba-06', name:'鼠尾灰', hex:'#B6B5A0'},
+    {id:'ba-07', name:'橄欖褐', hex:'#3E3727'},
+    {id:'ba-08', name:'墨綠', hex:'#272D23'},
+    {id:'ba-09', name:'炭黑', hex:'#1D1E20'},
+    {id:'ba-10', name:'午夜藍', hex:'#07081D'},
+    {id:'ba-11', name:'石板灰', hex:'#393F4B'},
+    {id:'ba-12', name:'深海軍藍', hex:'#11182A'},
+    {id:'ba-13', name:'勃艮第紅', hex:'#662626'},
+    {id:'ba-14', name:'黑莓紅', hex:'#380E1A'},
+    {id:'ba-15', name:'灰玫褐', hex:'#64504F'},
+    {id:'ba-16', name:'羊毛白', hex:'#D5CDC0'},
+    // ---- 工業時尚 ----（取自使用者提供的色卡，由左到右、由上到下）
+    {id:'ic-01', name:'鏽橘', hex:'#A45A2D'},
+    {id:'ic-02', name:'鐵鏽紅', hex:'#602419'},
+    {id:'ic-03', name:'深灰褐', hex:'#554A44'},
+    {id:'ic-04', name:'水泥灰', hex:'#636363'},
+    {id:'ic-05', name:'橄欖灰', hex:'#78786C'},
+    {id:'ic-06', name:'石墨黑', hex:'#27282A'},
+    {id:'ic-07', name:'鋼鐵藍', hex:'#323B44'},
+    {id:'ic-08', name:'灰藍', hex:'#768185'},
+    {id:'ic-09', name:'淺鋼灰', hex:'#B3B7BA'},
+    {id:'ic-10', name:'混凝土白', hex:'#D1CEC7'},
+    {id:'ic-11', name:'石灰米', hex:'#C1BBAD'},
+    {id:'ic-12', name:'苔灰', hex:'#80837C'},
+    {id:'ic-13', name:'暖灰', hex:'#A89E95'},
+    {id:'ic-14', name:'霧白', hex:'#F1EFF0'},
+    {id:'ic-15', name:'鋁灰', hex:'#AEAEAE'},
+    {id:'ic-16', name:'鐵灰', hex:'#4C5053'}
   ];
   const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
   const rawEventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
@@ -4736,12 +5044,18 @@
   // 會從原本風格的第 N 色換成新風格的第 N 色，選色盤的排列位置也一樣。
   // 想調整配對，只要在其中一套裡把兩個 id 對調位置就好。
   const EVENT_COLOR_THEME_IDS = {
-    'default':          ['morandi-mauve','morandi-blue','morandi-sage','morandi-oat','morandi-lilac','morandi-teal','morandi-clay','morandi-fog','macaron-peach','macaron-mint','macaron-lavender','macaron-lemon','macaron-sky','macaron-pink','morandi-charcoal','morandi-plum'],
+    'default':          ['macaron-pink','macaron-peach','macaron-lemon','macaron-mint','macaron-sky','macaron-lavender','morandi-lilac','morandi-blue','morandi-mauve','morandi-clay','morandi-oat','morandi-sage','morandi-teal','morandi-charcoal','morandi-plum','morandi-fog'],
     'american-vintage': ['av-wine','av-rust','av-pumpkin','av-yolk','av-greyolive','av-mistteal','av-inkteal','av-pine','av-slateteal','av-navy','av-ivory','av-camel','av-amber','av-chestnut','av-prune','av-darkolive'],
     'showa':            ['sw-sienna','sw-brick','sw-vermil','sw-amber','sw-wheat','sw-matcha','sw-greymoss','sw-moss','sw-turquoise','sw-jade','sw-greyteal','sw-leadblue','sw-nightpurple','sw-cocoa','sw-coffee','sw-terra'],
     'forest':           ['fo-khaki','fo-asholive','fo-moss','fo-deepcedar','fo-forest','fo-leaf','fo-sagegrey','fo-oat','fo-cream','fo-sand','fo-greige','fo-darkolive','fo-mistrose','fo-rosebrown','fo-chestgrey','fo-bark'],
-    'garden-tea': ['gt-rose','gt-blossom','gt-dustrose','gt-latte','gt-lemon','gt-tangerine','gt-pumpkin','gt-mint','gt-garden','gt-cornflower','gt-sky','gt-mistlake','gt-iris','gt-lilac','gt-lavender','gt-pearl'],
-    'berry-picnic': ['bp-coral','bp-berry','bp-tomato','bp-orange','bp-peach','bp-mistblue','bp-sky','bp-denim','bp-slate','bp-navy','bp-meadow','bp-sage','bp-moss','bp-pine','bp-oat','bp-cream']
+    'garden-tea': ['gt-rose','gt-blossom','gt-dustrose','gt-latte','gt-lemon','gt-tangerine','gt-pumpkin','gt-lime','gt-mint','gt-garden','gt-sky','gt-mistlake','gt-iris','gt-lilac','gt-lavender','gt-pearl'],
+    'berry-picnic': ['bp-coral','bp-berry','bp-tomato','bp-orange','bp-peach','bp-mistblue','bp-sky','bp-denim','bp-slate','bp-navy','bp-meadow','bp-sage','bp-moss','bp-pine','bp-oat','bp-cream'],
+    'sakura-tea': ['st-01','st-02','st-03','st-04','st-05','st-06','st-07','st-08','st-09','st-10','st-11','st-12','st-13','st-14','st-15','st-16'],
+    'lemon-soda': ['ls-01','ls-02','ls-03','ls-04','ls-05','ls-06','ls-07','ls-08','ls-09','ls-10','ls-11','ls-12','ls-13','ls-14','ls-15','ls-16'],
+    'pumpkin-latte': ['pl-01','pl-02','pl-03','pl-04','pl-05','pl-06','pl-07','pl-08','pl-09','pl-10','pl-11','pl-12','pl-13','pl-14','pl-15','pl-16'],
+    'cocoa-rum': ['cr-01','cr-02','cr-03','cr-04','cr-05','cr-06','cr-07','cr-08','cr-09','cr-10','cr-11','cr-12','cr-13','cr-14','cr-15','cr-16'],
+    'british-academy': ['ba-01','ba-02','ba-03','ba-04','ba-05','ba-06','ba-07','ba-08','ba-09','ba-10','ba-11','ba-12','ba-13','ba-14','ba-15','ba-16'],
+    'industrial-chic': ['ic-01','ic-02','ic-03','ic-04','ic-05','ic-06','ic-07','ic-08','ic-09','ic-10','ic-11','ic-12','ic-13','ic-14','ic-15','ic-16']
   };
   // 舊版配色（已被取代）用過的 id：照原本所在的位置對應到新色票的同一格，
   // 這樣舊行程不會因為換了色票就全部變成同一種顏色。
@@ -4750,6 +5064,8 @@
   ['showa-brick','showa-water','showa-matcha','showa-greige','showa-coal','showa-moss','showa-amber','showa-lead','showa-terra','showa-olive','showa-salmon','showa-cream','showa-ice','showa-vermil','showa-night','showa-cocoa'].forEach((id,i)=>{ LEGACY_COLOR_SLOTS[id]=i; });
   // 森林手札舊版十六色（已換成新色卡）：照原本位置對應到新色票的同一格。
   ['fr-cocoarose','fr-chestgrey','fr-mist','fr-straw','fr-ebony','fr-cedar','fr-hay','fr-moss','fr-sand','fr-linen','fr-dustrose','fr-honey','fr-forest','fr-clayrose','fr-mossgrey','fr-bark'].forEach((id,i)=>{ LEGACY_COLOR_SLOTS[id]=i; });
+  // 花園派對換色卡時拿掉的「矢車菊藍」：用過它的舊行程改成同色系的晴空藍那一格。
+  LEGACY_COLOR_SLOTS['gt-cornflower']=10;
   LEGACY_COLOR_SLOTS['fo-apricot']=9; LEGACY_COLOR_SLOTS['fo-sandapricot']=10; // 森林手札上一版色卡裡被換掉的兩色
   // 目前的風格 id：直接讀 <html data-theme>（<head> 的小 script 在畫面畫出來前
   // 就設好了，applyTheme 也會同步更新），不依賴後面才宣告的 currentTheme，
@@ -11335,12 +11651,19 @@
   // 之前先套用一次，這裡的 applyTheme() 負責之後使用者手動切換時用。
   const THEME_STORAGE_KEY = 'plannerTheme';
   const THEMES = [
+    // 選單裡一排三個，依使用者指定的順序排列（由左到右、由上到下）
     { id: 'default', name: '經典', colors: ['#FBD3C4', '#8FA1B0', '#FCEFB4'] },
+    { id: 'industrial-chic', name: '工業時尚', colors: ['#602419', '#27282A', '#CFCCC5'] },
+    { id: 'sakura-tea', name: '櫻花果茶', colors: ['#FAB7AE', '#FCDFB3', '#E7E0AA'] },
     { id: 'american-vintage', name: '美式復古', colors: ['#99341D', '#25353C', '#5A8A7F'] },
-    { id: 'showa', name: '昭和懷舊', colors: ['#861108', '#317B6A', '#DE942B'] },
     { id: 'forest', name: '森林手札', colors: ['#616543', '#A39F7D', '#D7CBB3'] },
+    { id: 'lemon-soda', name: '檸檬蘇打', colors: ['#FCF698', '#E7F8CC', '#D4EEED'] },
+    { id: 'showa', name: '昭和懷舊', colors: ['#861108', '#317B6A', '#DE942B'] },
     { id: 'garden-tea', name: '花園派對', colors: ['#F75D93', '#BEC9EA', '#F3C624'] },
-    { id: 'berry-picnic', name: '春日野餐', colors: ['#F0284E', '#FF7780', '#D5DFEF'] }
+    { id: 'pumpkin-latte', name: '南瓜拿鐵', colors: ['#E77922', '#874F2E', '#F4E4CD'] },
+    { id: 'british-academy', name: '英倫學院', colors: ['#380E1A', '#07081D', '#3E3727'] },
+    { id: 'berry-picnic', name: '春日野餐', colors: ['#F0284E', '#FF7780', '#D5DFEF'] },
+    { id: 'cocoa-rum', name: '可可蘭姆', colors: ['#552229', '#9A817A', '#F4F1FA'] }
   ];
   let currentTheme = 'default';
   (function initTheme(){
