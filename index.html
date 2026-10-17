@@ -3069,12 +3069,21 @@
       <div class="device-user-title">Lasso-手帳曆</div>
       <div class="device-user-hint">自由自在的安排時間</div>
       <div class="device-user-list">
-        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnSignIn">
+        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnRegister">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="16" y1="11" x2="22" y2="11"></line>
+          </svg>
+          <span>註冊</span>
+        </button>
+        <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnLogin">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="3" y="5" width="18" height="14" rx="2"></rect>
             <polyline points="3 7 12 13 21 7"></polyline>
           </svg>
-          <span>註冊／登入</span>
+          <span>登入</span>
         </button>
       </div>
       <div class="nb-divider"><span>或</span></div>
@@ -3186,11 +3195,14 @@
       <div class="device-user-hint" id="nbAuthHint"></div>
       <div class="nb-field-label">Email</div>
       <input type="email" id="nbAuthEmail" class="nb-input" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com">
+      <div class="nb-field-label" id="nbAuthPwLabel" hidden>密碼</div>
+      <input type="password" id="nbAuthPw" class="nb-input" autocomplete="current-password" hidden>
       <div class="nb-error" id="nbAuthError"></div>
       <div class="device-user-actions">
         <button type="button" class="device-user-action" id="nbAuthBack">返回</button>
         <button type="button" class="device-user-action primary" id="nbAuthSend">寄送驗證碼</button>
       </div>
+      <button type="button" class="nb-link" id="nbAuthForgot" hidden>忘記密碼？</button>
     </div>
 
     <!-- 再輸入信裡的驗證碼 -->
@@ -3207,6 +3219,21 @@
       <button type="button" class="nb-link" id="nbCodeLinkDone">信裡是連結、不是驗證碼？點完連結後按這裡</button>
     </div>
 
+    <!-- 設定密碼：註冊／訪客綁定／忘記密碼驗證完 email 之後，或在帳號頁面修改密碼 -->
+    <div class="nb-step" data-step="setPw" hidden>
+      <div class="device-user-title" id="nbPwTitle">設定密碼</div>
+      <div class="device-user-hint" id="nbPwHint"></div>
+      <div class="nb-field-label">密碼（至少 8 個字元）</div>
+      <input type="password" id="nbPwNew" class="nb-input" autocomplete="new-password">
+      <div class="nb-field-label">再輸入一次</div>
+      <input type="password" id="nbPwNew2" class="nb-input" autocomplete="new-password">
+      <div class="nb-error" id="nbPwError"></div>
+      <div class="device-user-actions">
+        <button type="button" class="device-user-action" id="nbPwBack" hidden>返回</button>
+        <button type="button" class="device-user-action primary" id="nbPwSubmit">確定</button>
+      </div>
+    </div>
+
     <!-- 帳號頁面（點行事曆右上角的頭像進來）：訪客 → 顯示「訪客」＋註冊並綁定；已註冊 → 頭像、帳號名稱、email -->
     <div class="nb-step" data-step="acct" hidden>
       <div class="device-user-title">帳號</div>
@@ -3215,6 +3242,7 @@
         <div class="acct-static">訪客</div>
         <div class="device-user-hint" style="margin:12px 0">訪客的資料只存在這個瀏覽器，清除瀏覽器資料就找不回來。註冊並綁定 email 之後，目前的手帳和行程都會保留，換手機也能用同一個 email 登入找回。</div>
         <button type="button" class="device-user-action primary" id="nbAcctBind" style="width:100%">註冊並綁定</button>
+        <button type="button" class="device-user-action" id="nbAcctLogin" style="width:100%;margin-top:10px">已有帳號？登入</button>
       </div>
       <div id="nbAcctUser" hidden>
         <div class="nb-field-label">頭像</div>
@@ -3223,6 +3251,7 @@
         <input type="text" id="nbAcctName" class="nb-input" data-nofocus autocomplete="off">
         <div class="nb-field-label">Email</div>
         <div class="acct-static" id="nbAcctEmail"></div>
+        <button type="button" class="nb-link" id="nbAcctChangePw" style="display:block;margin:10px auto 0">設定／修改密碼</button>
         <div class="nb-error" id="nbAcctError"></div>
       </div>
       <div class="device-user-actions">
@@ -10543,6 +10572,10 @@
   let acctAvatarSel = null;  // 帳號頁面裡正在編輯的頭像 {icon, color}
   const nbAuthEmail = document.getElementById('nbAuthEmail');
   const nbAuthSend = document.getElementById('nbAuthSend');
+  const nbAuthPw = document.getElementById('nbAuthPw');
+  const nbPwNew = document.getElementById('nbPwNew');
+  const nbPwNew2 = document.getElementById('nbPwNew2');
+  const nbPwSubmit = document.getElementById('nbPwSubmit');
   const nbCodeInput = document.getElementById('nbCodeInput');
   const nbCodeSubmit = document.getElementById('nbCodeSubmit');
   const nbCodeResend = document.getElementById('nbCodeResend');
@@ -10638,6 +10671,17 @@
       return '目前的寄信設定只能寄給特定的 email，請檢查 Supabase 的寄信（SMTP）設定。';
     if(code === 'email_address_invalid' || /invalid.*email|email.*invalid/i.test(msg))
       return '這個 email 格式不正確，請再確認一次。';
+    if(ctx === 'login' && (code === 'invalid_credentials' || /invalid login credentials/i.test(msg)))
+      return '帳號或密碼不對。如果你還沒設過密碼，請按下面的「忘記密碼」。';
+    if(ctx === 'login' && (code === 'email_not_confirmed' || /not confirmed/i.test(msg)))
+      return '這個 email 還沒完成驗證，請先按「註冊」完成驗證。';
+    if(ctx === 'reset' && (code === 'otp_disabled' || /signups? not allowed|user not found/i.test(msg)))
+      return '這個 email 還沒註冊過，請回到第一頁按「註冊」。';
+    if(ctx === 'setpw'){
+      if(code === 'same_password' || /different from the old/i.test(msg)) return '新密碼不能跟目前的密碼一樣。';
+      if(code === 'weak_password' || /password.*(weak|short|least)/i.test(msg)) return '密碼太弱，請換一組（長一點、加入數字或符號）。';
+      if(code === 'reauthentication_needed' || /reauth/i.test(code + ' ' + msg)) return '為了安全，請先登出，用「登入」重新登入後再修改密碼。';
+    }
     if(ctx === 'bind' && (code === 'email_exists' || /already (been )?registered|already exists/i.test(msg)))
       return '這個 email 已經註冊過了。訪客的資料沒辦法合併進既有的帳號，請改用另一個 email 綁定。';
     if(ctx === 'verify' && (code === 'otp_expired' || /expired|invalid|token/i.test(code + ' ' + msg)))
@@ -10652,8 +10696,11 @@
       if(!(await currentAuthUser())) throw new Error('Auth session missing');
       r = await sb.auth.updateUser({email: email});
     } else {
-      // shouldCreateUser（預設 true）：第一次用這個 email 就是註冊，註冊過就是登入
-      r = await sb.auth.signInWithOtp({email: email});
+      // 註冊：shouldCreateUser 預設 true（沒註冊過就建立；已註冊就等於登入）
+      // 登入：shouldCreateUser:false，email 沒註冊過會回錯誤，不會偷偷建立新帳號
+      r = mode === 'reset'
+        ? await sb.auth.signInWithOtp({email: email, options: {shouldCreateUser: false}})
+        : await sb.auth.signInWithOtp({email: email});
     }
     if(r.error) throw r.error;
   }
@@ -10668,14 +10715,65 @@
       nbCodeResend.textContent = '重新寄送（' + left + '）';
     }, 1000);
   }
-  function openAuth(mode){
-    authFlow = {mode: mode, email: ''};
-    document.getElementById('nbAuthTitle').textContent = mode === 'bind' ? '註冊並綁定' : '註冊／登入';
-    document.getElementById('nbAuthHint').textContent = mode === 'bind'
-      ? '輸入 email，目前的手帳和行程都會保留，之後用這個 email 就能在任何裝置登入。'
-      : '輸入 email，我們會寄一組驗證碼給你。第一次使用會自動建立帳號，註冊過就直接登入。';
-    nbAuthEmail.value = '';
+  function openAuth(mode, from, prefillEmail){
+    authFlow = {mode: mode, email: '', from: from || 'welcome'};
+    const titles = {bind:'註冊並綁定', register:'註冊', login:'登入', reset:'忘記密碼'};
+    document.getElementById('nbAuthTitle').textContent = titles[mode] || '登入';
+    document.getElementById('nbAuthHint').textContent =
+      mode === 'bind' ? '輸入 email，目前的手帳和行程都會保留。驗證信箱後設定密碼，之後用 email＋密碼就能在任何裝置登入。'
+      : mode === 'register' ? '輸入 email，我們會寄一組驗證碼確認信箱，接著設定密碼。已經註冊過的話，請回上一頁按「登入」。'
+      : mode === 'reset' ? '輸入註冊時用的 email，我們會寄驗證碼確認身分，接著設定新密碼。'
+      : (from === 'acct'
+          ? '輸入 email 與密碼登入。注意：目前訪客的手帳和行程不會帶過去，只會看到該帳號自己的資料。'
+          : '輸入 email 與密碼登入。');
+    const isLogin = mode === 'login';
+    document.getElementById('nbAuthPwLabel').hidden = !isLogin;
+    nbAuthPw.hidden = !isLogin;
+    nbAuthPw.value = '';
+    document.getElementById('nbAuthForgot').hidden = !isLogin;
+    nbAuthSend.textContent = isLogin ? '登入' : '寄送驗證碼';
+    nbAuthEmail.value = prefillEmail || '';
     showNbStep('authEmail');
+  }
+
+  // ---- 設定密碼（註冊／綁定／忘記密碼驗證完 email 之後，或帳號頁修改密碼）----
+  function openSetPassword(){
+    if(!authFlow) return;
+    clearInterval(resendTimer);
+    const mode = authFlow.mode;
+    document.getElementById('nbPwTitle').textContent =
+      mode === 'reset' ? '設定新密碼' : (mode === 'changepw' ? '修改密碼' : '設定密碼');
+    document.getElementById('nbPwHint').textContent =
+      mode === 'changepw' ? '輸入新的密碼，之後用 email＋密碼登入。'
+      : mode === 'reset' ? 'email 驗證完成了。請設定一組新密碼，之後用它登入。'
+      : 'email 驗證完成了。請設定密碼，之後用 email＋密碼就能登入。';
+    nbPwNew.value = ''; nbPwNew2.value = '';
+    document.getElementById('nbPwBack').hidden = mode !== 'changepw';
+    showNbStep('setPw');
+  }
+  async function submitSetPassword(){
+    if(!authFlow) { showNbStep('welcome'); return; }
+    const pw = nbPwNew.value, pw2 = nbPwNew2.value;
+    if(pw.length < 8){ setNbError('nbPwError', '密碼至少 8 個字元'); return; }
+    if(pw !== pw2){ setNbError('nbPwError', '兩次輸入的密碼不一樣'); return; }
+    setNbError('nbPwError', '');
+    nbPwSubmit.disabled = true;
+    try{
+      const r = await sb.auth.updateUser({password: pw});
+      if(r.error) throw r.error;
+      const mode = authFlow.mode;
+      if(mode === 'bind'){ finishBind(); }
+      else if(mode === 'changepw'){ authFlow = null; showToast('密碼已更新'); showNbStep('acct'); }
+      else {
+        const sr = await sb.auth.getSession();
+        await finishLogin(sr && sr.data ? sr.data.session : null);
+      }
+    }catch(err){
+      console.error('設定密碼失敗：', err);
+      setNbError('nbPwError', friendlyAuthError(err, 'setpw'));
+    }finally{
+      nbPwSubmit.disabled = false;
+    }
   }
   function openCodeStep(email){
     authFlow.email = email;
@@ -10692,8 +10790,17 @@
     setNbError('nbAuthError', '');
     nbAuthSend.disabled = true;
     try{
-      await requestAuthCode(authFlow.mode, email);
-      openCodeStep(email);
+      if(authFlow.mode === 'login'){
+        const pw = nbAuthPw.value;
+        if(!pw){ setNbError('nbAuthError', '請輸入密碼'); return; }
+        await authReady;
+        const r = await sb.auth.signInWithPassword({email: email, password: pw});
+        if(r.error) throw r.error;
+        await finishLogin(r.data && r.data.session);
+      } else {
+        await requestAuthCode(authFlow.mode, email);
+        openCodeStep(email);
+      }
     }catch(err){
       console.error('寄送驗證碼失敗：', err);
       setNbError('nbAuthError', friendlyAuthError(err, authFlow.mode));
@@ -10747,13 +10854,13 @@
       if(authFlow.mode === 'bind'){
         const r = await sb.auth.verifyOtp({email: authFlow.email, token: token, type: 'email_change'});
         if(r.error) throw r.error;
-        finishBind();
+        openSetPassword();
       } else {
         let r = await sb.auth.verifyOtp({email: authFlow.email, token: token, type: 'email'});
         // 第一次註冊的驗證碼，有些版本要用 'signup' 這個類型驗證：失敗時再試一次
         if(r.error) r = await sb.auth.verifyOtp({email: authFlow.email, token: token, type: 'signup'}).then(x => x.error ? r : x);
         if(r.error) throw r.error;
-        await finishLogin(r.data && r.data.session);
+        openSetPassword();
       }
     }catch(err){
       console.error('驗證失敗：', err);
@@ -10778,7 +10885,7 @@
       }
       user = session ? session.user : null;
       if(user && user.email && user.email.toLowerCase() === authFlow.email){
-        if(authFlow.mode === 'bind') finishBind(); else await finishLogin(session);
+        openSetPassword();
       } else {
         setNbError('nbCodeError', '還沒偵測到驗證完成。請先點信裡的連結，再回來按一次。');
       }
@@ -10834,11 +10941,14 @@
     }
   }
 
-  document.getElementById('nbBtnSignIn').addEventListener('click', function(){ openAuth('login'); });
+  document.getElementById('nbBtnRegister').addEventListener('click', function(){ openAuth('register'); });
+  document.getElementById('nbBtnLogin').addEventListener('click', function(){ openAuth('login'); });
+  document.getElementById('nbAcctLogin').addEventListener('click', function(){ openAuth('login', 'acct'); });
   document.getElementById('nbBtnGuest').addEventListener('click', startGuest);
   document.getElementById('nbAcctBind').addEventListener('click', function(){ openAuth('bind'); });
   document.getElementById('nbAuthBack').addEventListener('click', function(){
-    showNbStep(authFlow && authFlow.mode === 'bind' ? 'acct' : 'welcome');
+    if(authFlow && authFlow.mode === 'reset'){ openAuth('login', authFlow.from, nbAuthEmail.value.trim()); return; }
+    showNbStep(authFlow && (authFlow.mode === 'bind' || authFlow.from === 'acct') ? 'acct' : 'welcome');
   });
   document.getElementById('nbCodeBack').addEventListener('click', function(){ clearInterval(resendTimer); showNbStep('authEmail'); });
   document.getElementById('nbAcctClose').addEventListener('click', function(){ hideOverlay(); });
@@ -10848,12 +10958,21 @@
       onConfirm: function(sel){ acctAvatarSel = sel && sel.icon ? sel : null; renderIconPickBtn(nbAcctAvatarBtn, acctAvatarSel); }});
   });
   nbAuthSend.addEventListener('click', sendAuthCode);
+  document.getElementById('nbAuthForgot').addEventListener('click', function(){
+    openAuth('reset', authFlow ? authFlow.from : 'welcome', nbAuthEmail.value.trim());
+  });
+  nbPwSubmit.addEventListener('click', submitSetPassword);
+  document.getElementById('nbPwBack').addEventListener('click', function(){ authFlow = null; showNbStep('acct'); });
+  document.getElementById('nbAcctChangePw').addEventListener('click', function(){
+    authFlow = {mode: 'changepw', email: '', from: 'acct'};
+    openSetPassword();
+  });
   nbCodeSubmit.addEventListener('click', submitAuthCode);
   nbCodeResend.addEventListener('click', resendCode);
   document.getElementById('nbCodeLinkDone').addEventListener('click', checkLinkDone);
   nbAcctSave.addEventListener('click', saveAccount);
   nbAcctSignOut.addEventListener('click', signOutAccount);
-  [[nbAuthEmail, nbAuthSend], [nbCodeInput, nbCodeSubmit], [nbAcctName, nbAcctSave]].forEach(function(pair){
+  [[nbAuthEmail, nbAuthSend], [nbAuthPw, nbAuthSend], [nbPwNew2, nbPwSubmit], [nbCodeInput, nbCodeSubmit], [nbAcctName, nbAcctSave]].forEach(function(pair){
     pair[0].addEventListener('keydown', function(e){ if(e.key === 'Enter') pair[1].click(); });
   });
 
