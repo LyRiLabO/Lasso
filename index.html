@@ -44,7 +44,7 @@
     --col-div:color-mix(in srgb, var(--grid-line-sub) 80%, var(--ink-faint)); /* 欄位分隔線：跟各風格自己的格線同色系、稍深一點點 */
     --col-w:25%; --cols-w:100%; --cols-x:0px; /* 欄位寬度／全部欄位總寬／橫向捲動位移，由 JS（applyColLayout）更新 */
     --cell-px:16.67; /* 「格子」時間軸背景的單格邊長（px，不含單位），跟 --hour-px 一樣由 JS 在縮放時更新 */
-    --hour-px:50; /* 每小時的高度（px，不含單位），縮放時由 JS 更新這個變數，
+    --hour-px:80; /* 每小時的高度（px，不含單位），縮放時由 JS 更新這個變數，
                      所有跟每小時高度成比例的地方（格線、卡片容器）都跟著變 */
   }
   /* ============ 個人化主題：美式復古 ============
@@ -681,6 +681,7 @@
     padding:10px; cursor:pointer;
   }
   .nb-link[hidden]{display:none;}
+  .nb-danger-link{color:var(--red);}
   .nb-choice-btn[hidden]{display:none;}
   /* 第一頁「註冊／登入」跟「訪客」中間的分隔線 */
   .nb-divider{
@@ -3109,6 +3110,75 @@
     cursor:pointer;
   }
   .delete-btn:active{background:var(--red); color:#fff;}
+  .delete-btn[hidden]{display:none;}
+  /* 「加入此行程」：建立者開放加入（或編輯）時，不是參與者的人才看得到 */
+  .join-btn{
+    margin-top:6px;
+    width:100%;
+    padding:14px;
+    border-radius:10px;
+    border:1.5px solid var(--btn-coffee);
+    background:var(--btn-coffee);
+    color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif;
+    font-weight:700;
+    font-size:14.5px;
+    cursor:pointer;
+  }
+  .join-btn:active{opacity:.7;}
+  .join-btn[hidden]{display:none;}
+
+  /* 行程權限：編輯頁的三段式按鈕（僅檢視／可加入／可編輯）。只有建立者能點，
+     其他人看到的是灰掉的同一排，知道建立者開放到哪裡。 */
+  .perm-seg{
+    display:flex;
+    border:1.5px solid var(--btn-coffee);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .perm-seg button{
+    flex:1 1 0;
+    padding:9px 4px;
+    border:none;
+    background:transparent;
+    color:var(--ink);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13.5px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .perm-seg button + button{border-left:1.5px solid var(--btn-coffee);}
+  .perm-seg button.selected{background:var(--btn-coffee); color:var(--paper);}
+  .perm-seg.readonly{opacity:.55;}
+  .perm-seg.readonly button{cursor:default;}
+  .perm-hint{
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:12.5px;
+    line-height:1.5;
+    color:var(--ink-faint);
+  }
+
+  /* 帳號頁面的「設定」：預設權限滑軸，三個停點下方對齊三個文字 */
+  .acct-settings{
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px dashed var(--line);
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .acct-settings-title{
+    font-family:'Noto Serif TC', serif;
+    font-weight:700;
+    font-size:16px;
+    color:var(--ink);
+  }
+  .perm-range{width:100%; margin:4px 0 0; accent-color:var(--btn-coffee);}
+  .perm-range-labels{
+    display:flex; justify-content:space-between;
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:12.5px;
+    color:var(--ink-faint);
+  }
+  .perm-range-labels span.on{color:var(--ink); font-weight:700;}
 
   .participants-box{
     display:flex; flex-wrap:wrap; gap:8px;
@@ -3442,7 +3512,7 @@
       <div class="device-user-title">加入其他人的手帳</div>
       <div class="device-user-hint">輸入對方提供給你的密碼。</div>
       <div class="nb-field-label">手帳密碼</div>
-      <input type="text" id="nbJoinCode" class="nb-input code" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="－－－－－－">
+      <input type="text" id="nbJoinCode" class="nb-input code" inputmode="text" autocapitalize="characters" maxlength="9" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="－－－－－－">
       <div class="nb-error" id="nbJoinError"></div>
       <div class="device-user-actions">
         <button type="button" class="device-user-action" data-nb-back>返回</button>
@@ -3537,11 +3607,20 @@
         <button type="button" class="nb-link" id="nbAcctChangePw" style="display:block;margin:10px auto 0">設定／修改密碼</button>
         <div class="nb-error" id="nbAcctError"></div>
       </div>
+      <!-- 設定：訪客跟已註冊的人都有 -->
+      <div class="acct-settings">
+        <div class="acct-settings-title">設定</div>
+        <div class="nb-field-label" style="margin-top:0">我的行程預設權限（手帳裡的其他人可以…）</div>
+        <input type="range" class="perm-range" id="nbPermRange" min="0" max="2" step="1" value="0" aria-label="行程預設權限">
+        <div class="perm-range-labels" id="nbPermLabels"><span>僅供檢視</span><span>可供加入</span><span>可供編輯</span></div>
+        <div class="perm-hint" id="nbPermHint"></div>
+      </div>
       <div class="device-user-actions">
         <button type="button" class="device-user-action" id="nbAcctClose">返回</button>
         <button type="button" class="device-user-action primary" id="nbAcctSave" hidden>儲存</button>
       </div>
       <button type="button" class="nb-link" id="nbAcctSignOut" hidden>登出</button>
+      <button type="button" class="nb-link nb-danger-link" id="nbAcctDelete">刪除帳號</button>
     </div>
   </div>
 </div>
@@ -3822,11 +3901,10 @@
     </header>
 
     <div class="edit-body">
-      <!-- 除了「參與者」之外的所有欄位，包在同一層裡：如果目前這個人不是
-           這個行程的參與者（別人欄位上、你還沒加入的行程），這一整層會被
-           鎖住唯讀（灰階 + pointer-events:none），只留最後面的「參與者」
-           還能互動——這樣才能讓還沒加入的人點參與者的勾選把自己加進去。
-           見 JS 的 applyEditPermission()。 -->
+      <!-- 除了「參與者」之外的所有欄位，包在同一層裡：沒有編輯權（不是建立者、
+           建立者也沒開放編輯）時整層鎖住唯讀（灰階 + pointer-events:none）。
+           參與者的勾選同樣只有編輯權的人能點；開放加入時改用下面的
+           「加入此行程」按鍵。見 JS 的 applyEditPermission()。 -->
       <div class="edit-lockable-fields" id="editLockableFields">
       <div class="field">
         <span class="field-label">行程名稱</span>
@@ -3896,15 +3974,27 @@
       </div>
       </div>
 
-      <!-- 目前這個人還不是參與者時提醒用的一行小字，平常隱藏，見
+      <!-- 沒有編輯權時說明建立者開放到哪裡的一行小字，平常隱藏，見
            applyEditPermission()。 -->
-      <div class="field-lock-hint" id="fieldLockHint" hidden>你還不是這個行程的參與者，只能查看內容；把自己加進「參與者」就能編輯。</div>
+      <div class="field-lock-hint" id="fieldLockHint" hidden>你不是這個行程的參與者，只能查看內容。</div>
 
       <div class="field">
         <span class="field-label">參與者</span>
         <div class="participants-box" id="participantsBox"></div>
       </div>
 
+      <!-- 行程權限：其他人（不是建立者）可以做什麼。只有建立者能改。 -->
+      <div class="field" id="permField">
+        <span class="field-label">其他人可以</span>
+        <div class="perm-seg" id="permSeg">
+          <button type="button" data-perm="view">僅檢視</button>
+          <button type="button" data-perm="join">可加入</button>
+          <button type="button" data-perm="edit">可編輯</button>
+        </div>
+        <div class="perm-hint" id="permHint"></div>
+      </div>
+
+      <button id="btnJoin" class="join-btn" type="button" hidden>加入此行程</button>
       <button id="btnDelete" class="delete-btn">刪除此行程</button>
     </div>
   </section>
@@ -4134,7 +4224,7 @@
   let DEVICE_ID = peekAuthUserId() || 'd-pending'; // 沒接雲端（或還沒登入）時的暫時值
 
   /* ---------------- 手帳（notebook）：一本手帳 = 一組共編者 + 一組分享密碼 ----------------
-     - 創建手帳：產生 6 碼數字密碼，寫進 Supabase 的 notebooks 表，自己成為第一位共編者。
+     - 創建手帳：產生 6 碼英文字母＋數字的密碼，寫進 Supabase 的 notebooks 表，自己成為第一位共編者。
      - 加入手帳：輸入別人給的密碼，找到對應的手帳，再輸入自己的使用者名稱。
      - columns / events / notifications 都帶 notebook_id，每支裝置只讀寫自己
        這本手帳的資料。這支裝置目前在哪一本，存在自己的 localStorage。 */
@@ -4154,13 +4244,18 @@
   }
   let NOTEBOOK = getStoredNotebook(); // {id, code}；null＝這支裝置還沒選過「創建／加入」
 
-  // 手帳密碼是 6 碼數字（好記、手機上輸入方便，會跳出數字鍵盤）。
-  // 舊版產生的 8 碼英數字密碼還是認得（見 normalizeJoinCode / submitJoin）。
+  // 手帳密碼是 6 碼英文大寫字母＋數字混合（約 8.9 億種組合，6 碼純數字只有 100 萬種，
+  // 比較不容易被程式猜中）。拿掉容易看錯的 0/O、1/I/L，一定同時有字母和數字。
+  // 舊版的 6 碼數字、8 碼英數字密碼還是認得（見 normalizeJoinCode / submitJoin）。
+  const JOIN_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   function generateJoinCode(){
-    const buf = new Uint32Array(1);
-    if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(buf);
-    else buf[0] = Math.floor(Math.random() * 4294967296);
-    return String(buf[0] % 1000000).padStart(6, '0'); // 前面的 0 要保留，例如 048213
+    for(;;){
+      const buf = new Uint32Array(6);
+      if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(buf);
+      else for(let i = 0; i < 6; i++) buf[i] = Math.floor(Math.random() * 4294967296);
+      const code = Array.from(buf, v => JOIN_CODE_CHARS[v % JOIN_CODE_CHARS.length]).join('');
+      if(/[A-Z]/.test(code) && /[0-9]/.test(code)) return code;
+    }
   }
   function normalizeJoinCode(text){
     return String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -4251,15 +4346,6 @@
   function isParticipantOf(participants){
     return (participants || []).some(id => isMine(id));
   }
-  // 這個人是不是行程的「創建者」：創建時用的欄位是我的。
-  // 創建者欄位已經不存在（被刪掉了）、或舊資料沒有 creatorId 的時候，沒有人
-  // 能當創建者，改由「名下欄位有在參與者裡的人」接手，避免行程變成沒人能刪。
-  // 創建者把自己移出行程（移轉給別人）之後就完全放手：不再有編輯、刪除的權限。
-  function isInstanceCreator(creatorId, participants){
-    if(isMine(creatorId)) return creatorIsIn(creatorId, participants);
-    const creatorExists = !!creatorId && columns.some(c => c.id === creatorId);
-    return !creatorExists && isParticipantOf(participants);
-  }
   // 從我的欄位裡挑一個「這次動作用的身分」：優先挑 preferIds 裡屬於我的，
   // 沒有的話用我的第一個欄位；名下一個欄位都沒有就回傳 null。
   function pickMyColumnId(preferIds){
@@ -4277,34 +4363,36 @@
     const ids = creatorColumnIds(creatorId);
     return (participants || []).some(id => ids.includes(id));
   }
-  // 有權「整場刪除」：創建者本人，或是創建者已經把自己移出行程之後的任何參與者
-  function hasDeleteRight(creatorId, participants){
-    if(isInstanceCreator(creatorId, participants)) return true;
-    return isParticipantOf(participants) && !creatorIsIn(creatorId, participants);
-  }
-  // 非創建者想把創建者移出行程（只有創建者本人能把自己移出／移轉）-> true 代表要擋
-  function wouldRemoveCreator(creatorId, oldParticipants, newParticipants){
-    if(isInstanceCreator(creatorId, oldParticipants)) return false;
-    return creatorIsIn(creatorId, oldParticipants) && !creatorIsIn(creatorId, newParticipants);
-  }
-  // 行程「已完成」打勾狀態：存在 overrides 裡（不用改資料表）。重複行程每一天
-  // 各自一筆（key 是日期）；單次行程用固定的 '_' 當 key，這樣搬到別天也不用搬資料。
+  // （刪除權、移出建立者的判斷已改成看行程權限，見 canDeleteInstance／creatorKept）
+  // 行程「已完成」打勾狀態：每個人各自的，只顯示在自己的畫面上，不影響其他參與者。
+  // 存在 overrides 裡（不用改資料表）：doneBy 是「打勾的人的帳號 id」清單。重複行程
+  // 每一天各自一筆（key 是日期）；單次行程用固定的 '_' 當 key，搬到別天也不用搬資料。
+  // 舊版的 done:true（大家共用一個勾）不再使用，第一次切換時順便清掉。
   function doneKeyFor(master, dateStr){ return master.recurrence ? dateStr : '_'; }
   function isInstanceDone(master, dateStr){
     const ov = master.overrides && master.overrides[doneKeyFor(master, dateStr)];
-    return !!(ov && ov.done);
+    return !!(ov && Array.isArray(ov.doneBy) && ov.doneBy.indexOf(DEVICE_ID) !== -1);
   }
-  // 切換完成狀態，回傳切換後是不是「已完成」。呼叫端要自己負責重繪（重繪會順便存檔、記錄復原點）。
+  // 切換「我」的完成狀態，回傳切換後是不是「已完成」。呼叫端要自己負責重繪（重繪會順便存檔、記錄復原點）。
   function toggleInstanceDone(masterId, dateStr){
     const master = events.find(e => e.id === masterId);
     if(!master) return false;
     const key = doneKeyFor(master, dateStr);
     const ovs = master.overrides || {};
     const cur = Object.assign({}, ovs[key] || {});
-    if(cur.done) delete cur.done; else cur.done = true;
+    delete cur.done;
+    const list = Array.isArray(cur.doneBy) ? cur.doneBy.filter(id => id !== DEVICE_ID) : [];
+    const nowDone = !isInstanceDone(master, dateStr);
+    if(nowDone) list.push(DEVICE_ID);
+    if(list.length) cur.doneBy = list; else delete cur.doneBy;
     if(Object.keys(cur).length) ovs[key] = cur; else delete ovs[key];
     master.overrides = Object.keys(ovs).length ? ovs : null;
-    return !!cur.done;
+    return nowDone;
+  }
+  // 要不要顯示「待完成／已完成」按鈕：別人的「僅供檢視」行程（我不是建立者、也沒參與）不顯示。
+  function showsDoneBtn(inst){
+    if(!inst) return false;
+    return amCreatorOf(inst) || isParticipantOf(inst.participants) || permOf(inst) !== 'view';
   }
   // 某個欄位在某一天「所有」被排進的行程是不是都已完成——沒有任何行程
   // 排進這個欄位的話不算（不要無中生有噴彩帶慶祝一個空的一天）。
@@ -4424,7 +4512,7 @@
   }
   // 卡片夠高、文字也沒被縮小時，左側放整條「待完成 / 已完成」按鈕
   function addCardCheck(card, inst, cardHeight){
-    const btn = makeDoneBtn(!!inst.done, canEditInstance(inst), 'ecard-donebtn');
+    const btn = makeDoneBtn(!!inst.done, true, 'ecard-donebtn'); // 打勾只影響自己，看得到按鈕就能點
     if(cardHeight < CHECK_MIN_CARD_PX) btn.classList.add('short'); // 太矮放不下字：字拿掉，按鈕本身（空間、線、顏色）還在
     bindStripTap(btn, function(){
       const nowDone = toggleInstanceDone(inst.masterId, inst.instanceDate);
@@ -4437,6 +4525,62 @@
   const CHECK_MIN_CARD_PX = 38; // 卡片矮於這個高度，直書的「待完成」放不下，改放到長按選單 / N 項清單
   const CREATOR_LOCK_MSG = '只有建立者本人可以把自己移出行程';
   const MOVE_CONFLICT_MSG = '該日該時段已有行程';
+  const OTHERS_COLUMN_CREATE_MSG = '不能在別人的欄位建立行程\n只能建立包含自己欄位的共同行程';
+  const KEEP_SELF_MSG = '參與者裡至少要保留一個自己的欄位\n不能把行程轉交給別人';
+  const NO_EDIT_PERM_MSG = '建立者沒有開放編輯\n不能移動或修改這個行程';
+
+  /* ---------------- 行程權限：僅供檢視／可供加入／可供編輯 ----------------
+     每個行程有自己的 permission，由建立者決定「其他人」可以做什麼：
+     - view（僅供檢視）：其他人只能點開看內容、複製一份到自己的欄位。
+     - join（可供加入）：再多「加入／退出」，但不能改內容、不能刪除。
+     - edit（可供編輯）：其他人可以用所有編輯功能（包含刪除）。
+     建立者自己永遠可以編輯；被建立者拉進來的參與者，任何模式下都可以退出
+     （那是他自己的行程表）。建立者欄位已經不存在的舊行程沒人能管，當成 edit。
+     資料庫那邊有同一套規則（supabase-upgrade.sql 的 trigger）。 */
+  const PERMS = ['view', 'join', 'edit'];
+  const PERM_LABELS = {view:'僅供檢視', join:'可供加入', edit:'可供編輯'};
+  const PERM_HINTS = {
+    view: '其他人只能查看內容、複製這個行程到自己的欄位。',
+    join: '其他人可以自由加入、退出，但不能修改內容或刪除。',
+    edit: '其他人可以修改內容、調整時間、刪除這個行程。'
+  };
+  function normPerm(p){ return PERMS.indexOf(p) >= 0 ? p : 'view'; }
+  function creatorColumnExists(creatorId){ return !!creatorId && columns.some(c => c.id === creatorId); }
+  function amCreatorOf(inst){ return !!inst && isMine(inst.creatorId); }
+  function permOf(inst){
+    if(!inst) return 'view';
+    if(!creatorColumnExists(inst.creatorId)) return 'edit';
+    return normPerm(inst.permission);
+  }
+  function canDeleteInstance(inst){ return !!inst && (amCreatorOf(inst) || permOf(inst) === 'edit'); }
+  function canJoinInstance(inst){
+    if(!inst || amCreatorOf(inst) || isParticipantOf(inst.participants)) return false;
+    const p = permOf(inst);
+    return p === 'join' || p === 'edit';
+  }
+  function canLeaveInstance(inst){ return !!inst && !amCreatorOf(inst) && isParticipantOf(inst.participants); }
+  // 改動後建立者還在不在參與者裡：建立者不能被移出，建立者自己也不能把自己全部移出（不能轉交）
+  function creatorKept(creatorId, newParticipants){
+    return !creatorColumnExists(creatorId) || creatorIsIn(creatorId, newParticipants);
+  }
+  function creatorKeptMsg(creatorId){ return isMine(creatorId) ? KEEP_SELF_MSG : CREATOR_LOCK_MSG; }
+  // 通知對象：參與者再加上建立者（建立者就算不在畫面上這一天的參與者裡也要知道）
+  function withCreator(ids, creatorId){
+    const out = (ids || []).slice();
+    if(creatorId && out.indexOf(creatorId) === -1) out.push(creatorId);
+    return out;
+  }
+
+  // 這個帳號的「預設權限」：新建立的行程用這個。存在帳號資料（user_metadata）裡，
+  // 換裝置也一樣；本機另外存一份，開網頁時不用等網路就知道。
+  const DEFAULT_PERM_KEY = 'shared-planner-default-perm';
+  let defaultPermission = 'view';
+  try{ defaultPermission = normPerm(localStorage.getItem(DEFAULT_PERM_KEY)); }catch(err){}
+  function setDefaultPermissionLocal(p){
+    defaultPermission = normPerm(p);
+    try{ localStorage.setItem(DEFAULT_PERM_KEY, defaultPermission); }catch(err){}
+  }
+
 
   let events = [];
 
@@ -4515,6 +4659,8 @@
     if(row.icon){ c.icon = row.icon; c.iconColor = row.icon_color || null; }
     return c;
   }
+  let eventPermSyncOk = true;
+  function stripPermField(row){ const y = Object.assign({}, row); delete y.permission; return y; }
   async function upsertColumnRows(rows){
     let r = await sb.from('columns').upsert(rows);
     if(r && r.error && columnIconSyncOk && /icon/i.test(String(r.error.message || r.error.details || ''))){
@@ -4531,7 +4677,8 @@
       notes: ev.notes || '', participants: ev.participants || [], creator_id: ev.creatorId,
       color: ev.color || '', recurrence: ev.recurrence || null,
       excluded: ev.excluded || null, overrides: ev.overrides || null,
-      notebook_id: NOTEBOOK ? NOTEBOOK.id : null
+      notebook_id: NOTEBOOK ? NOTEBOOK.id : null,
+      permission: normPerm(ev.permission)
     };
   }
   function rowToEvent(row){
@@ -4539,7 +4686,8 @@
       id: row.id, title: row.title || '', date: row.date, start: row.start, end: row.end,
       notes: row.notes || '', participants: row.participants || [], creatorId: row.creator_id,
       color: row.color || '', recurrence: row.recurrence || null,
-      excluded: row.excluded || null, overrides: row.overrides || null
+      excluded: row.excluded || null, overrides: row.overrides || null,
+      permission: normPerm(row.permission)
     };
   }
   function notificationToRow(n){
@@ -4564,7 +4712,16 @@
     });
     try{
       if(upsertRows.length){
-        const { error } = table === 'columns' ? await upsertColumnRows(upsertRows) : await sb.from(table).upsert(upsertRows);
+        let rowsToSend = upsertRows;
+        if(table === 'events' && !eventPermSyncOk) rowsToSend = rowsToSend.map(stripPermField);
+        let { error } = table === 'columns' ? await upsertColumnRows(rowsToSend) : await sb.from(table).upsert(rowsToSend);
+        // 資料庫還沒執行 supabase-upgrade.sql（events 沒有 permission 欄位）：
+        // 這次連線先不送權限欄位，行程本身照常同步。
+        if(error && table === 'events' && eventPermSyncOk && /'permission' column|column .*permission/i.test(String(error.message || ''))){
+          console.warn('Supabase events 資料表還沒有 permission 欄位，先不同步權限：', error);
+          eventPermSyncOk = false;
+          ({ error } = await sb.from(table).upsert(upsertRows.map(stripPermField)));
+        }
         if(error) console.error('Supabase upsert 失敗（'+table+'）：', error);
       }
       if(deleteIds.length){
@@ -5751,7 +5908,7 @@
     const list = [];
     events.forEach(ev => {
       // 舊資料可能沒有 creatorId：不再一律當成「我」建立的，
-      // 由 isInstanceCreator() 統一處理（沒有創建者時由參與者接手）。
+      // 建立者欄位不存在的行程由 permOf() 當成「可供編輯」處理。
       const creatorId = ev.creatorId;
       if(ev.recurrence){
         const excluded = ev.excluded || [];
@@ -5770,6 +5927,7 @@
             participants: ov.participants !== undefined ? ov.participants : ev.participants,
             color: ev.color || DEFAULT_EVENT_COLOR,
             creatorId: creatorId,
+            permission: ev.permission,
             isRecurring: true,
             done: isInstanceDone(ev, dateStr),
             hasOverride: !!(ev.overrides && ev.overrides[dateStr])
@@ -5783,6 +5941,7 @@
           notes: ev.notes, participants: ev.participants,
           color: ev.color || DEFAULT_EVENT_COLOR,
           creatorId: creatorId,
+          permission: ev.permission,
           done: isInstanceDone(ev, dateStr),
           isRecurring: false, hasOverride: false
         });
@@ -5827,7 +5986,7 @@
     notifyColumns(newParticipants.filter(id => !oldP.includes(id) && notMine(id)), who+' 把你加進了「'+title+'」', resultMasterId, resultInstanceDate);
     notifyColumns(oldP.filter(id => !newParticipants.includes(id) && notMine(id)), who+' 把你從「'+title+'」移除了', resultMasterId, resultInstanceDate);
     if(labels.length){
-      notifyColumns(oldP.filter(id => notMine(id) && newParticipants.includes(id)), who+' 更新了「'+title+'」（'+labels.join('、')+'）', resultMasterId, resultInstanceDate);
+      notifyColumns(withCreator(oldP.filter(id => newParticipants.includes(id)), master.creatorId).filter(notMine), who+' 更新了「'+title+'」（'+labels.join('、')+'）', resultMasterId, resultInstanceDate);
     }
   }
 
@@ -5862,8 +6021,10 @@
       notes: ov.notes !== undefined ? ov.notes : master.notes,
       participants: newParticipants,
       creatorId: master.creatorId,
+      color: master.color, // 拆出來的那一天保留原本的顏色
+      permission: master.permission, // 也保留建立者設定的權限
       recurrence: null,
-      overrides: ov.done ? {'_': {done: true}} : null
+      overrides: (Array.isArray(ov.doneBy) && ov.doneBy.length) ? {'_': {doneBy: ov.doneBy.slice()}} : null
     });
     master.excluded = master.excluded || [];
     if(master.excluded.indexOf(homeDate) === -1) master.excluded.push(homeDate);
@@ -5881,6 +6042,9 @@
     const master = events.find(e => e.id === masterId);
     const creatorId = pickMyColumnId(inst.participants);
     if(!creatorId){ promptNeedOwnColumn(); return; }
+    // 自己建立的行程：照原本的參與者複製一份。別人的行程：複製到自己的欄位，
+    // 不會把原本的參與者一起帶進新行程（新行程是我自己的）。
+    const copyParticipants = amCreatorOf(inst) ? (inst.participants||[]).slice() : [creatorId];
     const newId = 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
     const sMin = timeToMinutes(inst.start), eMin = timeToMinutes(inst.end);
     const shift = Math.max(0, Math.min(DUPLICATE_SHIFT_MIN, 1440 - eMin)); // 已經貼近 24:00 就不再往後挪
@@ -5895,10 +6059,11 @@
       start: shift ? hh(sMin + shift) : inst.start,
       end: shift ? hh(eMin + shift) : inst.end,
       notes: inst.notes,
-      participants: (inst.participants||[]).slice(),
+      participants: copyParticipants,
       creatorId: creatorId,
       color: inst.color,
-      recurrence: rec
+      recurrence: rec,
+      permission: defaultPermission
     });
     justCreatedEventId = newId; // 複製出來的也是一張全新的卡片，一樣套用「捲軸攤開」進場動畫
   }
@@ -5910,7 +6075,7 @@
     if(!master) return;
     const title = master.title || '(未命名行程)';
     const notifyOthers = () => {
-      notifyColumns(master.participants, actingNameFor(master)+' 刪除了「'+title+'」', masterId, instanceDate);
+      notifyColumns(withCreator(master.participants, master.creatorId), actingNameFor(master)+' 刪除了「'+title+'」', masterId, instanceDate);
     };
     if(!master.recurrence){
       notifyOthers();
@@ -5921,6 +6086,32 @@
     master.excluded = master.excluded || [];
     if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
     if(master.overrides) delete master.overrides[instanceDate];
+  }
+
+  // 「加入」別人開放加入（或可編輯）的行程：把我的第一個欄位加進參與者。
+  // 重複行程是加入整個系列（本體的參與者，以及每一天個別改過的參與者名單）。
+  // 只檢查這一天這個時段我有沒有別的行程，有就擋下。回傳是否成功。
+  function joinInstance(masterId, instanceDate){
+    const master = events.find(e => e.id === masterId);
+    const inst = getInstancesForDate(instanceDate).find(i => i.masterId === masterId);
+    if(!master || !inst || !canJoinInstance(inst)) return false;
+    const colId = pickMyColumnId([]);
+    if(!colId){ promptNeedOwnColumn(); return false; }
+    const idx = colIndex(colId);
+    if(idx >= 0 && findCollision(instanceDate, idx, idx, timeToMinutes(inst.start), timeToMinutes(inst.end), masterId, instanceDate)){
+      showConfirmDialog(colLabel(columns[idx]) + '該時段已有行程', function(){}, {okLabel:'知道了', hideCancel:true});
+      return false;
+    }
+    const before = withCreator(inst.participants, master.creatorId);
+    if((master.participants || []).indexOf(colId) === -1) master.participants = (master.participants || []).concat(colId);
+    if(master.overrides){
+      Object.keys(master.overrides).forEach(d => {
+        const ov = master.overrides[d];
+        if(ov && ov.participants && ov.participants.indexOf(colId) === -1) ov.participants = ov.participants.concat(colId);
+      });
+    }
+    notifyColumns(before, columnName(colId)+' 加入了「'+(inst.title || '(未命名行程)')+'」', masterId, instanceDate);
+    return true;
   }
 
   // 「退出」共同行程：只有創建者才能真的整場刪掉（見 deleteInstanceQuick），
@@ -5936,7 +6127,7 @@
     if(!master.recurrence){
       const remaining = (master.participants||[]).filter(notMine);
       master.participants = remaining;
-      notifyColumns(remaining, who+' 退出了「'+title+'」', masterId, instanceDate);
+      notifyColumns(withCreator(remaining, master.creatorId), who+' 退出了「'+title+'」', masterId, instanceDate);
       if(master.participants.length === 0){
         events = events.filter(e => e !== master);
       }
@@ -5946,7 +6137,7 @@
     const base = master.overrides[instanceDate] || {};
     const baseParticipants = base.participants || master.participants || [];
     const newParticipants = baseParticipants.filter(notMine);
-    notifyColumns(newParticipants, who+' 退出了「'+title+'」', masterId, instanceDate);
+    notifyColumns(withCreator(newParticipants, master.creatorId), who+' 退出了「'+title+'」', masterId, instanceDate);
     if(newParticipants.length === 0){
       master.excluded = master.excluded || [];
       if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
@@ -6007,20 +6198,23 @@
     closeCardMenu();
     const rect = card.getBoundingClientRect();
     const masterId = inst.masterId, instanceDate = inst.instanceDate;
-    const isCreator = hasDeleteRight(inst.creatorId, inst.participants);
+    const isCreator = canDeleteInstance(inst); // 可以整場刪除：建立者，或建立者開放編輯
     const isParticipant = isParticipantOf(inst.participants);
+    const canJoin = canJoinInstance(inst);
     // 創建者可以整場刪掉；只是參與者（不是創建者）只能退出（把自己從
     // 參與者名單移除）；純粹路過看看、還沒加入的人這裡完全不出現刪除/
     // 退出這個按鍵，因為根本沒有東西可以讓他刪或退。
-    const dangerAction = isCreator ? 'del' : (isParticipant ? 'leave' : null);
+    const dangerAction = isCreator ? 'del' : (canLeaveInstance(inst) ? 'leave' : null);
     const dangerLabel = isCreator ? '刪除' : '退出';
 
+    // 任何人都可以複製（別人的行程會複製到自己的欄位）；開放加入時多一顆「加入」。
     const menu = document.createElement('div');
     menu.className = 'card-menu';
     menu.innerHTML =
       (shrunkTitle ? '<div class="card-menu-title-row"></div>' : '') +
       '<div class="card-menu-actions">' +
         '<button type="button" data-action="dup">複製</button>' +
+        (canJoin ? '<button type="button" data-action="join">加入</button>' : '') +
         (dangerAction ? '<button type="button" data-action="'+dangerAction+'" class="danger">'+dangerLabel+'</button>' : '') +
       '</div>';
     if(shrunkTitle){
@@ -6028,7 +6222,7 @@
       row.textContent = '';
       if(withCheck){
         row.classList.add('has-chk');
-        const chk = makeDoneBtn(!!inst.done, canEditInstance(inst), 'menu-donebtn');
+        const chk = makeDoneBtn(!!inst.done, true, 'menu-donebtn');
         bindCheckTap(chk, function(){
           cardMenuKeep = true;
           let nowDone;
@@ -6058,7 +6252,14 @@
     menu.style.top = top + 'px';
     menu.classList.add(arrowDown ? 'arrow-down' : 'arrow-up');
 
-    menu.querySelector('[data-action="dup"]').addEventListener('click', function(ev){
+    const joinBtn = menu.querySelector('[data-action="join"]');
+    if(joinBtn) joinBtn.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      closeCardMenu();
+      if(joinInstance(masterId, instanceDate)) renderEvents();
+    });
+    const dupBtn = menu.querySelector('[data-action="dup"]');
+    if(dupBtn) dupBtn.addEventListener('click', function(ev){
       ev.stopPropagation();
       duplicateInstance(masterId, instanceDate);
       closeCardMenu();
@@ -6166,8 +6367,8 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.innerHTML = '<span class="cluster-title"></span><span class="cluster-time"></span>';
-      const rowChk = makeDoneBtn(!!item.done, canEditInstance(item), 'menu-donebtn');
-      bindCheckTap(rowChk, function(){
+      const rowChk = showsDoneBtn(item) ? makeDoneBtn(!!item.done, true, 'menu-donebtn') : null;
+      if(rowChk) bindCheckTap(rowChk, function(){
         clusterMenuKeep = true;
         let nowDone;
         try{
@@ -6178,7 +6379,7 @@
         setDoneBtnState(rowChk, nowDone);
         maybeCelebrateColumnDone(item.masterId, item.instanceDate, nowDone);
       });
-      btn.insertBefore(rowChk, btn.firstChild);
+      if(rowChk) btn.insertBefore(rowChk, btn.firstChild);
       const colorInfo = eventColorById(item.color);
       const light = isLightColor(colorInfo.hex);
       btn.style.setProperty('--item-bg', colorInfo.hex);
@@ -6403,14 +6604,17 @@
   const dateLabel = document.getElementById('dateLabel');
 
   // ---- 垂直縮放：每小時的高度（px） ----
-  // 預設 50px／小時，雙指 pinch／雙擊可以即時放大縮小；每次重新整理網頁
-  // 都會回到預設值，不會記住上次縮放到哪裡。放大到最大值時，就算是最短
+  // 預設 80px／小時（使用者要求間隔大一點，原本是 50px），雙指 pinch／雙擊
+  // 可以即時放大縮小；每次「進入」時間軸頁面（重新整理、進入手帳、從月曆頁或
+  // 匯入頁回來）都會回到預設值，不會記住上次縮放到哪裡（見 resetTimelineZoom）。
+  // 從行程編輯頁回來不算「進入」，維持原本的縮放，免得改完一個行程畫面就跳掉。放大到最大值時，就算是最短
   // （5 分鐘）的行程也有足夠高度可以完整顯示一行文字，不需要再靠浮動標籤。
-  const HOUR_PX_DEFAULT = 50;
+  const HOUR_PX_DEFAULT = 80;
   const HOUR_PX_MIN = 24;
   const MIN_READABLE_CARD_PX = 11; // 卡片矮於這個高度，連最小字體都看不清楚，改交給「N 項行程」
   const HOUR_PX_MAX = 300;
   let hourPx = HOUR_PX_DEFAULT;
+  document.documentElement.style.setProperty('--hour-px', hourPx); // 跟 CSS 的預設值保持一致，避免兩邊數字對不上
   // 「格子」時間軸背景：每格是正方形，邊長不小於 CELL_MIN_PX。一小時分成 n 格
   // （n 是整數、至少 1），格子邊長 = hourPx / n，所以每個整點一定落在格線上。
   // n = floor(hourPx / CELL_MIN_PX)：放大時格數變多、縮小時變少（最少 1 格），
@@ -6464,8 +6668,9 @@
     return col.ownerId === DEVICE_ID;
   }
 
+  // 可以勾選：有編輯權（刪除、拖移、搬日期），或是自己有參與、可以退出
   function canSelectInstance(inst){
-    return canEditInstance(inst);
+    return canEditInstance(inst) || canLeaveInstance(inst);
   }
 
   const phoneEl = document.getElementById('phone');
@@ -6529,10 +6734,10 @@
         const instanceDate = key.slice(at+1);
         const master = events.find(e => e.id === masterId);
         if(!master) return;
-        const isCreator = hasDeleteRight(master.creatorId, master.participants);
-        if(isCreator){
+        const inst = getInstancesForDate(instanceDate).find(i => i.masterId === masterId);
+        if(canDeleteInstance(inst)){
           deleteInstanceQuick(masterId, instanceDate);
-        } else {
+        } else if(canLeaveInstance(inst)){
           leaveInstance(masterId, instanceDate);
         }
       });
@@ -6599,7 +6804,7 @@
       const masterId = key.slice(0, at);
       const instanceDate = key.slice(at+1);
       const inst = getInstancesForDate(instanceDate).find(i => i.masterId === masterId);
-      if(inst) moveItems.push({masterId, instanceDate, inst});
+      if(inst && canEditInstance(inst)) moveItems.push({masterId, instanceDate, inst}); // 沒有編輯權的（只能退出的）不搬
     });
 
     // 目的地那天同時段（同欄位）已經有行程，或是這一批搬過去的行程彼此
@@ -7580,6 +7785,13 @@
     timelineScroll.scrollTop = Math.max(0, Math.min(maxScroll, targetScrollTop));
   }
 
+  // 進入時間軸頁面時把縮放恢復成預設高度。縮放中心用可視範圍正中間（setHourPx
+  // 沒給 anchorClientY 時的預設），畫面中間的時間點維持不動，不會突然跳到別的時段。
+  function resetTimelineZoom(){
+    if(Math.abs(hourPx - HOUR_PX_DEFAULT) < 0.5) return;
+    setHourPx(HOUR_PX_DEFAULT);
+  }
+
   function renderDateHeader(){
     const [y,m,d] = currentDate.split('-').map(Number);
     const dt = new Date(y, m-1, d);
@@ -7707,7 +7919,7 @@
         // 甚至變成浮動標籤，就把這張卡片砍掉重做一次「不帶圓圈」的版本，
         // 圓圈改放到長按選單 / N 項清單裡。
         for(let attempt = 0; attempt < 2; attempt++){
-        const wantCheck = attempt === 0; // 左側按鈕的位置永遠保留，卡片再小也一樣
+        const wantCheck = attempt === 0 && showsDoneBtn(inst); // 左側按鈕的位置永遠保留，卡片再小也一樣；別人的僅供檢視行程沒有按鈕
         const card = document.createElement('div');
         card.className = 'event-card' + (inst.isRecurring ? ' has-recur' : '');
         applyEventColor(card, inst.color);
@@ -7792,6 +8004,7 @@
               rawTitle: inst.title || '(未命名行程)',
               isRecurring: !!inst.isRecurring,
               creatorId: inst.creatorId, participants: inst.participants,
+              permission: inst.permission,
               done: inst.done,
               color: inst.color,
               masterId: inst.masterId, instanceDate: inst.instanceDate
@@ -7802,13 +8015,16 @@
         // 左側「待完成／已完成」按鈕：空間、分隔線、顏色永遠保留，卡片再小也一樣，
         // 文字不會往左擠進按鈕的位置。太矮放不下直書的字時，只有按鈕上的字拿掉，
         // 這時長按選單裡會多一顆小按鈕（顯示目前狀態）。
-        addCardCheck(card, inst, height);
-        if(height < CHECK_MIN_CARD_PX || card.classList.contains('label-floated')){
-          card.dataset.chkMenu = '1';
+        if(showsDoneBtn(inst)){
+          addCardCheck(card, inst, height);
+          if(height < CHECK_MIN_CARD_PX || card.classList.contains('label-floated')){
+            card.dataset.chkMenu = '1';
+          }
         }
 
         attachCardInteractions(card, inst, runMin, runMax);
-        ['tl','tr','bl','br'].forEach(corner => {
+        // 沒有編輯權的行程不放調整圓點：不能調整別人行程的時長或欄位範圍
+        if(canEditInstance(inst)) ['tl','tr','bl','br'].forEach(corner => {
           const handle = document.createElement('span');
           handle.className = 'resize-handle rh-' + corner;
           handle.setAttribute('aria-hidden', 'true');
@@ -7963,6 +8179,7 @@
           instanceDate: c.instanceDate,
           creatorId: c.creatorId,
           participants: c.participants,
+          permission: c.permission,
           done: c.done,
           color: c.color
         })));
@@ -8105,7 +8322,8 @@
 
       runs.forEach(([runMin, runMax]) => {
         const card = document.createElement('div');
-        card.className = 'event-card has-check' + (inst.isRecurring ? ' has-recur' : '');
+        const previewCheck = showsDoneBtn(inst);
+        card.className = 'event-card' + (previewCheck ? ' has-check' : '') + (inst.isRecurring ? ' has-recur' : '');
         applyEventColor(card, inst.color);
         card.style.top = top+'px';
         card.style.height = height+'px';
@@ -8120,10 +8338,12 @@
         // 左側「待完成／已完成」按鈕：純視覺呈現（面板本身 pointer-events:none，
         // 不需要真的綁點擊），位置、狀態要跟真正的時間軸一致，不然滑動中
         // 會看起來像這個按鍵整個消失了，放開手指重繪才又冒出來。
-        const donebtn = document.createElement('span');
-        donebtn.className = 'ecard-donebtn' + (inst.done ? ' done' : '') + (height < CHECK_MIN_CARD_PX ? ' short' : '');
-        donebtn.textContent = inst.done ? '已完成' : '待完成';
-        card.appendChild(donebtn);
+        if(previewCheck){
+          const donebtn = document.createElement('span');
+          donebtn.className = 'ecard-donebtn' + (inst.done ? ' done' : '') + (height < CHECK_MIN_CARD_PX ? ' short' : '');
+          donebtn.textContent = inst.done ? '已完成' : '待完成';
+          card.appendChild(donebtn);
+        }
         layer.appendChild(card);
       });
     });
@@ -8590,8 +8810,8 @@
     }
 
     const fdInst = getInstancesForDate(fd.homeDate).find(i => i.masterId === fd.masterId);
-    if(fdInst && wouldRemoveCreator(fdInst.creatorId, fdInst.participants, newParticipants)){
-      showToast(CREATOR_LOCK_MSG, 1800);
+    if(fdInst && !creatorKept(fdInst.creatorId, newParticipants)){
+      showToast(creatorKeptMsg(fdInst.creatorId), 1800);
       bounceGhostBack(fd);
       return;
     }
@@ -8618,7 +8838,7 @@
       const homeDate = key.slice(idx+1);
       if(homeDate !== currentDate) return; // 只同步拖移目前畫面上看得到的這一天
       const inst = getInstancesForDate(currentDate).find(i => i.masterId === masterId);
-      if(!inst || !canSelectInstance(inst)) return;
+      if(!inst || !canEditInstance(inst)) return; // 沒有編輯權的行程不跟著一起拖走
       const domCard = eventsLayer.querySelector(
         '.event-card[data-master-id="'+CSS.escape(masterId)+'"][data-date="'+CSS.escape(homeDate)+'"]'
       );
@@ -8781,6 +9001,7 @@
           // 不需要長按判斷。
           bLongPressTimer = setTimeout(function(){
             if(bMoved || cancelledByScroll) return;
+            if(!canEditInstance(inst)){ showToast(NO_EDIT_PERM_MSG, 1500); return; }
             bDragging = startBatchDrag(inst, card, startX, startY);
           }, 400);
         }
@@ -8854,6 +9075,7 @@
       cancelledByScroll = false;
 
       let pinchTouched = false; // 這次手勢期間是否曾經進入過雙指縮放狀態
+      let dragBlockedNotified = false; // 別人欄位上的行程被試著拖移時，同一次手勢只提示一次
 
       longPressTimer = setTimeout(function(){
         if(cancelledByScroll) return;
@@ -8895,6 +9117,14 @@
           // 拖曳搬移這個行程，不是要用選單——收起選單，轉成浮動拖曳。
           const dx = ev2.clientX - startX;
           if(Math.abs(dx) > 10 || Math.abs(ev2.clientY - startY) > 10){
+            // 沒有編輯權（建立者沒開放編輯）的行程：不能拖走，選單維持顯示，提示一次就好
+            if(!canEditInstance(inst)){
+              if(!dragBlockedNotified){
+                dragBlockedNotified = true;
+                showToast(NO_EDIT_PERM_MSG, 1500);
+              }
+              return;
+            }
             closeCardMenu();
             phase = 'dragging';
             startFloatingDrag(inst, runMin, runMax, card, startX, startY, ev2.clientX, ev2.clientY);
@@ -9210,8 +9440,8 @@
           newIds.forEach(id => pset.add(id));
 
           const newPs = Array.from(pset);
-          if(wouldRemoveCreator(inst.creatorId, inst.participants, newPs)){
-            showToast(CREATOR_LOCK_MSG, 1800);
+          if(!creatorKept(inst.creatorId, newPs)){
+            showToast(creatorKeptMsg(inst.creatorId), 1800);
           } else {
             applyQuickPlacement(inst.masterId, inst.instanceDate, inst.instanceDate, newStart, newEnd, newPs);
           }
@@ -9373,7 +9603,11 @@
     box.style.height = Math.max(6, trueHeight)+'px'; // 視覺上留一點高度看得到,但不代表可以建立
     box.style.left = 'calc(' + (colMin/n*100) + '% + 2px)';
     box.style.width = 'calc(' + ((colMax-colMin+1)/n*100) + '% - 4px)';
-    box.classList.toggle('no-room', trueHeight < fiveMinPx());
+    // 框選範圍裡沒有任何一個自己的欄位＝想在別人的欄位上建立行程，不允許；
+    // 範圍有包含自己的欄位（共同行程）才可以建立。
+    const hasMine = columns.slice(colMin, colMax+1).some(c => c.ownerId === DEVICE_ID);
+    box.dataset.hasMine = hasMine ? '1' : '0';
+    box.classList.toggle('no-room', trueHeight < fiveMinPx() || !hasMine);
     // 直接記錄實際欄位索引跟「真實」高度，放開時讀這裡即可，不要從
     // calc() 字串或被強制拉高的 style.height 反推。
     box.dataset.colMin = colMin;
@@ -9383,7 +9617,9 @@
     const startMin = Math.round(topPx/hourPx*60);
     const endMin = Math.round(bottomPx/hourPx*60);
     const names = columns.slice(colMin, colMax+1).map(colLabel).join('、');
-    box.querySelector('.selection-label').textContent = trueHeight < fiveMinPx()
+    box.querySelector('.selection-label').textContent = !hasMine
+      ? '只能建立共同行程'
+      : trueHeight < fiveMinPx()
       ? '沒有空間'
       : minutesToTime(startMin) + ' – ' + minutesToTime(endMin) + (names ? ' · '+names : '');
   }
@@ -9466,8 +9702,11 @@
         const bottom = Number(box.dataset.trueBottom);
         const colMin = Number(box.dataset.colMin);
         const colMax = Number(box.dataset.colMax);
+        const hasMine = box.dataset.hasMine === '1';
         removeSelectionBox();
-        if(bottom - top >= fiveMinPx()){ // 被夾到沒有空間時這裡會趨近 0，不建立行程
+        if(!hasMine){
+          showToast(OTHERS_COLUMN_CREATE_MSG, 1800);
+        } else if(bottom - top >= fiveMinPx()){ // 被夾到沒有空間時這裡會趨近 0，不建立行程
           const startMin = Math.round(top/hourPx*60);
           const endMin = Math.round(bottom/hourPx*60);
           const participantIds = columns.slice(colMin, colMax+1).map(c=>c.id);
@@ -9534,6 +9773,8 @@
     const creatorId = pickMyColumnId(participantIds);
     if(!creatorId){ promptNeedOwnColumn(); return null; } // 名下沒有任何欄位，沒有身分可以當創建者
     if(!participantIds || participantIds.length===0) participantIds = [creatorId];
+    // 不能只建在別人的欄位上：參與者裡至少要有一個自己的欄位（共同行程）
+    if(!participantIds.some(id => isMine(id))){ showToast(OTHERS_COLUMN_CREATE_MSG, 1800); return null; }
     const id = 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6); // 加一段亂數，同一毫秒建兩個行程也不會撞 id
     const ev = {
       id: id,
@@ -9545,7 +9786,8 @@
       participants: participantIds.slice(),
       creatorId: creatorId,
       color: (function(){ const pal = themeEventColorList(); return pal[events.length % pal.length].id; })(),
-      recurrence: null
+      recurrence: null,
+      permission: defaultPermission // 新行程用帳號設定裡的預設權限
     };
     events.push(ev);
     // 建立當下如果就跨到了別人的欄位，等於直接把對方加進參與者，
@@ -9716,31 +9958,65 @@
   // 參與者），其餘人只有本來就是參與者才行。
   function canEditInstance(inst){
     if(!inst) return false;
-    return isInstanceCreator(inst.creatorId, inst.participants) || isParticipantOf(inst.participants);
+    return amCreatorOf(inst) || permOf(inst) === 'edit';
   }
 
   function applyEditPermission(inst){
     editCanEditFields = canEditInstance(inst);
     editLockableFields.classList.toggle('locked', !editCanEditFields);
-    fieldLockHint.hidden = editCanEditFields;
-
-    editIsCreator = isInstanceCreator(inst && inst.creatorId, inst && inst.participants);
+    editIsCreator = amCreatorOf(inst);
     editCreatorId = (inst && inst.creatorId) || '';
-    editHasDeleteRight = hasDeleteRight(editCreatorId, inst && inst.participants);
-    const isParticipant = isParticipantOf(inst && inst.participants);
-    // 創建者可以整場刪除；只是參與者（不是創建者）改成「退出」（把自己
-    // 從參與者名單移除）；純粹路過看看、還沒加入的人這顆鍵直接隱藏，
-    // 沒有東西可以讓他刪或退。
+    editHasDeleteRight = canDeleteInstance(inst);
+    const perm = permOf(inst);
+    fieldLockHint.hidden = editCanEditFields;
+    if(!editCanEditFields){
+      fieldLockHint.textContent = perm === 'join'
+        ? '建立者設定為「可供加入」：你可以加入或退出，但不能修改內容。'
+        : '建立者設定為「僅供檢視」：你可以查看內容，或長按卡片複製到自己的欄位。';
+    }
+    // 權限那一排：建立者可以改；其他人看得到建立者開放到哪裡，但不能點
+    editPermission = normPerm(inst && inst.permission);
+    renderPermSeg();
+    // 建立者或開放編輯：整場刪除；被拉進來（或自己加入）的參與者：退出；
+    // 都不是的人：沒有刪除／退出，開放加入時改成顯示「加入此行程」。
     if(editHasDeleteRight){
       btnDelete.hidden = false;
       btnDelete.textContent = '刪除此行程';
-    } else if(isParticipant){
+    } else if(canLeaveInstance(inst)){
       btnDelete.hidden = false;
       btnDelete.textContent = '退出此行程';
     } else {
       btnDelete.hidden = true;
     }
+    btnJoin.hidden = !canJoinInstance(inst);
   }
+
+  const btnJoin = document.getElementById('btnJoin');
+  const permSeg = document.getElementById('permSeg');
+  const permHint = document.getElementById('permHint');
+  let editPermission = 'view';
+  function renderPermSeg(){
+    permSeg.classList.toggle('readonly', !editIsCreator);
+    permSeg.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('selected', b.dataset.perm === editPermission);
+      b.disabled = !editIsCreator;
+    });
+    permHint.textContent = (editIsCreator ? '' : '建立者的設定：') + PERM_HINTS[editPermission];
+  }
+  permSeg.addEventListener('click', function(e){
+    const b = e.target.closest('button[data-perm]');
+    if(!b || !editIsCreator) return;
+    editPermission = normPerm(b.dataset.perm);
+    renderPermSeg();
+  });
+  // 編輯頁的「加入此行程」：直接加入（不用再按完成），回到時間軸
+  btnJoin.addEventListener('click', function(){
+    if(!editingMasterId) return;
+    if(joinInstance(editingMasterId, editingInstanceDate)){
+      renderTimeline();
+      goBackToTimeline();
+    }
+  });
 
   function renderColorSwatches(colorId){
     selectedColor = colorId ? pairedEventColorId(colorId) : themeDefaultEventColor();
@@ -9779,7 +10055,9 @@
     participantsBox.innerHTML = '';
     columns.forEach(col => {
       const chip = document.createElement('div');
-      const canToggleThisChip = editCanEditFields || isMine(col.id);
+      // 只有這個行程的參與者能調整參與者名單；不是參與者的人只能查看，
+      // 不能再把自己加進別人的行程（不能以任何形式干預別人的行程）。
+      const canToggleThisChip = editCanEditFields;
       chip.className = 'participant-chip'
         + (selectedParticipants.has(col.id) ? ' selected' : '')
         + (canToggleThisChip ? '' : ' chip-locked');
@@ -9796,6 +10074,11 @@
               showToast(CREATOR_LOCK_MSG, 1800);
               return;
             }
+            // 不能把自己名下的欄位全部移出（取消「轉交行程」）：要離開請用退出／刪除
+            if(editIsCreator && isMine(col.id) && !myColumnIds().some(id => id !== col.id && selectedParticipants.has(id))){
+              showToast(KEEP_SELF_MSG, 1800);
+              return;
+            }
             // 至少保留一位參與者，避免行程變成沒人參加
             if(selectedParticipants.size > 1) selectedParticipants.delete(col.id);
           } else {
@@ -9809,22 +10092,6 @@
             selectedParticipants.add(col.id);
           }
           chip.classList.toggle('selected', selectedParticipants.has(col.id));
-          // 参與狀態一變，編輯權就要跟著即時重新判斷（創建者不受影響，
-          // 一直都能編輯；非創建者則是「現在還在不在參與者名單裡」決定）：
-          // 剛加入自己 -> 解鎖；把自己剛移除掉 -> 鎖回去，不讓人退出了
-          // 又繼續改內容還存得進去。
-          if(!editIsCreator && isMine(col.id)){
-            const stillIn = myColumnIds().some(id => selectedParticipants.has(id));
-            editCanEditFields = stillIn;
-            editLockableFields.classList.toggle('locked', !stillIn);
-            fieldLockHint.hidden = stillIn;
-            btnDelete.hidden = !stillIn;
-            if(stillIn){
-              editHasDeleteRight = !creatorIsIn(editCreatorId, editOriginalParticipants);
-              btnDelete.textContent = editHasDeleteRight ? '刪除此行程' : '退出此行程';
-            }
-            renderParticipantChips(Array.from(selectedParticipants));
-          }
         });
       }
       participantsBox.appendChild(chip);
@@ -9929,7 +10196,7 @@
       notes: master.notes, participants: master.participants, color: master.color
     };
 
-    applyEditPermission({creatorId: master.creatorId, participants: data.participants});
+    applyEditPermission({creatorId: master.creatorId, participants: data.participants, permission: master.permission});
     editOriginalParticipants = (data.participants || []).slice();
     editOriginalSlot = {
       date: instanceDate, start: data.start, end: data.end,
@@ -10132,6 +10399,8 @@
     )) + 4;
 
     currentDate = cellDate;
+    lastShownPage = 'timeline'; // 這條路不經過 showPage，自己記錄已經回到時間軸
+    resetTimelineZoom(); // 從月曆進入時間軸：縮放恢復預設高度
     renderTimeline(); // 先把內容準備好，等一下圓圈展開看到的就是正確的那一天
 
     pageTimeline.classList.remove('pushed', 'pushed-by-month');
@@ -10364,7 +10633,10 @@
     }
   });
 
+  let lastShownPage = 'timeline';
   function showPage(name){
+    const prevPage = lastShownPage;
+    lastShownPage = name;
     pageEdit.classList.toggle('active', name === 'edit');
     pageMonth.classList.toggle('active', name === 'month');
     pageImport.classList.toggle('active', name === 'import');
@@ -10375,6 +10647,9 @@
       editingMasterId = null;
       editingInstanceDate = null;
     }
+    // 從月曆頁、匯入頁回到時間軸＝重新「進入」時間軸頁面：縮放恢復預設高度。
+    // 從編輯頁回來不重設（見 HOUR_PX_DEFAULT 那段說明）。
+    if(name === 'timeline' && (prevPage === 'month' || prevPage === 'import')) resetTimelineZoom();
   }
 
   function goBackToTimeline(){
@@ -10405,7 +10680,9 @@
 
     const newTitle = fieldTitle.value.trim() || '新行程';
     const newNotes = fieldNotes.value;
+    if(!editCanEditFields){ goBackToTimeline(); return; } // 不是參與者：只能看，不存任何變更
     const newParticipants = selectedParticipants.size ? Array.from(selectedParticipants) : [pickMyColumnId([]) || columns[0].id];
+    if(!creatorKept(master.creatorId, newParticipants)){ showToast(creatorKeptMsg(master.creatorId), 1800); return; }
 
     // 開始／結束時間各自獨立，直接讀取使用者手動填的值；
     // 只有在結束時間沒填或不晚於開始時間時才做最低限度的保底（開始後5分鐘）
@@ -10442,6 +10719,7 @@
       showConfirmDialog('重複的結束日期不能早於起始日期', function(){}, {okLabel:'知道了', hideCancel:true});
       return;
     }
+    if(editIsCreator) master.permission = editPermission; // 只有建立者能改權限（整個系列共用）
     const wasRecurring = !!master.recurrence;
     const syncOn = fieldSyncEdit.checked;
 
@@ -10484,9 +10762,9 @@
       master.notes = newNotes; master.participants = newParticipants;
       // 這一天如果原本有獨立編輯過的內容，順便清掉，讓它跟系列同步一致
       if(master.overrides){
-        const wasDone = !!(master.overrides[editingInstanceDate] && master.overrides[editingInstanceDate].done);
+        const prevDoneBy = master.overrides[editingInstanceDate] && master.overrides[editingInstanceDate].doneBy;
         delete master.overrides[editingInstanceDate];
-        if(wasDone) master.overrides[editingInstanceDate] = {done: true}; // 完成狀態不受「同步編輯」影響
+        if(Array.isArray(prevDoneBy) && prevDoneBy.length) master.overrides[editingInstanceDate] = {doneBy: prevDoneBy.slice()}; // 完成狀態不受「同步編輯」影響
       }
     } else {
       // 沒開同步編輯：只改這一天，寫入 override，系列其他日期不受影響
@@ -10494,7 +10772,7 @@
       const prevOv = master.overrides[editingInstanceDate] || {};
       master.overrides[editingInstanceDate] = Object.assign({
         title:newTitle, start:newStart, end:newEnd, notes:newNotes, participants:newParticipants
-      }, prevOv.done ? {done: true} : {});
+      }, (Array.isArray(prevOv.doneBy) && prevOv.doneBy.length) ? {doneBy: prevOv.doneBy.slice()} : {});
     }
 
     currentDate = master.recurrence ? editingInstanceDate : master.date;
@@ -10525,7 +10803,7 @@
     notifyColumns(removedParticipants, who+' 把你從「'+newTitle+'」移除了', editingMasterId, currentDate);
     if(changeLabels.length){
       notifyColumns(
-        editOriginalParticipants.filter(id => notMine(id) && newParticipants.includes(id) && !addedOthers.includes(id)),
+        withCreator(editOriginalParticipants.filter(id => newParticipants.includes(id)), master.creatorId).filter(id => notMine(id) && !addedOthers.includes(id)),
         who+' 更新了「'+newTitle+'」（'+changeLabels.join('、')+'）',
         editingMasterId, currentDate
       );
@@ -10546,7 +10824,7 @@
       if(!isLeaving){
         // 創建者：原本的整場/單日刪除邏輯不變，順便通知其他參與者
         const title = master.title || '(未命名行程)';
-        notifyColumns(master.participants, actingNameFor(master)+' 刪除了「'+title+'」', editingMasterId, editingInstanceDate);
+        notifyColumns(withCreator(master.participants, master.creatorId), actingNameFor(master)+' 刪除了「'+title+'」', editingMasterId, editingInstanceDate);
         if(!master.recurrence){
           events = events.filter(e => e !== master);
         } else if(syncOn){
@@ -10564,7 +10842,7 @@
         const who = actingNameFor(master); // 先取名字，退出後名下欄位就不在參與者裡了
         const remaining = (master.participants||[]).filter(id => !isMine(id));
         master.participants = remaining;
-        notifyColumns(remaining, who+' 退出了「'+title+'」', editingMasterId, editingInstanceDate);
+        notifyColumns(withCreator(remaining, master.creatorId), who+' 退出了「'+title+'」', editingMasterId, editingInstanceDate);
         if(master.overrides){
           Object.keys(master.overrides).forEach(d => {
             const ov = master.overrides[d];
@@ -11120,7 +11398,7 @@
 
   async function submitJoin(){
     const code = normalizeJoinCode(nbJoinCode.value);
-    if(code.length !== 6 && code.length !== 8){ setNbError('nbJoinError', '密碼是 6 碼數字，請再確認一次'); return; }
+    if(code.length !== 6 && code.length !== 8){ setNbError('nbJoinError', '密碼是 6 碼英文字母和數字，請再確認一次'); return; }
     if(!sb){ setNbError('nbJoinError', '目前連不上雲端，沒辦法加入別人的手帳'); return; }
     nbJoinSubmit.disabled = true;
     try{
@@ -11430,6 +11708,7 @@
     }
   }
   async function refreshAcctPage(){
+    renderPermSetting();
     const user = await currentAuthUser();
     const reg = isRegistered(user);
     document.getElementById('nbAcctGuest').hidden = reg;
@@ -11469,6 +11748,72 @@
       nbAcctSave.disabled = false;
     }
   }
+
+  /* ---------------- 設定：我的行程預設權限 ----------------
+     滑軸三個停點＝僅供檢視／可供加入／可供編輯，決定之後新建立的行程用哪一種。
+     改了之後問一次要不要連現有的行程一起改：現有的行程走資料庫的
+     set_my_events_permission（所有手帳裡我建立的行程），沒執行那份 SQL 的話
+     只改目前這本手帳。訪客、已註冊的人都可以設定（存在帳號資料裡）。 */
+  const nbPermRange = document.getElementById('nbPermRange');
+  const nbPermLabels = document.getElementById('nbPermLabels');
+  const nbPermHint = document.getElementById('nbPermHint');
+  function renderPermSetting(previewPerm){
+    const p = normPerm(previewPerm || defaultPermission);
+    nbPermRange.value = String(PERMS.indexOf(p));
+    Array.from(nbPermLabels.children).forEach((el, i) => el.classList.toggle('on', PERMS[i] === p));
+    nbPermHint.textContent = PERM_HINTS[p];
+  }
+  async function loadDefaultPermFromAccount(){
+    const u = await currentAuthUser();
+    const p = u && u.user_metadata && u.user_metadata.default_permission;
+    if(p && PERMS.indexOf(p) >= 0) setDefaultPermissionLocal(p);
+    renderPermSetting();
+  }
+  async function applyPermissionToMyEvents(p){
+    let ok = false;
+    if(sb){
+      try{
+        const r = await sb.rpc('set_my_events_permission', {p_permission: p});
+        if(r.error) throw r.error;
+        ok = true;
+      }catch(err){
+        console.warn('set_my_events_permission 失敗（還沒執行 supabase-upgrade.sql？）：', err);
+      }
+    }
+    // 目前這本手帳的畫面馬上跟著改
+    events.forEach(ev => { if(isMine(ev.creatorId)) ev.permission = p; });
+    if(ok){
+      // 資料庫已經改好了：基準點設成改完的樣子，不會被記成可以「復原」的一步，也不用再上傳一次
+      lastCommittedEvents = JSON.parse(JSON.stringify(events));
+    }
+    renderEvents(); // 沒改到資料庫的話，這次重繪會把目前這本手帳的變動同步上去
+    scheduleSaveToStorage();
+    return ok;
+  }
+  nbPermRange.addEventListener('input', function(){ renderPermSetting(PERMS[Number(nbPermRange.value)]); });
+  nbPermRange.addEventListener('change', async function(){
+    const next = PERMS[Number(nbPermRange.value)] || 'view';
+    if(next === defaultPermission){ renderPermSetting(); return; }
+    const choice = await chooseOption('預設權限改成「' + PERM_LABELS[next] + '」，要套用到哪些行程？',
+      ['只套用到之後建立的行程', '現有的行程也一併更改']);
+    if(choice < 0){ renderPermSetting(); return; } // 取消：滑軸回到原本的位置
+    setDefaultPermissionLocal(next);
+    renderPermSetting();
+    if(sb){
+      try{
+        const r = await sb.auth.updateUser({data: {default_permission: next}});
+        if(r.error) throw r.error;
+      }catch(err){ console.warn('預設權限存到帳號失敗（只存在這支裝置）：', err); }
+    }
+    if(choice === 1){
+      const ok = await applyPermissionToMyEvents(next);
+      showToast(ok ? '已更新預設權限和現有的行程' : '已更新預設權限\n現有行程只改了目前這本手帳', 2000);
+    } else {
+      showToast('已更新預設權限', 1500);
+    }
+  });
+  renderPermSetting();
+  authReady.then(loadDefaultPermFromAccount);
 
   // 把登入／綁定的各種英文錯誤，翻成使用者看得懂、而且知道下一步怎麼做的話。
   function friendlyAuthError(err, ctx){
@@ -11789,6 +12134,37 @@
   document.getElementById('nbCodeLinkDone').addEventListener('click', checkLinkDone);
   nbAcctSave.addEventListener('click', saveAccount);
   nbAcctSignOut.addEventListener('click', signOutAccount);
+
+  /* ---------------- 刪除帳號 ----------------
+     訪客、已註冊的人都可以刪。先刪頭像照片，再呼叫資料庫的 delete_my_account()
+     （supabase-upgrade.sql）：刪掉自己的欄位、只有自己參與的行程、寄給自己的
+     通知、手帳成員資格、沒人了的手帳，最後刪掉登入帳號。共同行程只會把自己拿掉。
+     確認視窗用 chooseOption（跟帳號頁面同一層，不會被開始畫面蓋住）。 */
+  const nbAcctDelete = document.getElementById('nbAcctDelete');
+  async function deleteAccount(){
+    if(!sb){ showToast('目前連不上雲端，沒辦法刪除帳號'); return; }
+    const choice = await chooseOption('確定要永久刪除帳號嗎？你的欄位和只有你參與的行程都會刪除，共同行程只會把你拿掉。刪除後無法復原。',
+      ['永久刪除我的帳號']);
+    if(choice !== 0) return;
+    nbAcctDelete.disabled = true;
+    try{
+      const user = await currentAuthUser();
+      if(user){ try{ await sb.storage.from('avatars').remove([user.id + '/avatar.jpg']); }catch(e){} }
+      const r = await sb.rpc('delete_my_account');
+      if(r.error) throw r.error;
+      try{ await sb.auth.signOut({scope: 'local'}); }catch(e){} // 帳號已經不在了，只清掉這支裝置的登入狀態
+      purgeLocalNotebookData();
+      try{ localStorage.removeItem(AUTH_STORAGE_KEY); localStorage.removeItem(DEFAULT_PERM_KEY); }catch(e){}
+      showToast('帳號已刪除', 1500);
+      setTimeout(function(){ location.reload(); }, 1500); // 重新載入後回到第一頁
+    }catch(err){
+      console.error('刪除帳號失敗：', err);
+      const missing = /could not find the function|PGRST202/i.test(((err && err.code) || '') + ' ' + ((err && err.message) || ''));
+      showToast(missing ? '刪除失敗：資料庫還沒執行\nsupabase-upgrade.sql' : '刪除失敗，請再試一次\n' + describeError(err), 2500);
+      nbAcctDelete.disabled = false;
+    }
+  }
+  nbAcctDelete.addEventListener('click', deleteAccount);
   [[nbAuthEmail, nbAuthSend], [nbAuthPw, nbAuthSend], [nbPwNew2, nbPwSubmit], [nbCodeInput, nbCodeSubmit], [nbAcctName, nbAcctSave]].forEach(function(pair){
     pair[0].addEventListener('keydown', function(e){ if(e.key === 'Enter') pair[1].click(); });
   });
@@ -11872,6 +12248,7 @@
         notes: ev.notes || '',
         participants: [tgtColId], creatorId: tgtColId,
         color: ev.color || '',
+        permission: defaultPermission,
         recurrence: ev.recurrence ? Object.assign({weekdays: (ev.recurrence.weekdays || []).slice()}, ev.recurrence.until ? {until: ev.recurrence.until} : {}) : null,
         excluded: ev.excluded ? ev.excluded.slice() : null,
         overrides: null
