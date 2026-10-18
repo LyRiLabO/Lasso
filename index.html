@@ -3995,6 +3995,7 @@
       </div>
 
       <button id="btnJoin" class="join-btn" type="button" hidden>加入此行程</button>
+      <button id="btnLeaveEvent" class="delete-btn" type="button" hidden>退出此行程</button>
       <button id="btnDelete" class="delete-btn">刪除此行程</button>
     </div>
   </section>
@@ -4389,10 +4390,9 @@
     master.overrides = Object.keys(ovs).length ? ovs : null;
     return nowDone;
   }
-  // 要不要顯示「待完成／已完成」按鈕：別人的「僅供檢視」行程（我不是建立者、也沒參與）不顯示。
+  // 要不要顯示「待完成／已完成」按鈕：只有自己有參與的行程（個人或共同）才有。
   function showsDoneBtn(inst){
-    if(!inst) return false;
-    return amCreatorOf(inst) || isParticipantOf(inst.participants) || permOf(inst) !== 'view';
+    return !!inst && isParticipantOf(inst.participants);
   }
   // 某個欄位在某一天「所有」被排進的行程是不是都已完成——沒有任何行程
   // 排進這個欄位的話不算（不要無中生有噴彩帶慶祝一個空的一天）。
@@ -4526,7 +4526,7 @@
   const CREATOR_LOCK_MSG = '只有建立者本人可以把自己移出行程';
   const MOVE_CONFLICT_MSG = '該日該時段已有行程';
   const OTHERS_COLUMN_CREATE_MSG = '不能在別人的欄位建立行程\n只能建立包含自己欄位的共同行程';
-  const KEEP_SELF_MSG = '參與者裡至少要保留一個自己的欄位\n不能把行程轉交給別人';
+  const KEEP_SELF_MSG = '要離開這個行程\n請按「退出」';
   const NO_EDIT_PERM_MSG = '建立者沒有開放編輯\n不能移動或修改這個行程';
 
   /* ---------------- 行程權限：僅供檢視／可供加入／可供編輯 ----------------
@@ -4546,22 +4546,36 @@
   };
   function normPerm(p){ return PERMS.indexOf(p) >= 0 ? p : 'view'; }
   function creatorColumnExists(creatorId){ return !!creatorId && columns.some(c => c.id === creatorId); }
-  function amCreatorOf(inst){ return !!inst && isMine(inst.creatorId); }
+  // 建立者已經不在這個行程裡：建立者欄位被刪掉了，或建立者自己按了「退出」。
+  // 這時行程交給留下來的參與者共同管理（參與者都能編輯、刪除；其他人只能看）。
+  function creatorLeft(inst){
+    return !!inst && (!creatorColumnExists(inst.creatorId) || !creatorIsIn(inst.creatorId, inst.participants));
+  }
+  function amCreatorOf(inst){ return !!inst && isMine(inst.creatorId) && !creatorLeft(inst); }
   function permOf(inst){
     if(!inst) return 'view';
-    if(!creatorColumnExists(inst.creatorId)) return 'edit';
+    if(creatorLeft(inst)) return isParticipantOf(inst.participants) ? 'edit' : 'view';
     return normPerm(inst.permission);
   }
   function canDeleteInstance(inst){ return !!inst && (amCreatorOf(inst) || permOf(inst) === 'edit'); }
+  // 參與者裡除了我以外還有沒有別人（建立者要退出時，行程得有人接手）
+  function hasOtherParticipants(inst){ return !!inst && (inst.participants || []).some(id => !isMine(id)); }
   function canJoinInstance(inst){
     if(!inst || amCreatorOf(inst) || isParticipantOf(inst.participants)) return false;
     const p = permOf(inst);
     return p === 'join' || p === 'edit';
   }
-  function canLeaveInstance(inst){ return !!inst && !amCreatorOf(inst) && isParticipantOf(inst.participants); }
-  // 改動後建立者還在不在參與者裡：建立者不能被移出，建立者自己也不能把自己全部移出（不能轉交）
-  function creatorKept(creatorId, newParticipants){
-    return !creatorColumnExists(creatorId) || creatorIsIn(creatorId, newParticipants);
+  // 退出：參與者都可以；建立者要有其他參與者留下來接手才可以（只剩自己就用刪除）
+  function canLeaveInstance(inst){
+    if(!inst || !isParticipantOf(inst.participants)) return false;
+    return !amCreatorOf(inst) || hasOtherParticipants(inst);
+  }
+  // 改動後建立者還在不在參與者裡：拖移、勾選參與者、四角調整都不能把建立者移出
+  // （建立者要離開只能按「退出」，大家會收到通知）。建立者原本就已經退出的行程不受限。
+  function creatorKept(creatorId, newParticipants, oldParticipants){
+    if(!creatorColumnExists(creatorId)) return true;
+    if(oldParticipants && !creatorIsIn(creatorId, oldParticipants)) return true;
+    return creatorIsIn(creatorId, newParticipants);
   }
   function creatorKeptMsg(creatorId){ return isMine(creatorId) ? KEEP_SELF_MSG : CREATOR_LOCK_MSG; }
   // 通知對象：參與者再加上建立者（建立者就算不在畫面上這一天的參與者裡也要知道）
@@ -4628,6 +4642,33 @@
       return false;
     }
   })();
+  // 同一個瀏覽器（包括同一個無痕視窗）的所有分頁共用同一個登入狀態：別的分頁換了帳號
+  // 或登出時，這個分頁的身分其實已經跟著變了，但畫面還停在原本那個人。偵測到就提示並
+  // 重新載入，避免用錯的身分繼續操作。（storage 事件只會在「其他」分頁改了資料時觸發）
+  window.addEventListener('storage', function(e){
+    if(e.key !== AUTH_STORAGE_KEY) return;
+    // 用事件本身帶的「改之前／改之後」比對，不看 DEVICE_ID：supabase-js 自己也在聽同一個
+    // 事件，可能已經先把 DEVICE_ID 換成新的人了。
+    const idOf = function(raw){ try{ const v = raw && JSON.parse(raw); return (v && v.user && v.user.id) || null; }catch(err){ return null; } };
+    const oldId = idOf(e.oldValue), newId = idOf(e.newValue);
+    if(newId === oldId) return; // 只是換新登入憑證（同一個人），不用處理
+    if(!oldId) return;          // 原本沒有人登入（還在第一頁），不用打斷
+    showAccountSwitchedNotice(newId ? '這個瀏覽器在另一個分頁換成了別的帳號' : '這個瀏覽器在另一個分頁登出了');
+  });
+  function showAccountSwitchedNotice(msg){
+    if(document.getElementById('acctSwitchOverlay')) return;
+    const ov = document.createElement('div');
+    ov.id = 'acctSwitchOverlay';
+    ov.className = 'device-user-overlay';
+    ov.style.zIndex = '100002';
+    ov.innerHTML = '<div class="device-user-card"><div class="device-user-title"></div>' +
+      '<div class="device-user-hint">同一個瀏覽器同時只能登入一個帳號。要同時用兩個帳號，請用不同的瀏覽器，或一個一般視窗、一個無痕視窗。</div>' +
+      '<div class="device-user-actions"><button type="button" class="device-user-action primary">重新載入</button></div></div>';
+    ov.querySelector('.device-user-title').textContent = msg;
+    ov.querySelector('button').addEventListener('click', function(){ location.reload(); });
+    document.body.appendChild(ov);
+  }
+
   // 確保現在有登入狀態；沒有的話建立匿名（訪客）帳號。
   async function ensureSession(){
     if(!sb) throw new Error('沒有連上雲端');
@@ -6047,7 +6088,9 @@
     const copyParticipants = amCreatorOf(inst) ? (inst.participants||[]).slice() : [creatorId];
     const newId = 'e' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
     const sMin = timeToMinutes(inst.start), eMin = timeToMinutes(inst.end);
-    const shift = Math.max(0, Math.min(DUPLICATE_SHIFT_MIN, 1440 - eMin)); // 已經貼近 24:00 就不再往後挪
+    // 自己的行程照原欄位複製：往後挪一點才看得出是複製的。別人的行程複製到自己的欄位：
+    // 本來就在不同欄位，時間維持一模一樣。
+    const shift = amCreatorOf(inst) ? Math.max(0, Math.min(DUPLICATE_SHIFT_MIN, 1440 - eMin)) : 0; // 已經貼近 24:00 就不再往後挪
     const hh = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
     const rec = inst.isRecurring && master && master.recurrence
       ? Object.assign({weekdays: master.recurrence.weekdays.slice()}, master.recurrence.until ? {until: master.recurrence.until} : {})
@@ -6124,10 +6167,11 @@
     const title = master.title || '(未命名行程)';
     const who = actingNameFor(master); // 先取名字：退出之後名下欄位就不在參與者裡了
     const notMine = id => !isMine(id); // 退出＝把「我名下所有欄位」都從這場行程移除
+    const leaveSuffix = isMine(master.creatorId) ? '，行程交給其他參與者共同管理' : '';
     if(!master.recurrence){
       const remaining = (master.participants||[]).filter(notMine);
       master.participants = remaining;
-      notifyColumns(withCreator(remaining, master.creatorId), who+' 退出了「'+title+'」', masterId, instanceDate);
+      notifyColumns(withCreator(remaining, master.creatorId), who+' 退出了「'+title+'」'+leaveSuffix, masterId, instanceDate);
       if(master.participants.length === 0){
         events = events.filter(e => e !== master);
       }
@@ -6137,7 +6181,7 @@
     const base = master.overrides[instanceDate] || {};
     const baseParticipants = base.participants || master.participants || [];
     const newParticipants = baseParticipants.filter(notMine);
-    notifyColumns(withCreator(newParticipants, master.creatorId), who+' 退出了「'+title+'」', masterId, instanceDate);
+    notifyColumns(withCreator(newParticipants, master.creatorId), who+' 退出了「'+title+'」'+leaveSuffix, masterId, instanceDate);
     if(newParticipants.length === 0){
       master.excluded = master.excluded || [];
       if(master.excluded.indexOf(instanceDate) === -1) master.excluded.push(instanceDate);
@@ -6204,8 +6248,8 @@
     // 創建者可以整場刪掉；只是參與者（不是創建者）只能退出（把自己從
     // 參與者名單移除）；純粹路過看看、還沒加入的人這裡完全不出現刪除/
     // 退出這個按鍵，因為根本沒有東西可以讓他刪或退。
-    const dangerAction = isCreator ? 'del' : (canLeaveInstance(inst) ? 'leave' : null);
-    const dangerLabel = isCreator ? '刪除' : '退出';
+    const canLeave = canLeaveInstance(inst); // 建立者有其他參與者留下時，也可以退出
+
 
     // 任何人都可以複製（別人的行程會複製到自己的欄位）；開放加入時多一顆「加入」。
     const menu = document.createElement('div');
@@ -6215,7 +6259,8 @@
       '<div class="card-menu-actions">' +
         '<button type="button" data-action="dup">複製</button>' +
         (canJoin ? '<button type="button" data-action="join">加入</button>' : '') +
-        (dangerAction ? '<button type="button" data-action="'+dangerAction+'" class="danger">'+dangerLabel+'</button>' : '') +
+        (canLeave ? '<button type="button" data-action="leave" class="danger">退出</button>' : '') +
+        (isCreator ? '<button type="button" data-action="del" class="danger">刪除</button>' : '') +
       '</div>';
     if(shrunkTitle){
       const row = menu.querySelector('.card-menu-title-row');
@@ -6265,7 +6310,7 @@
       closeCardMenu();
       renderEvents();
     });
-    if(dangerAction === 'del'){
+    if(isCreator){
       menu.querySelector('[data-action="del"]').addEventListener('click', function(ev){
         ev.stopPropagation();
         closeCardMenu();
@@ -6276,7 +6321,8 @@
           });
         }, {danger:true});
       });
-    } else if(dangerAction === 'leave'){
+    }
+    if(canLeave){
       menu.querySelector('[data-action="leave"]').addEventListener('click', function(ev){
         ev.stopPropagation();
         closeCardMenu();
@@ -6285,7 +6331,7 @@
             leaveInstance(masterId, instanceDate);
             renderEvents();
           });
-        }, {danger:true});
+        }, {danger:true, hint: amCreatorOf(inst) ? '你是建立者：退出後，行程交給其他參與者共同管理' : ''});
       });
     }
 
@@ -8596,8 +8642,14 @@
 
   function positionGhost(clientX, clientY){
     if(!floatingDrag) return;
-    floatingDrag.ghost.style.left = (clientX - floatingDrag.grabOffsetX) + 'px';
-    floatingDrag.ghost.style.top = (clientY - floatingDrag.grabOffsetY) + 'px';
+    const left = clientX - floatingDrag.grabOffsetX, top = clientY - floatingDrag.grabOffsetY;
+    floatingDrag.ghost.style.left = left + 'px';
+    floatingDrag.ghost.style.top = top + 'px';
+    (floatingDrag.extras || []).forEach(x => { x.el.style.left = (left + x.dx) + 'px'; x.el.style.top = (top + x.dy) + 'px'; });
+  }
+  function removeFloatingGhosts(fd){
+    fd.ghost.remove();
+    (fd.extras || []).forEach(x => x.el.remove());
   }
 
   function flipDayInstant(direction){
@@ -8650,20 +8702,35 @@
     if(vAutoScrollRAF){ cancelAnimationFrame(vAutoScrollRAF); vAutoScrollRAF = null; }
   }
 
+  function makeCardGhost(card){
+    const r = card.getBoundingClientRect();
+    const g = card.cloneNode(true);
+    g.removeAttribute('id');
+    g.classList.remove('dragging', 'resizing');
+    g.classList.add('card-ghost');
+    g.style.width = r.width + 'px';
+    g.style.height = r.height + 'px';
+    document.body.appendChild(g);
+    return {el: g, rect: r};
+  }
   function startFloatingDrag(inst, runMin, runMax, sourceCard, grabX, grabY, curX, curY){
     const rect = sourceCard.getBoundingClientRect();
-    const ghost = sourceCard.cloneNode(true);
-    ghost.removeAttribute('id');
-    ghost.classList.remove('dragging', 'resizing');
-    ghost.classList.add('card-ghost');
-    ghost.style.width = rect.width + 'px';
-    ghost.style.height = rect.height + 'px';
-    document.body.appendChild(ghost);
+    const ghost = makeCardGhost(sourceCard).el;
+    // 參與者不相鄰的共同行程（例如 A、C 參與，中間隔著 B）畫面上是好幾張卡片：
+    // 其他段也一起做成浮動卡片，跟著手指保持原本的相對位置，拖移中仍看得出是共同行程。
+    const extras = [];
+    eventsLayer.querySelectorAll('.event-card[data-master-id="'+CSS.escape(inst.masterId)+'"][data-date="'+CSS.escape(inst.instanceDate)+'"]').forEach(function(c){
+      if(c === sourceCard) return;
+      const x = makeCardGhost(c);
+      extras.push({el: x.el, dx: x.rect.left - rect.left, dy: x.rect.top - rect.top, originLeft: x.rect.left, originTop: x.rect.top});
+    });
 
     floatingDrag = {
       masterId: inst.masterId,
       homeDate: inst.instanceDate,
       ghost: ghost,
+      extras: extras,
+      runMin: runMin,
       w: rect.width,
       h: rect.height,
       // 記住抓取當下的原始畫面位置，如果放開時發現會跟別的行程重疊，
@@ -8763,9 +8830,14 @@
     fd.ghost.style.transition = 'left .22s cubic-bezier(.3,.6,.3,1), top .22s cubic-bezier(.3,.6,.3,1)';
     fd.ghost.style.left = fd.originLeft + 'px';
     fd.ghost.style.top = fd.originTop + 'px';
+    (fd.extras || []).forEach(x => {
+      x.el.style.transition = fd.ghost.style.transition;
+      x.el.style.left = x.originLeft + 'px';
+      x.el.style.top = x.originTop + 'px';
+    });
     if(navigator.vibrate) navigator.vibrate(10);
     setTimeout(function(){
-      fd.ghost.remove();
+      removeFloatingGhosts(fd);
       floatingDrag = null;
       renderEvents(); // 現在才把本尊畫回來（floatingDrag 已清空，不會再被跳過）
     }, 230);
@@ -8791,32 +8863,37 @@
     const evRect = eventsLayer.getBoundingClientRect();
     const n = Math.max(1, columns.length);
     const colWidthPx = evRect.width / n || 1;
-    let colIdx = Math.floor((ghostLeft - evRect.left) / colWidthPx);
-    colIdx = Math.max(0, Math.min(n - 1 - fd.span, colIdx));
-    const newParticipants = columns.slice(colIdx, colIdx + fd.span + 1).map(c => c.id);
+    const fdInst = getInstancesForDate(fd.homeDate).find(i => i.masterId === fd.masterId);
+    // 左右移動＝所有參與欄位一起平移同樣的欄數（不相鄰的共同行程也維持原本的間隔），
+    // 平移後不能超出最左、最右的欄位。
+    const partIdxs = Array.from(new Set(((fdInst && fdInst.participants) || []).map(colIndex).filter(i => i >= 0))).sort((a,b) => a-b);
+    if(!partIdxs.length) partIdxs.push(fd.runMin);
+    let delta = Math.floor((ghostLeft - evRect.left) / colWidthPx) - fd.runMin;
+    delta = Math.max(-partIdxs[0], Math.min(n - 1 - partIdxs[partIdxs.length-1], delta));
+    const newIdxs = partIdxs.map(i => i + delta);
+    const newParticipants = newIdxs.map(i => columns[i].id);
 
     // 落點如果會跟別的行程重疊（欄位+時間都有交集），不提交這次移動，
     // 動畫跳回原位；複製出來、還沒被拖過的行程不會走到這裡（那時候
     // floatingDrag 根本還不存在），所以「剛複製可以重疊」的例外自然成立。
-    const collision = findCollision(
-      currentDate, colIdx, colIdx + fd.span,
+    const collision = eventColRuns({participants: newParticipants}).some(([a, b]) => findCollision(
+      currentDate, a, b,
       snappedStart, snappedStart + fd.durationMin,
       fd.masterId, fd.homeDate
-    );
+    ));
     if(collision){
       showToast(MOVE_CONFLICT_MSG, 1500);
       bounceGhostBack(fd);
       return;
     }
 
-    const fdInst = getInstancesForDate(fd.homeDate).find(i => i.masterId === fd.masterId);
-    if(fdInst && !creatorKept(fdInst.creatorId, newParticipants)){
+    if(fdInst && !creatorKept(fdInst.creatorId, newParticipants, fdInst.participants)){
       showToast(creatorKeptMsg(fdInst.creatorId), 1800);
       bounceGhostBack(fd);
       return;
     }
 
-    fd.ghost.remove();
+    removeFloatingGhosts(fd);
     floatingDrag = null;
     applyQuickPlacement(fd.masterId, fd.homeDate, currentDate, newStart, newEnd, newParticipants);
     renderEvents();
@@ -9440,7 +9517,7 @@
           newIds.forEach(id => pset.add(id));
 
           const newPs = Array.from(pset);
-          if(!creatorKept(inst.creatorId, newPs)){
+          if(!creatorKept(inst.creatorId, newPs, inst.participants)){
             showToast(creatorKeptMsg(inst.creatorId), 1800);
           } else {
             applyQuickPlacement(inst.masterId, inst.instanceDate, inst.instanceDate, newStart, newEnd, newPs);
@@ -9988,8 +10065,13 @@
     } else {
       btnDelete.hidden = true;
     }
+    // 能刪除又能退出（建立者、或開放編輯時的參與者）：另外顯示一顆「退出此行程」
+    btnLeaveEvent.hidden = !(editHasDeleteRight && canLeaveInstance(inst));
+    editLeaveHint = amCreatorOf(inst) ? '你是建立者：退出後，行程交給其他參與者共同管理' : '';
     btnJoin.hidden = !canJoinInstance(inst);
   }
+  const btnLeaveEvent = document.getElementById('btnLeaveEvent');
+  let editLeaveHint = '';
 
   const btnJoin = document.getElementById('btnJoin');
   const permSeg = document.getElementById('permSeg');
@@ -10682,7 +10764,7 @@
     const newNotes = fieldNotes.value;
     if(!editCanEditFields){ goBackToTimeline(); return; } // 不是參與者：只能看，不存任何變更
     const newParticipants = selectedParticipants.size ? Array.from(selectedParticipants) : [pickMyColumnId([]) || columns[0].id];
-    if(!creatorKept(master.creatorId, newParticipants)){ showToast(creatorKeptMsg(master.creatorId), 1800); return; }
+    if(!creatorKept(master.creatorId, newParticipants, editOriginalParticipants)){ showToast(creatorKeptMsg(master.creatorId), 1800); return; }
 
     // 開始／結束時間各自獨立，直接讀取使用者手動填的值；
     // 只有在結束時間沒填或不晚於開始時間時才做最低限度的保底（開始後5分鐘）
@@ -10813,9 +10895,10 @@
     goBackToTimeline();
   });
 
-  document.getElementById('btnDelete').addEventListener('click', function(){
+  document.getElementById('btnDelete').addEventListener('click', function(){ deleteOrLeaveFromEdit(!editHasDeleteRight); });
+  btnLeaveEvent.addEventListener('click', function(){ deleteOrLeaveFromEdit(true); });
+  function deleteOrLeaveFromEdit(isLeaving){
     if(!editingMasterId) return;
-    const isLeaving = !editHasDeleteRight;
     showConfirmDialog(isLeaving ? '確定要退出這個行程嗎？' : '確定刪除？', function(){
       const master = events.find(e => e.id === editingMasterId);
       if(!master) return;
@@ -10842,7 +10925,7 @@
         const who = actingNameFor(master); // 先取名字，退出後名下欄位就不在參與者裡了
         const remaining = (master.participants||[]).filter(id => !isMine(id));
         master.participants = remaining;
-        notifyColumns(withCreator(remaining, master.creatorId), who+' 退出了「'+title+'」', editingMasterId, editingInstanceDate);
+        notifyColumns(withCreator(remaining, master.creatorId), who+' 退出了「'+title+'」'+(isMine(master.creatorId) ? '，行程交給其他參與者共同管理' : ''), editingMasterId, editingInstanceDate);
         if(master.overrides){
           Object.keys(master.overrides).forEach(d => {
             const ov = master.overrides[d];
@@ -10857,8 +10940,8 @@
 
       renderTimeline();
       goBackToTimeline();
-    }, {danger:true});
-  });
+    }, {danger:true, hint: isLeaving ? editLeaveHint : ''});
+  }
 
   /* ---------------- 初始化 ---------------- */
   const deviceUserPickerOverlay = document.getElementById('deviceUserPickerOverlay');
@@ -11065,6 +11148,20 @@
     await bootNotebook(data);
   }
 
+  /* ---- 新成員加入時通知其他成員 ----
+     用新的欄位名稱加入別人的手帳時，先在本機記下「要通知」，進到手帳、資料載入完成
+     後才送出（加入第二本手帳時會重新載入頁面，記在本機才不會漏掉）。同一個人名下
+     好幾個欄位只會收到一則（notifyColumns 會合併）。 */
+  const JOIN_ANNOUNCE_KEY = 'shared-planner-join-announce';
+  function announcePendingJoin(){
+    let pending = null;
+    try{ pending = JSON.parse(localStorage.getItem(JOIN_ANNOUNCE_KEY) || 'null'); }catch(e){}
+    if(!pending || !NOTEBOOK || pending.nbId !== NOTEBOOK.id) return;
+    try{ localStorage.removeItem(JOIN_ANNOUNCE_KEY); }catch(e){}
+    const others = columns.filter(c => c.ownerId !== DEVICE_ID).map(c => c.id);
+    if(others.length) notifyColumns(others, columnName(pending.colId) + ' 加入了這本手帳');
+  }
+
   /* ---- 移除訪客欄位 ----
      訪客的身分只存在他自己的瀏覽器，清掉瀏覽器資料就再也回不來，他名下的欄位就沒人
      能改、能刪。所以讓「已註冊」的成員可以隨時移除同手帳裡訪客的欄位：
@@ -11074,7 +11171,7 @@
      - 前端再把這些欄位從行程的參與者裡拿掉，只剩他參與的行程整個刪掉（跟「退出
        手帳」同一套規則）。移除不能復原，所以不會進到「復原」的紀錄裡。
      - touch_notebook：打開手帳時確認自己還是不是成員，被移除的訪客會看到提示。
-     這些函式要先在 Supabase 執行 supabase-guest-remove.sql；還沒執行時呼叫會失敗，
+     這些函式在 supabase-upgrade.sql 的 C 段；還沒執行時呼叫會失敗，
      只記在 console，不影響手帳的其他功能（只是看不到「移除訪客」）。 */
   let guestSqlMissing = false;
   let guestOwnerIds = new Set(); // 這本手帳裡是訪客的欄位主人（auth user id）
@@ -11329,6 +11426,7 @@
     scheduleSaveToStorage();
     // 創建／加入手帳時勾了「匯入舊手帳的行程」：載入完成後才執行匯入
     try{ await runPendingImport(); }catch(err){ console.error('匯入失敗：', err); }
+    announcePendingJoin();
     // 讀取成員的帳號名稱（點別人的欄位名稱時顯示）；沒有那個函式就退回只查訪客名單（移除訪客用）
     (async function(){
       iAmRegistered = isRegistered(await currentAuthUser());
@@ -11442,6 +11540,8 @@
       remote.columns.push(col);
       const nb = pendingJoin.nb;
       pendingJoin = null;
+      // 進到手帳（可能會重新載入頁面）之後，通知其他成員「有新的人加入」
+      try{ localStorage.setItem(JOIN_ANNOUNCE_KEY, JSON.stringify({nbId: nb.id, colId: col.id})); }catch(e){}
       await enterNotebook(nb, remote, col, joinImport ? joinImport.get() : null);
     }catch(err){
       console.error('加入手帳失敗：', err);
