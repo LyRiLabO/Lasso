@@ -365,32 +365,35 @@
      按下去的底色＝--paper-deep／--btn-face-pressed、卡片＝--card／--date-bg、主文字＝
      --ink／--btn-coffee、圖示＝--btn-brown、次要文字＝線條類（--line、--ink-soft、
      --ink-faint），時間軸橫線是次要文字往手帳底色混淡。強調紅＝--red、月曆所在日＝
-     --gold（圈內數字依底色深淺用主文字色或卡片色）。行程十六色見 EVENT_COLOR_THEME_IDS。 */
+     --gold（圈內數字依底色深淺用主文字色或卡片色）。行程十六色見 EVENT_COLOR_THEME_IDS。
+     【英倫學院調亮】使用者反映整體太暗看不清楚：背景、卡片、按下去的底色、格線、
+     強調紅、月曆所在日、行程十六色、三色圓圈都往白色混 10%（調亮一點點、色相不變）；
+     主文字、次要文字、圖示這些「字」的顏色維持原本的深色，跟變亮的底色對比反而更清楚。 */
   [data-theme="british-academy"]{
     --col-div:color-mix(in srgb, var(--line) 62%, var(--ink));
     --nav-rule:color-mix(in srgb, var(--line-soft) 38%, var(--card)); /* 「我的手帳」按鈕上的橫線：比一般線條再淡 */
-    --body-bg:#979488;
-    --paper:#A19D91;
-    --paper-deep:#7A766B;
+    --body-bg:#A19F94;
+    --paper:#AAA79C;
+    --paper-deep:#87847A;
     --line:#4F4440;
     --line-soft:#4F4440;
-    --grid-line:#888279;
-    --grid-line-sub:#888279;
+    --grid-line:#948E86;
+    --grid-line-sub:#948E86;
     --ink:#1D0807;
     --ink-soft:#4F4440;
     --ink-faint:#4F4440;
     --btn-coffee:#1D0807;
     --btn-brown:#281A0F;
-    --btn-face:#A19D91;
+    --btn-face:#AAA79C;
     --btn-relief:0 3px 8px rgba(40,26,15,0.34), 0 1px 3px rgba(40,26,15,0.22);
-    --btn-face-pressed:#7A766B;
+    --btn-face-pressed:#87847A;
     --btn-relief-pressed:inset 0 1px 3px rgba(40,26,15,0.32), 0 0 0 rgba(40,26,15,0);
-    --red:#4E1F25;
-    --red-deep:#38161B;
-    --card:#B1AC99;
-    --date-bg:#B1AC99;
+    --red:#60353B;
+    --red-deep:#45262A;
+    --card:#B9B4A3;
+    --date-bg:#B9B4A3;
     --shadow:rgba(29,8,7,0.22);
-    --gold:#3E3727;
+    --gold:#514B3D;
     --gold-fg:var(--card); /* 月曆所在日圓圈裡的數字：依圓圈深淺挑看得清楚的顏色 */
   }
 
@@ -702,15 +705,15 @@
   /* 行事曆右上角（跟手帳名稱同一排）的帳號頭像圓框 */
   .account-avatar{
     flex:0 0 auto; margin-left:auto;
-    width:32px; height:32px; box-sizing:border-box;
+    width:38px; height:38px; box-sizing:border-box;
     display:flex; align-items:center; justify-content:center;
     padding:0; border-radius:50%;
     border:1.5px solid var(--btn-brown); background:var(--card); color:var(--btn-brown);
-    font-family:'Noto Serif TC', serif; font-weight:700; font-size:15px;
+    font-family:'Noto Serif TC', serif; font-weight:700; font-size:18px;
     cursor:pointer; touch-action:manipulation; overflow:hidden;
   }
   .account-avatar[hidden]{display:none;}
-  .account-avatar svg{width:20px; height:20px;}
+  .account-avatar svg{width:23px; height:23px;}
   .account-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
   .acct-photo-row{display:flex; align-items:center; gap:14px; margin-bottom:6px;}
   .acct-photo{
@@ -721,6 +724,38 @@
   }
   .acct-photo img{width:100%; height:100%; object-fit:cover; display:block;}
   .acct-photo-btns{display:flex; flex-direction:column; align-items:flex-start; gap:2px;}
+  /* 頭像裁切畫面：拖曳移動、雙指或滑桿縮放，圓圈內就是頭像 */
+  .crop-overlay{
+    position:fixed; inset:0; z-index:100001;
+    background:rgba(0,0,0,.55);
+    display:flex; align-items:center; justify-content:center;
+    padding:16px; box-sizing:border-box;
+    animation:overlay-fade-in .18s ease;
+  }
+  .crop-overlay[hidden]{display:none;}
+  .crop-card{
+    width:100%; max-width:340px; box-sizing:border-box;
+    background:var(--paper); border-radius:14px; padding:18px 16px 16px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .crop-stage{
+    position:relative; width:100%; aspect-ratio:1/1; overflow:hidden;
+    border-radius:10px; background:#111; touch-action:none; cursor:grab;
+    user-select:none; -webkit-user-select:none;
+  }
+  .crop-stage:active{cursor:grabbing;}
+  .crop-stage img{
+    position:absolute; left:0; top:0; transform-origin:0 0;
+    max-width:none; max-height:none; pointer-events:none;
+    -webkit-user-drag:none; user-select:none;
+  }
+  .crop-ring{
+    position:absolute; inset:6%; border-radius:50%; pointer-events:none;
+    box-shadow:0 0 0 2000px rgba(0,0,0,.5); border:2px solid rgba(255,255,255,.9);
+  }
+  .crop-zoom{display:flex; align-items:center; gap:10px; color:var(--ink-soft);}
+  .crop-zoom input{flex:1; accent-color:var(--btn-coffee);}
+  .crop-zoom span{font-size:18px; line-height:1; width:14px; text-align:center;}
   .account-avatar:active{opacity:.6;}
 
   /* 右側選單 */
@@ -1588,6 +1623,17 @@
   }
   .card-menu-actions button:active{background:rgba(246,241,228,0.14);}
   .card-menu-actions button.danger{color:#F4B8AA;}
+  /* 點別人的欄位名稱：顯示這個欄位主人的帳號名稱（太長用「…」） */
+  .col-owner-name{
+    color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif;
+    font-size:13.5px; font-weight:700;
+    padding:11px 16px;
+    max-width:200px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .col-owner-name.muted{opacity:.7; font-weight:500;}
+  .col-owner-name + button{border-left:1px solid rgba(246,241,228,0.22);}
   .card-menu.arrow-down::after,
   .card-menu.arrow-up::after{
     content:"";
@@ -3276,6 +3322,22 @@
 <!-- 開啟網頁的第一步：這支裝置還沒有手帳時才會出現。
      創建新的手帳（輸入自己的使用者名稱，會得到一組分享密碼），或用別人
      給的密碼加入他的手帳。見 JS 的「開啟網頁：創建新手帳／加入別人的手帳」。 -->
+<!-- 頭像裁切畫面：放在最外層，才不會被開始畫面卡片的位移動畫影響全螢幕定位 -->
+<div class="crop-overlay" id="cropOverlay" hidden>
+  <div class="crop-card" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+    <div class="device-user-title" id="cropTitle" style="margin:0">裁切頭像</div>
+    <div class="device-user-hint" style="margin:0">拖曳移動照片，用雙指或下方滑桿放大縮小，圓圈裡的範圍就是頭像。</div>
+    <div class="crop-stage" id="cropStage">
+      <img id="cropImg" alt="">
+      <div class="crop-ring"></div>
+    </div>
+    <label class="crop-zoom"><span aria-hidden="true">－</span><input type="range" id="cropZoom" min="0" max="1000" value="0" aria-label="縮放"><span aria-hidden="true">＋</span></label>
+    <div class="device-user-actions" style="margin-top:0">
+      <button type="button" class="device-user-action" id="cropCancel">取消</button>
+      <button type="button" class="device-user-action primary" id="cropOk">使用這張</button>
+    </div>
+  </div>
+</div>
 <div id="notebookStartOverlay" class="device-user-overlay" hidden>
   <div class="device-user-card">
     <!-- 第一頁：註冊／登入 或 訪客。還沒有登入狀態才會出現。 -->
@@ -3310,7 +3372,7 @@
           <span>訪客</span>
         </button>
       </div>
-      <div class="device-user-hint" style="margin:10px 0 0">訪客不用註冊就能馬上開始，之後可以在帳號頁面綁定 email 備份。</div>
+      <div class="device-user-hint" style="margin:10px 0 0">訪客不用註冊就能馬上開始，之後可以在帳號頁面綁定 email 備份。手帳裡已註冊的人可以隨時移除訪客的欄位，綁定 email 就不會被移除。</div>
       <div class="nb-error" id="nbWelcomeError"></div>
     </div>
 
@@ -3454,7 +3516,7 @@
       <div id="nbAcctGuest">
         <div class="nb-field-label">帳號名稱</div>
         <div class="acct-static">訪客</div>
-        <div class="device-user-hint" style="margin:12px 0">訪客的資料只存在這個瀏覽器，清除瀏覽器資料就找不回來。註冊並綁定 email 之後，目前的手帳和行程都會保留，換手機也能用同一個 email 登入找回。</div>
+        <div class="device-user-hint" style="margin:12px 0">訪客的資料只存在這個瀏覽器，清除瀏覽器資料就找不回來。註冊並綁定 email 之後，目前的手帳和行程都會保留，換手機也能用同一個 email 登入找回。<br>在共用手帳裡，已註冊的成員可以隨時移除訪客的欄位和行程（避免訪客清掉瀏覽器資料後，留下沒人能管的欄位）。綁定 email 之後就不會被移除。</div>
         <button type="button" class="device-user-action primary" id="nbAcctBind" style="width:100%">註冊並綁定</button>
         <button type="button" class="device-user-action" id="nbAcctLogin" style="width:100%;margin-top:10px">已有帳號？登入</button>
       </div>
@@ -4997,22 +5059,22 @@
     {id:'cr-15', name:'深灰藍', hex:'#39404A'},
     {id:'cr-16', name:'墨綠', hex:'#333E3A'},
     // ---- 英倫學院 ----（取自使用者提供的色卡，由左到右、由上到下）
-    {id:'ba-01', name:'深焦褐', hex:'#271813'},
-    {id:'ba-02', name:'煙燻棕', hex:'#3E2F28'},
-    {id:'ba-03', name:'紅木棕', hex:'#563629'},
-    {id:'ba-04', name:'卡其褐', hex:'#8D7960'},
-    {id:'ba-05', name:'麂皮米', hex:'#C9B89A'},
-    {id:'ba-06', name:'鼠尾灰', hex:'#B6B5A0'},
-    {id:'ba-07', name:'橄欖褐', hex:'#3E3727'},
-    {id:'ba-08', name:'墨綠', hex:'#272D23'},
-    {id:'ba-09', name:'炭黑', hex:'#1D1E20'},
-    {id:'ba-10', name:'午夜藍', hex:'#07081D'},
-    {id:'ba-11', name:'石板灰', hex:'#393F4B'},
-    {id:'ba-12', name:'深海軍藍', hex:'#11182A'},
-    {id:'ba-13', name:'勃艮第紅', hex:'#662626'},
-    {id:'ba-14', name:'黑莓紅', hex:'#380E1A'},
-    {id:'ba-15', name:'灰玫褐', hex:'#64504F'},
-    {id:'ba-16', name:'羊毛白', hex:'#D5CDC0'},
+    {id:'ba-01', name:'深焦褐', hex:'#3D2F2B'},
+    {id:'ba-02', name:'煙燻棕', hex:'#51443E'},
+    {id:'ba-03', name:'紅木棕', hex:'#674A3E'},
+    {id:'ba-04', name:'卡其褐', hex:'#988670'},
+    {id:'ba-05', name:'麂皮米', hex:'#CEBFA4'},
+    {id:'ba-06', name:'鼠尾灰', hex:'#BDBCAA'},
+    {id:'ba-07', name:'橄欖褐', hex:'#514B3D'},
+    {id:'ba-08', name:'墨綠', hex:'#3D4239'},
+    {id:'ba-09', name:'炭黑', hex:'#343436'},
+    {id:'ba-10', name:'午夜藍', hex:'#202134'},
+    {id:'ba-11', name:'石板灰', hex:'#4D525D'},
+    {id:'ba-12', name:'深海軍藍', hex:'#292F3F'},
+    {id:'ba-13', name:'勃艮第紅', hex:'#753C3C'},
+    {id:'ba-14', name:'黑莓紅', hex:'#4C2631'},
+    {id:'ba-15', name:'灰玫褐', hex:'#746261'},
+    {id:'ba-16', name:'羊毛白', hex:'#D9D2C6'},
     // ---- 工業時尚 ----（取自使用者提供的色卡，由左到右、由上到下）
     {id:'ic-01', name:'鏽橘', hex:'#A45A2D'},
     {id:'ic-02', name:'鐵鏽紅', hex:'#602419'},
@@ -6915,7 +6977,11 @@
       return;
     }
     if(!col.ownerId){ renameColumn(col); return; } // 還沒有主人的舊欄位：先走「認領」確認
-    if(col.ownerId !== DEVICE_ID) return;           // 別人的欄位，只有主人能改
+    if(col.ownerId !== DEVICE_ID){                  // 別人的欄位：只有主人能改，單擊顯示主人的帳號名稱
+      const cell = columnHeaderRow.querySelector('.col-head[data-col-id="' + CSS.escape(col.id) + '"] .col-name');
+      if(cell) openColOwnerTip(cell, col);
+      return;
+    }
     openColumnEditDialog(col);
   }
 
@@ -6959,6 +7025,9 @@
         if(col && canSelectColumn(col)){
           const nameEl = g.cellEl.querySelector('.col-name');
           if(nameEl) openColMenu(nameEl, col); // 跟以前一樣：長按先跳出「刪除」小框框
+        } else if(col && canRemoveGuestColumn(col)){
+          const nameEl = g.cellEl.querySelector('.col-name');
+          if(nameEl) openGuestColMenu(nameEl, col); // 別人的訪客欄位：長按跳出「移除訪客」
         }
       }
     }
@@ -7195,11 +7264,32 @@
   const ICON_LIGHT_THIN = 0.6;    // 淺色圖示本身線條要削掉多少（總量，每側 0.3）：用遮罩把填色圖案往內縮
   const ICON_LIGHT_SW_SCALE = 0.65; // 淺色的真線條圖示（圓、方…）線寬縮成原本的幾倍
   const ICON_EDGE_DARKEN = 0.12;  // 輪廓色比圖示色深多少（原本 0.22，太深）
+  // 背景偏深的主題（英倫學院）：淺色圖示在深底上本來就看得清楚，不需要輪廓；
+  // 改成「圖示明度跟手帳底色接近」才加輪廓（不論圖示比底色亮或暗）。
+  // 其他主題的底色都很淺，維持原本「淺色圖示就加輪廓」的規則。
+  const ICON_OUTLINE_BY_CONTRAST_THEMES = {'british-academy': true};
+  const ICON_OUTLINE_NEAR_L = 12; // 跟底色的明度差（CIE L*，0～100）小於這個值才加輪廓
+  function perceivedL(hex){
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+    if(!m) return null;
+    const n = parseInt(m[1], 16);
+    const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const Y = 0.2126 * lin(n >> 16 & 255) + 0.7152 * lin(n >> 8 & 255) + 0.0722 * lin(n & 255);
+    return Y > 0.008856 ? 116 * Math.cbrt(Y) - 16 : 903.3 * Y;
+  }
+  function iconNeedsOutline(hex){
+    if(!ICON_OUTLINE_BY_CONTRAST_THEMES[activeThemeId()]) return isLightIconColor(hex);
+    let bg = '';
+    try{ bg = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim(); }catch(err){}
+    const li = perceivedL(hex), lb = perceivedL(bg);
+    if(li == null || lb == null) return isLightIconColor(hex); // 讀不到顏色就退回原本規則
+    return Math.abs(li - lb) < ICON_OUTLINE_NEAR_L;
+  }
   let iconMaskSeq = 0;
   function colIconSvg(iconId, color){
     const ic = COL_ICON_MAP[iconId];
     if(!ic) return '';
-    const light = isLightIconColor(color);
+    const light = iconNeedsOutline(color); // 要不要加輪廓（變數名沿用 light，淺色主題下就是「淺色圖示」）
     const edge = light ? darkenHex(color, ICON_EDGE_DARKEN) : null;
     if(ic.fill){
       if(!light) return '<svg viewBox="0 0 24 24" fill="' + color + '" stroke="none" aria-hidden="true">' + ic.svg + '</svg>';
@@ -10697,10 +10787,233 @@
     await bootNotebook(data);
   }
 
+  /* ---- 移除訪客欄位 ----
+     訪客的身分只存在他自己的瀏覽器，清掉瀏覽器資料就再也回不來，他名下的欄位就沒人
+     能改、能刪。所以讓「已註冊」的成員可以隨時移除同手帳裡訪客的欄位：
+     - notebook_guest_owners：打開手帳時問伺服器「這本手帳裡哪些欄位主人是訪客」；
+     - remove_guest：伺服器確認呼叫的人是已註冊成員、對象是訪客，才刪掉他的欄位、
+       寄給他的通知和成員資格，回傳被刪掉的欄位 id；
+     - 前端再把這些欄位從行程的參與者裡拿掉，只剩他參與的行程整個刪掉（跟「退出
+       手帳」同一套規則）。移除不能復原，所以不會進到「復原」的紀錄裡。
+     - touch_notebook：打開手帳時確認自己還是不是成員，被移除的訪客會看到提示。
+     這些函式要先在 Supabase 執行 supabase-guest-remove.sql；還沒執行時呼叫會失敗，
+     只記在 console，不影響手帳的其他功能（只是看不到「移除訪客」）。 */
+  let guestSqlMissing = false;
+  let guestOwnerIds = new Set(); // 這本手帳裡是訪客的欄位主人（auth user id）
+  let iAmRegistered = false;
+  function isGuestSqlMissingError(err){
+    return /could not find the function|PGRST202|does not exist/i.test(((err && err.code) || '') + ' ' + ((err && err.message) || ''));
+  }
+  // 回傳 true＝還是成員；false＝已經不是成員（被移除、或在別的裝置退出了）；null＝無法判斷
+  async function touchNotebook(nbId){
+    if(!sb || guestSqlMissing) return null;
+    try{
+      const r = await sb.rpc('touch_notebook', {nb: nbId});
+      if(r.error){
+        if(isGuestSqlMissingError(r.error)) guestSqlMissing = true;
+        console.warn('touch_notebook 失敗（還沒執行 supabase-guest-remove.sql？）：', r.error);
+        return null;
+      }
+      return r.data === false ? false : (r.data === true ? true : null);
+    }catch(err){ return null; }
+  }
+  function rpcTextList(data){
+    return (data || []).map(x => (x && typeof x === 'object') ? Object.values(x)[0] : x).filter(Boolean).map(String);
+  }
+  async function loadGuestOwners(){
+    guestOwnerIds = new Set();
+    iAmRegistered = isRegistered(await currentAuthUser());
+    if(!sb || !NOTEBOOK || guestSqlMissing || !iAmRegistered) return; // 只有已註冊的人需要知道（才能移除）
+    try{
+      const r = await sb.rpc('notebook_guest_owners', {nb: NOTEBOOK.id});
+      if(r.error){
+        if(isGuestSqlMissingError(r.error)) guestSqlMissing = true;
+        console.warn('notebook_guest_owners 失敗：', r.error);
+        return;
+      }
+      guestOwnerIds = new Set(rpcTextList(r.data));
+    }catch(err){ console.warn('notebook_guest_owners 發生錯誤：', err); }
+  }
+  // 這本手帳的成員資料：user id → {name, isGuest, guestNo}（點別人的欄位名稱時顯示）
+  let memberProfiles = new Map();
+  let guestsEver = 0; // 這本手帳發過幾個訪客編號；只發過 1 個時只顯示「訪客」
+  let memberProfilesSqlMissing = false;
+  async function loadMemberProfiles(){
+    if(!sb || !NOTEBOOK || memberProfilesSqlMissing) return false;
+    try{
+      const r = await sb.rpc('notebook_member_profiles', {nb: NOTEBOOK.id});
+      if(r.error){
+        if(isGuestSqlMissingError(r.error)) memberProfilesSqlMissing = true;
+        console.warn('notebook_member_profiles 失敗（還沒執行 supabase-member-names.sql？）：', r.error);
+        return false;
+      }
+      const m = new Map();
+      guestsEver = 0;
+      (r.data || []).forEach(function(x){
+        if(x && x.guests_ever) guestsEver = Number(x.guests_ever) || 0;
+        if(x && x.user_id) m.set(String(x.user_id), {name: x.name || '', isGuest: !!x.is_guest, guestNo: x.guest_no || null});
+      });
+      memberProfiles = m;
+      // 訪客名單也一起更新（移除訪客要用）
+      guestOwnerIds = new Set(Array.from(m.entries()).filter(e => e[1].isGuest).map(e => e[0]));
+      return true;
+    }catch(err){ console.warn('notebook_member_profiles 發生錯誤：', err); return false; }
+  }
+  function ownerLabel(ownerId){
+    const p = memberProfiles.get(String(ownerId));
+    if(!p) return null;
+    // 訪客編號是伺服器發的固定號碼，移除別的訪客也不會變（訪客2 不會因為訪客1 被移除就變成訪客1）
+    if(p.isGuest) return guestsEver > 1 && p.guestNo ? '訪客' + p.guestNo : '訪客';
+    return p.name || '（未命名）';
+  }
+  // 單擊別人的欄位名稱：在欄位上方顯示主人的帳號名稱；可以移除的訪客旁邊多一顆「移除」。
+  async function openColOwnerTip(nameEl, col){
+    closeCardMenu();
+    closeClusterMenu();
+    let label = ownerLabel(col.ownerId);
+    if(label === null && sb && NOTEBOOK){ // 可能是剛加入的人：重新抓一次
+      await loadMemberProfiles();
+      label = ownerLabel(col.ownerId);
+    }
+    const menu = document.createElement('div');
+    menu.className = 'card-menu';
+    const row = document.createElement('div');
+    row.className = 'card-menu-actions';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'col-owner-name' + (label === null ? ' muted' : '');
+    nameSpan.textContent = label === null ? '無法取得帳號名稱' : label;
+    if(label) nameSpan.title = label;
+    row.appendChild(nameSpan);
+    if(canRemoveGuestColumn(col)){
+      const rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'danger'; rm.textContent = '移除';
+      rm.addEventListener('click', function(ev){ ev.stopPropagation(); closeCardMenu(); confirmRemoveGuest(col); });
+      row.appendChild(rm);
+    }
+    menu.appendChild(row);
+    document.body.appendChild(menu);
+    const rect = nameEl.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    let left = rect.left + rect.width/2 - menuRect.width/2;
+    left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8));
+    let top = rect.top - menuRect.height - 10;
+    let arrowDown = true;
+    if(top < 8){ top = rect.bottom + 10; arrowDown = false; }
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    menu.classList.add(arrowDown ? 'arrow-down' : 'arrow-up');
+    cardMenuEl = menu;
+  }
+  function canRemoveGuestColumn(col){
+    return !!(col && iAmRegistered && col.ownerId && col.ownerId !== DEVICE_ID && guestOwnerIds.has(col.ownerId));
+  }
+  function stripColumnsFromEvents(evs, ids){
+    return evs.filter(function(ev){
+      ev.participants = (ev.participants || []).filter(pid => !ids.has(pid));
+      if(ev.overrides){
+        Object.keys(ev.overrides).forEach(function(d){
+          const ov = ev.overrides[d];
+          if(ov && ov.participants) ov.participants = ov.participants.filter(pid => !ids.has(pid));
+        });
+      }
+      return ev.participants.length > 0;
+    });
+  }
+  // 確認後移除這位訪客名下的所有欄位（同一個訪客可能有好幾個欄位）。
+  function confirmRemoveGuest(col){
+    const ownerId = col.ownerId;
+    const names = columns.filter(c => c.ownerId === ownerId).map(c => '「' + colLabel(c) + '」').join('、');
+    showConfirmDialog('移除訪客' + names + '？\n他在這本手帳的欄位，以及只有他參與的行程都會刪除，無法還原；共同行程只會把他拿掉。',
+      function(){ removeGuest(ownerId); }, {okLabel: '移除', danger: true});
+  }
+  async function removeGuest(ownerId){
+    if(!sb || !NOTEBOOK) return;
+    let removed = [];
+    try{
+      const r = await sb.rpc('remove_guest', {nb: NOTEBOOK.id, p_owner: ownerId});
+      if(r.error) throw r.error;
+      removed = rpcTextList(r.data);
+    }catch(err){
+      console.error('移除訪客失敗：', err);
+      showConfirmDialog('移除失敗，請再試一次。\n原因：' + describeError(err), function(){}, {okLabel: '知道了', hideCancel: true});
+      return;
+    }
+    guestOwnerIds.delete(ownerId);
+    // 伺服器沒刪到任何欄位（例如對方已經綁定 email、或已經被別人移除）：重新抓一次就好
+    if(!removed.length){
+      const remote = await fetchAllFromSupabase();
+      if(remote){
+        columns = remote.columns; events = remote.events;
+        lastCommittedColumns = JSON.parse(JSON.stringify(columns));
+        lastCommittedEvents = JSON.parse(JSON.stringify(events));
+        renderTimeline(); scheduleSaveToStorage();
+      }
+      showToast('這位已經不是訪客，或已經被移除了');
+      return;
+    }
+    const ids = new Set(removed);
+    animateColumnChange(function(){
+      const beforeEvents = JSON.parse(JSON.stringify(events));
+      columns = columns.filter(c => !ids.has(c.id));
+      events = stripColumnsFromEvents(events, ids);
+      syncChangesToSupabase('events', diffById(beforeEvents, events), ch => ch.after);
+      // 先把基準點設成移除後的樣子，重繪時才不會被記成一個可以「復原」的動作
+      lastCommittedColumns = JSON.parse(JSON.stringify(columns));
+      lastCommittedEvents = JSON.parse(JSON.stringify(events));
+      renderColumnHeader();
+      renderColumnDividers();
+      renderEvents();
+    });
+    scheduleSaveToStorage();
+    showToast('已移除訪客');
+  }
+  // 長按／點別人的訪客欄位：跳出跟「刪除欄位」同一種小框框，只有「移除訪客」
+  function openGuestColMenu(nameEl, col){
+    closeCardMenu();
+    closeClusterMenu();
+    const rect = nameEl.getBoundingClientRect();
+    const menu = document.createElement('div');
+    menu.className = 'card-menu';
+    menu.innerHTML = '<div class="card-menu-actions"><button type="button" data-action="rm" class="danger">移除訪客</button></div>';
+    document.body.appendChild(menu);
+    const menuRect = menu.getBoundingClientRect();
+    let left = rect.left + rect.width/2 - menuRect.width/2;
+    left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8));
+    let top = rect.top - menuRect.height - 10;
+    let arrowDown = true;
+    if(top < 8){ top = rect.bottom + 10; arrowDown = false; }
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    menu.classList.add(arrowDown ? 'arrow-down' : 'arrow-up');
+    menu.querySelector('[data-action="rm"]').addEventListener('click', function(ev){
+      ev.stopPropagation();
+      closeCardMenu();
+      confirmRemoveGuest(col);
+    });
+    cardMenuEl = menu;
+  }
+
   // 載入這本手帳：seed 有值就直接用（剛創建／剛加入時已經有資料了），
   // 沒有就從雲端抓；抓不到（離線）就沿用本機快取，不會壞掉。
   async function bootNotebook(seed){
     if(NOTEBOOK) registerNotebook(NOTEBOOK); // 舊版本升上來的裝置，目前這本也要進到手帳清單裡
+    // 記下「我還在」；如果伺服器說我已經不是成員（訪客被其他人移除、或在別的裝置退出了），
+    // 就不要再顯示這支裝置上的舊快取，回到開始畫面。
+    if(NOTEBOOK && sb){
+      const stillMember = await touchNotebook(NOTEBOOK.id);
+      if(stillMember === false){
+        const gone = NOTEBOOK;
+        const user = await currentAuthUser();
+        unregisterNotebook(gone.id);
+        clearStoredNotebook();
+        NOTEBOOK = null;
+        showConfirmDialog(isRegistered(user)
+          ? '你已經不在「' + notebookDisplayName(gone) + '」這本手帳裡了（可能在其他裝置退出過）。'
+          : '你在「' + notebookDisplayName(gone) + '」的訪客欄位已經被手帳裡的其他人移除了。需要的話，請向他們要密碼重新加入；綁定 email 之後就不會再被移除。',
+          function(){ location.reload(); }, {okLabel: '知道了', hideCancel: true});
+        return;
+      }
+    }
     if(!seed) refreshNotebookName(); // 重新打開網頁：手帳名稱有可能是別人剛改的，核對一次
     const remote = seed || await fetchAllFromSupabase();
     if(remote && remote.columns.length){
@@ -10738,6 +11051,11 @@
     scheduleSaveToStorage();
     // 創建／加入手帳時勾了「匯入舊手帳的行程」：載入完成後才執行匯入
     try{ await runPendingImport(); }catch(err){ console.error('匯入失敗：', err); }
+    // 讀取成員的帳號名稱（點別人的欄位名稱時顯示）；沒有那個函式就退回只查訪客名單（移除訪客用）
+    (async function(){
+      iAmRegistered = isRegistered(await currentAuthUser());
+      if(!(await loadMemberProfiles())) await loadGuestOwners();
+    })();
   }
 
 
@@ -10953,32 +11271,128 @@
     fillAvatar(accountAvatarBtn, user);
     accountAvatarBtn.setAttribute('aria-label', '帳號：' + accountDisplayName(user));
   }
-  // 照片：置中裁成正方形、縮成 256px 的 JPEG（約 20–40KB），傳到 Supabase Storage 的 avatars 桶，
-  // 只把網址存進帳號資料（不把圖片塞進登入憑證，避免請求標頭過大）。
-  function squareJpeg(file){
+  // 照片：先開裁切畫面讓使用者選範圍，裁好的正方形縮成 256px 的 JPEG（約 20–40KB），
+  // 傳到 Supabase Storage 的 avatars 桶，只把網址存進帳號資料（不把圖片塞進登入憑證）。
+  const AVATAR_PX = 256;
+  const cropOverlay = document.getElementById('cropOverlay');
+  const cropStage = document.getElementById('cropStage');
+  const cropImg = document.getElementById('cropImg');
+  const cropZoom = document.getElementById('cropZoom');
+  const crop = {url: null, w: 0, h: 0, S: 0, pad: 0, C: 0, min: 1, max: 4, scale: 1, tx: 0, ty: 0, resolve: null, pts: new Map(), pinch: null};
+  function cropClamp(){
+    const w = crop.w * crop.scale, h = crop.h * crop.scale;
+    crop.tx = Math.min(crop.pad, Math.max(crop.pad + crop.C - w, crop.tx));
+    crop.ty = Math.min(crop.pad, Math.max(crop.pad + crop.C - h, crop.ty));
+  }
+  function cropApply(){
+    cropClamp();
+    cropImg.style.transform = 'translate(' + crop.tx + 'px,' + crop.ty + 'px) scale(' + crop.scale + ')';
+    cropZoom.value = String(Math.round(1000 * Math.log(crop.scale / crop.min) / Math.log(crop.max / crop.min)));
+  }
+  // 以舞台上的某一點為中心縮放（雙指中點、滑桿則用圓心）
+  function cropZoomTo(ns, cx, cy){
+    ns = Math.min(crop.max, Math.max(crop.min, ns));
+    crop.tx = cx - (cx - crop.tx) * (ns / crop.scale);
+    crop.ty = cy - (cy - crop.ty) * (ns / crop.scale);
+    crop.scale = ns;
+    cropApply();
+  }
+  function cropLocal(e){
+    const r = cropStage.getBoundingClientRect();
+    return {x: e.clientX - r.left, y: e.clientY - r.top};
+  }
+  function closeCrop(result){
+    cropOverlay.hidden = true;
+    if(crop.url){ URL.revokeObjectURL(crop.url); crop.url = null; }
+    crop.pts.clear(); crop.pinch = null;
+    const done = crop.resolve; crop.resolve = null;
+    if(done) done(result);
+  }
+  // 打開裁切畫面；按「使用這張」回傳裁好的 JPEG Blob，按取消回傳 null。
+  function openCrop(file){
     return new Promise(function(resolve, reject){
       const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = function(){
-        URL.revokeObjectURL(url);
-        const side = Math.min(img.width, img.height), SZ = 256;
-        const cv = document.createElement('canvas');
-        cv.width = SZ; cv.height = SZ;
-        cv.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, SZ, SZ);
-        cv.toBlob(function(b){ b ? resolve(b) : reject(new Error('圖片轉檔失敗')); }, 'image/jpeg', 0.85);
+      const probe = new Image();
+      probe.onload = function(){
+        crop.url = url; crop.resolve = resolve;
+        crop.w = probe.naturalWidth; crop.h = probe.naturalHeight;
+        cropImg.src = url;
+        cropOverlay.hidden = false;
+        // 畫面顯示後才量得到舞台大小
+        requestAnimationFrame(function(){
+          crop.S = cropStage.clientWidth;
+          crop.pad = crop.S * 0.06;           // 跟 .crop-ring 的 inset:6% 一致
+          crop.C = crop.S - crop.pad * 2;
+          crop.min = crop.C / Math.min(crop.w, crop.h); // 最小：照片短邊剛好蓋滿圓圈
+          crop.max = crop.min * 5;
+          crop.scale = crop.min;
+          crop.tx = (crop.S - crop.w * crop.scale) / 2;
+          crop.ty = (crop.S - crop.h * crop.scale) / 2;
+          cropApply();
+        });
       };
-      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('讀不到這張圖片，請換一張（JPG、PNG 都可以）')); };
-      img.src = url;
+      probe.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('讀不到這張圖片，請換一張（JPG、PNG 都可以）')); };
+      probe.src = url;
     });
   }
+  cropStage.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    try{ cropStage.setPointerCapture(e.pointerId); }catch(err){}
+    crop.pts.set(e.pointerId, cropLocal(e));
+    if(crop.pts.size === 2){
+      const [p1, p2] = Array.from(crop.pts.values());
+      crop.pinch = {d: Math.hypot(p1.x - p2.x, p1.y - p2.y) || 1, s: crop.scale};
+    }
+  });
+  cropStage.addEventListener('pointermove', function(e){
+    if(!crop.pts.has(e.pointerId)) return;
+    const prev = crop.pts.get(e.pointerId), cur = cropLocal(e);
+    crop.pts.set(e.pointerId, cur);
+    if(crop.pts.size >= 2 && crop.pinch){
+      const [p1, p2] = Array.from(crop.pts.values());
+      const d = Math.hypot(p1.x - p2.x, p1.y - p2.y) || 1;
+      // 兩指一起移動時照片跟著走，再以中點縮放
+      crop.tx += (cur.x - prev.x) / 2; crop.ty += (cur.y - prev.y) / 2;
+      cropZoomTo(crop.pinch.s * d / crop.pinch.d, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+    } else if(crop.pts.size === 1){
+      crop.tx += cur.x - prev.x; crop.ty += cur.y - prev.y;
+      cropApply();
+    }
+  });
+  function cropPointerEnd(e){
+    crop.pts.delete(e.pointerId);
+    if(crop.pts.size < 2) crop.pinch = null;
+  }
+  cropStage.addEventListener('pointerup', cropPointerEnd);
+  cropStage.addEventListener('pointercancel', cropPointerEnd);
+  cropStage.addEventListener('wheel', function(e){
+    e.preventDefault();
+    const p = cropLocal(e);
+    cropZoomTo(crop.scale * Math.exp(-e.deltaY * 0.0015), p.x, p.y);
+  }, {passive: false});
+  cropZoom.addEventListener('input', function(){
+    const t = Number(cropZoom.value) / 1000;
+    cropZoomTo(crop.min * Math.pow(crop.max / crop.min, t), crop.S / 2, crop.S / 2);
+  });
+  document.getElementById('cropCancel').addEventListener('click', function(){ closeCrop(null); });
+  document.getElementById('cropOk').addEventListener('click', function(){
+    const cv = document.createElement('canvas');
+    cv.width = AVATAR_PX; cv.height = AVATAR_PX;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, AVATAR_PX, AVATAR_PX); // 透明 PNG 轉 JPEG 時不要變黑底
+    const side = crop.C / crop.scale;
+    ctx.drawImage(cropImg, (crop.pad - crop.tx) / crop.scale, (crop.pad - crop.ty) / crop.scale, side, side, 0, 0, AVATAR_PX, AVATAR_PX);
+    cv.toBlob(function(b){ closeCrop(b || null); if(!b) setNbError('nbAcctError', '圖片轉檔失敗，請換一張再試。'); }, 'image/jpeg', 0.88);
+  });
   async function uploadAvatar(file){
     setNbError('nbAcctError', '');
     const pick = document.getElementById('nbAcctPhotoPick');
-    pick.disabled = true; pick.textContent = '上傳中…';
     try{
       const user = await currentAuthUser();
       if(!isRegistered(user)) throw new Error('請先登入');
-      const blob = await squareJpeg(file);
+      const blob = await openCrop(file);
+      if(!blob) return; // 在裁切畫面按了取消
+      pick.disabled = true; pick.textContent = '上傳中…';
       const path = user.id + '/avatar.jpg';
       const up = await sb.storage.from('avatars').upload(path, blob, {upsert: true, contentType: 'image/jpeg', cacheControl: '3600'});
       if(up.error) throw up.error;
@@ -11661,7 +12075,7 @@
     { id: 'showa', name: '昭和懷舊', colors: ['#861108', '#317B6A', '#DE942B'] },
     { id: 'garden-tea', name: '花園派對', colors: ['#F75D93', '#BEC9EA', '#F3C624'] },
     { id: 'pumpkin-latte', name: '南瓜拿鐵', colors: ['#E77922', '#874F2E', '#F4E4CD'] },
-    { id: 'british-academy', name: '英倫學院', colors: ['#380E1A', '#07081D', '#3E3727'] },
+    { id: 'british-academy', name: '英倫學院', colors: ['#4C2631', '#202134', '#514B3D'] },
     { id: 'berry-picnic', name: '春日野餐', colors: ['#F0284E', '#FF7780', '#D5DFEF'] },
     { id: 'cocoa-rum', name: '可可蘭姆', colors: ['#552229', '#9A817A', '#F4F1FA'] }
   ];
