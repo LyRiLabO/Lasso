@@ -714,6 +714,8 @@
     cursor:pointer; touch-action:manipulation; overflow:hidden;
   }
   .account-avatar[hidden]{display:none;}
+  /* 訪客還沒綁定 email：頭像外框改成紅色，提醒去帳號頁面備份 */
+  .account-avatar.needs-bind{border-color:var(--red); box-shadow:0 0 0 1.5px color-mix(in srgb, var(--red) 35%, transparent);}
   .account-avatar svg{width:23px; height:23px;}
   .account-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
   .acct-photo-row{display:flex; align-items:center; gap:14px; margin-bottom:6px;}
@@ -5889,6 +5891,7 @@
     pickerConfirmOkBtn.textContent = opts.okLabel || '確定';
     pickerConfirmOkBtn.classList.toggle('danger', !!opts.danger);
     pickerConfirmCancelBtn.hidden = !!opts.hideCancel; // 純提示用（只有一顆按鍵）
+    pickerConfirmCancelBtn.textContent = opts.cancelLabel || '取消';
     pickerOnConfirm = onConfirm;
     pickerDateView.hidden = true;
     pickerTimeView.hidden = true;
@@ -11120,6 +11123,7 @@
   // 選好（或抓好）一本手帳之後的共同入口：記住這本手帳、把剛新增的欄位
   // 推上雲端、關掉開始畫面、載入內容。
   async function enterNotebook(nb, data, newColumn, importSel){
+    if(newColumn){ try{ localStorage.removeItem(BIND_REMIND_KEY); }catch(e){} bindRemindForceNext = true; } // 新建立或加入手帳：一定提醒一次（重新載入也有效）
     // 已經在另一本手帳裡（從選單來創建／加入第二本）：換過去用重新載入，
     // 這樣兩本手帳的資料不會混在同一個畫面狀態裡。
     const switching = !!NOTEBOOK;
@@ -11427,6 +11431,7 @@
     try{ await runPendingImport(); }catch(err){ console.error('匯入失敗：', err); }
     announcePendingJoin();
     startRealtime();
+    maybeRemindGuestToBind();
     // 讀取成員的帳號名稱（點別人的欄位名稱時顯示）；沒有那個函式就退回只查訪客名單（移除訪客用）
     (async function(){
       iAmRegistered = isRegistered(await currentAuthUser());
@@ -11648,6 +11653,40 @@
     if(!user) return;
     fillAvatar(accountAvatarBtn, user);
     accountAvatarBtn.setAttribute('aria-label', '帳號：' + accountDisplayName(user));
+    accountAvatarBtn.classList.toggle('needs-bind', !isRegistered(user));
+  }
+
+  /* ---------------- 提醒訪客綁定 email ----------------
+     訪客的資料只存在這個瀏覽器，清掉瀏覽器資料就找不回來，也可能被手帳裡的其他人移除。
+     - 頭像外框一直是紅色（renderAccountAvatar），點進去就有「註冊並綁定」。
+     - 進到手帳後跳一次提醒；按「之後再說」就 3 天內不再跳。第一次建立或加入手帳時
+       一定會跳（那時候最需要知道）。 */
+  const BIND_REMIND_KEY = 'shared-planner-bind-remind-at';
+  const BIND_REMIND_GAP_MS = 3 * 24 * 60 * 60 * 1000;
+  let bindRemindForceNext = false; // 剛建立／加入手帳：這次一定提醒
+  async function maybeRemindGuestToBind(){
+    if(!sb || !NOTEBOOK) return;
+    const user = await currentAuthUser();
+    if(!user || isRegistered(user)) return;
+    let last = 0;
+    try{ last = Number(localStorage.getItem(BIND_REMIND_KEY)) || 0; }catch(e){}
+    const force = bindRemindForceNext;
+    bindRemindForceNext = false;
+    if(!force && Date.now() - last < BIND_REMIND_GAP_MS) return;
+    setTimeout(function(){
+      // 正在操作、或已經有別的視窗開著，就不打斷，下次進來再說
+      if(!pickerOverlay.hidden || !nbStartOverlay.hidden || isUserBusy()) return;
+      try{ localStorage.setItem(BIND_REMIND_KEY, String(Date.now())); }catch(e){}
+      showConfirmDialog('要不要綁定 email 備份？', function(){
+        openStartOverlay('acct');
+        refreshAcctPage();
+        openAuth('bind', 'acct');
+      }, {
+        okLabel: '綁定 email',
+        cancelLabel: '之後再說',
+        hint: '你現在是訪客：資料只存在這個瀏覽器，清除瀏覽器資料就找不回來，手帳裡的其他人也可以移除你的欄位。綁定後手帳和行程都會保留，換手機也能登入找回。'
+      });
+    }, 1200); // 先讓手帳畫面出現，再跳提醒
   }
   // 照片：先開裁切畫面讓使用者選範圍，裁好的正方形縮成 256px 的 JPEG（約 20–40KB），
   // 傳到 Supabase Storage 的 avatars 桶，只把網址存進帳號資料（不把圖片塞進登入憑證）。
