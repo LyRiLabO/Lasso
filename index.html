@@ -4610,9 +4610,8 @@
      - 自己這邊改了什麼，靠既有的「復原/重做」系統本來就會做的
        diffById 比對（見 captureUndoCheckpoint／applyUndoEntry），順便
        把「變了哪些 id」精準推上雲端，不用整包重傳
-     - 沒有處理真正的即時（realtime）推播，也沒有處理很細緻的多人同時
-       改同一筆的合併——目前的規則就是「後寫的蓋掉先寫的」，對 2-4 人
-       的行事曆來說夠用；要更即時可以之後再加 Supabase Realtime 訂閱。
+     - 10/19 起加上 Supabase Realtime 即時推播（見「即時同步」那一段）；
+       多人同時改同一筆仍然是「後寫的蓋掉先寫的」，沒有逐欄合併。
      - 完全離線/連不上網路時，安靜地退回本機 localStorage 快取，不會讓
        App 整個壞掉，只是看不到對方最新的更動。 */
   const SUPABASE_URL = 'https://jzmmvhoougfnpkympjbp.supabase.co';
@@ -4748,8 +4747,8 @@
     const deleteIds = [];
     changes.forEach(ch => {
       const val = pickValue(ch);
-      if(val === null) deleteIds.push(ch.id);
-      else upsertRows.push(toRow(val));
+      if(val === null){ deleteIds.push(ch.id); noteSentForEcho(table, ch.id, null); }
+      else { const row = toRow(val); upsertRows.push(row); noteSentForEcho(table, ch.id, row); }
     });
     try{
       if(upsertRows.length){
@@ -11427,6 +11426,7 @@
     // 創建／加入手帳時勾了「匯入舊手帳的行程」：載入完成後才執行匯入
     try{ await runPendingImport(); }catch(err){ console.error('匯入失敗：', err); }
     announcePendingJoin();
+    startRealtime();
     // 讀取成員的帳號名稱（點別人的欄位名稱時顯示）；沒有那個函式就退回只查訪客名單（移除訪客用）
     (async function(){
       iAmRegistered = isRegistered(await currentAuthUser());
@@ -12957,20 +12957,223 @@
   // 切回這個分頁／從背景回來時，重新整包抓一次雲端資料——這是目前選擇
   // 的同步策略（開啟/切回時抓一次，不是即時 Realtime 推播），足夠讓
   // 兩支手機看到彼此在自己沒開著 App 的時候做的更動。
-  document.addEventListener('visibilitychange', async function(){
+  // 切回分頁時仍然整包重抓一次：即時同步在背景時可能被瀏覽器暫停、漏掉幾筆，
+  // 回來時補齊最保險。
+  document.addEventListener('visibilitychange', function(){
     if(document.visibilityState !== 'visible' || !NOTEBOOK) return;
     refreshNotebookName();
+    refreshAllFromCloud();
+  });
+  async function refreshAllFromCloud(){
+    if(!NOTEBOOK) return;
+    if(isUserBusy()){ setTimeout(refreshAllFromCloud, 400); return; } // 手指還在操作：等放開再換資料
     const remote = await fetchAllFromSupabase();
     if(!remote || remote.columns.length === 0) return;
+    if(isUserBusy()){ setTimeout(refreshAllFromCloud, 400); return; }
     columns = remote.columns;
     events = remote.events;
     notifications = remote.notifications;
     lastCommittedColumns = JSON.parse(JSON.stringify(columns));
     lastCommittedEvents = JSON.parse(JSON.stringify(events));
+    remoteQueue.length = 0; // 整包都換新了，排隊中的零星更新不用再套用
     renderTimeline();
     renderNotificationBadge();
     scheduleSaveToStorage();
+    checkEditingStillExists();
+  }
+
+  /* ---------------- 即時同步（Supabase Realtime） ----------------
+     進到手帳後訂閱這本手帳的 events／columns／notifications 變動，別人一改，
+     這邊幾秒內就跟著更新，不用重新整理。
+     - 自己寫上去的資料也會被推回來（回音）：送出時記下送了什麼（noteSentForEcho），
+       收到一樣的內容就略過，不會把自己後來又改的內容蓋回舊版。
+     - 套用別人的變動時，同時更新「復原」的基準點（lastCommitted…），這樣不會被當成
+       自己的修改又推回雲端，也不會變成可以「上一步」的動作。
+     - 手指正在操作（拖移、長按、縮放、拉框）或選單開著時，先排隊，放開後才套用，
+       不會把正在拖的卡片從手裡抽走。
+     - 刪除的通知只帶 id、而且不能依手帳過濾（Supabase 的限制），所以另外訂閱
+       不過濾的刪除，只處理自己畫面上有的 id。
+     - 需要資料庫把這三張表加進 supabase_realtime（supabase-upgrade.sql 的 D 段）。
+     已知限制：「上一步」會把那筆行程整筆改回自己當時的版本，可能蓋掉別人在這之間的修改。 */
+  let rtChannel = null;
+  let rtWasConnected = false;
+  const remoteQueue = [];
+  let remoteFlushTimer = null;
+  const echoLog = new Map(); // 'table:id' -> [{sig, t}]：自己送出、等著被推回來的內容
+
+  // 物件的鍵值依字母排序再轉文字：資料庫的 jsonb 會改變鍵的順序，直接比對會誤判
+  function stableStringify(v){
+    if(v === undefined) return 'null';
+    if(v === null || typeof v !== 'object') return JSON.stringify(v);
+    if(Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+    return '{' + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
+  }
+  function rowSig(table, row){
+    if(!row) return '__deleted__';
+    const conv = table === 'columns' ? rowToColumn : (table === 'events' ? rowToEvent : null);
+    return stableStringify(conv ? conv(row) : row);
+  }
+  function noteSentForEcho(table, id, row){
+    const key = table + ':' + id;
+    const now = Date.now();
+    const list = (echoLog.get(key) || []).filter(x => now - x.t < 15000); // 15 秒內沒回來就不等了
+    list.push({sig: rowSig(table, row), t: now});
+    echoLog.set(key, list);
+  }
+  // 是不是自己剛送出去的內容被推回來：是的話吃掉這筆紀錄（連同更早的），回傳 true
+  function consumeEcho(table, id, sig){
+    const key = table + ':' + id;
+    const list = echoLog.get(key);
+    if(!list) return false;
+    const idx = list.findIndex(x => x.sig === sig);
+    if(idx < 0) return false;
+    list.splice(0, idx + 1);
+    if(!list.length) echoLog.delete(key);
+    return true;
+  }
+  function hasPendingEcho(table, id){
+    const list = echoLog.get(table + ':' + id);
+    return !!(list && list.some(x => Date.now() - x.t < 15000));
+  }
+
+  // 使用者正在操作：手指按著、拖移中、選單開著、換日動畫中
+  // 記每根按著的手指（按下的時間）；超過 20 秒沒放開的當作漏接了放開事件，不再算數，
+  // 免得一次漏接就讓同步永遠等下去。
+  const pointersDown = new Map();
+  document.addEventListener('pointerdown', function(e){ pointersDown.set(e.pointerId, Date.now()); }, true);
+  ['pointerup', 'pointercancel'].forEach(function(t){
+    document.addEventListener(t, function(e){ pointersDown.delete(e.pointerId); }, true);
   });
+  window.addEventListener('blur', function(){ pointersDown.clear(); });
+  function fingerDown(){
+    const now = Date.now();
+    pointersDown.forEach(function(t, id){ if(now - t > 20000) pointersDown.delete(id); });
+    return pointersDown.size > 0;
+  }
+  function isUserBusy(){
+    return fingerDown() || !!floatingDrag || !!batchDrag || pinchActive || !!selectionBox ||
+      !!cardMenuEl || !!clusterMenuEl || daySlider.classList.contains('animating') ||
+      !!document.querySelector('.day-preview-panel, .event-card.resizing, .card-ghost');
+  }
+
+  function startRealtime(){
+    if(!sb || !NOTEBOOK || rtChannel) return;
+    const nbId = NOTEBOOK.id;
+    const filter = 'notebook_id=eq.' + nbId;
+    const ch = sb.channel('planner-' + nbId);
+    ['events', 'columns', 'notifications'].forEach(function(table){
+      ch.on('postgres_changes', {event: 'INSERT', schema: 'public', table: table, filter: filter}, p => queueRemote(table, p));
+      ch.on('postgres_changes', {event: 'UPDATE', schema: 'public', table: table, filter: filter}, p => queueRemote(table, p));
+      ch.on('postgres_changes', {event: 'DELETE', schema: 'public', table: table}, p => queueRemote(table, p));
+    });
+    ch.subscribe(function(status, err){
+      if(status === 'SUBSCRIBED'){
+        // 斷線後重新連上：中間可能漏掉別人的修改，整包補抓一次
+        if(rtWasConnected) refreshAllFromCloud();
+        rtWasConnected = true;
+      } else if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){
+        console.warn('即時同步連線中斷（會自動重連；還沒執行 supabase-upgrade.sql 的 D 段也會這樣）：', status, err || '');
+      }
+    });
+    rtChannel = ch;
+  }
+
+  function queueRemote(table, payload){
+    remoteQueue.push({table: table, payload: payload});
+    flushRemoteQueue();
+  }
+  function flushRemoteQueue(){
+    if(remoteFlushTimer) return;
+    remoteFlushTimer = setTimeout(function(){
+      remoteFlushTimer = null;
+      if(!remoteQueue.length) return;
+      if(isUserBusy()){ flushRemoteQueue(); return; } // 等手指放開再試
+      const items = remoteQueue.splice(0, remoteQueue.length);
+      let changedTimeline = false, changedNotifs = false;
+      items.forEach(function(it){
+        try{
+          if(it.table === 'notifications'){ if(applyRemoteNotification(it.payload)) changedNotifs = true; }
+          else if(applyRemoteRow(it.table, it.payload)) changedTimeline = true;
+        }catch(err){ console.error('套用即時同步資料失敗：', err, it); }
+      });
+      if(changedTimeline){
+        renderTimeline();
+        scheduleSaveToStorage();
+        checkEditingStillExists();
+      }
+      if(changedNotifs){
+        renderNotificationBadge();
+        scheduleSaveToStorage();
+      }
+    }, 120); // 稍微等一下，同一個動作連續送來的好幾筆一起處理、只重繪一次
+  }
+
+  // 套用一筆別人的 events／columns 變動，回傳畫面需不需要重繪
+  function applyRemoteRow(table, p){
+    const isCols = table === 'columns';
+    const conv = isCols ? rowToColumn : rowToEvent;
+    const type = p.eventType;
+    const row = type === 'DELETE' ? null : p.new;
+    const id = type === 'DELETE' ? (p.old && p.old.id) : (row && row.id);
+    if(!id) return false;
+    if(row && NOTEBOOK && row.notebook_id && row.notebook_id !== NOTEBOOK.id) return false;
+    const sig = rowSig(table, row);
+    if(consumeEcho(table, id, sig)) return false;     // 自己剛送出的內容
+    if(type !== 'DELETE' && hasPendingEcho(table, id)) return false; // 自己還有更新的版本在路上，以自己的為準
+
+    const list = isCols ? columns : events;
+    const idx = list.findIndex(x => x.id === id);
+    if(type === 'DELETE'){
+      if(idx < 0) return false;
+      list.splice(idx, 1);
+    } else {
+      const obj = conv(row);
+      if(idx >= 0){
+        if(stableStringify(list[idx]) === stableStringify(obj)) return false; // 內容一樣，不用動
+        list[idx] = obj;
+      } else {
+        list.push(obj);
+      }
+    }
+    // 復原的基準點也一起改，這筆才不會被當成「自己的修改」推回雲端或記進上一步
+    const baseName = isCols ? 'columns' : 'events';
+    const base = baseName === 'columns' ? lastCommittedColumns : lastCommittedEvents;
+    const bIdx = base.findIndex(x => x.id === id);
+    if(type === 'DELETE'){ if(bIdx >= 0) base.splice(bIdx, 1); }
+    else {
+      const copy = JSON.parse(JSON.stringify(conv(row)));
+      if(bIdx >= 0) base[bIdx] = copy; else base.push(copy);
+    }
+    return true;
+  }
+
+  // 新通知、已讀狀態：只更新通知清單和小紅點
+  function applyRemoteNotification(p){
+    if(p.eventType === 'DELETE'){
+      const id = p.old && p.old.id;
+      const before = notifications.length;
+      notifications = notifications.filter(n => n.id !== id);
+      return notifications.length !== before;
+    }
+    const n = rowToNotification(p.new);
+    if(NOTEBOOK && p.new.notebook_id && p.new.notebook_id !== NOTEBOOK.id) return false;
+    const idx = notifications.findIndex(x => x.id === n.id);
+    if(idx >= 0){
+      if(stableStringify(notifications[idx]) === stableStringify(n)) return false;
+      notifications[idx] = n;
+    } else {
+      notifications.push(n);
+    }
+    return true;
+  }
+
+  // 正在編輯的行程被別人刪掉了：提示並回到時間軸，不要讓使用者繼續改一個已經不存在的行程
+  function checkEditingStillExists(){
+    if(!editingMasterId) return;
+    if(events.some(e => e.id === editingMasterId)) return;
+    showToast('這個行程剛剛被其他人刪除了', 1800);
+    goBackToTimeline();
+  }
 
   /* ---------------- 禁止整個網頁本身縮放（時間軸自己的縮放不受影響） ----------------
      viewport 已經寫了 maximum-scale=1, user-scalable=no，Android 的 Chrome
