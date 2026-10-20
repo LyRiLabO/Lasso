@@ -4621,7 +4621,18 @@
   let sb = null;
   try{
     if(window.supabase && window.supabase.createClient){
-      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // 每個請求最多等 15 秒：網路很差（有連線但傳不出去）時，瀏覽器可能一直卡著
+      // 不回應，等不到失敗就沒辦法提示使用者、也不會自動重送。
+      const fetchWithTimeout = function(input, init){
+        const ctrl = new AbortController();
+        const t = setTimeout(function(){ ctrl.abort(); }, 15000);
+        if(init && init.signal){
+          if(init.signal.aborted) ctrl.abort();
+          else init.signal.addEventListener('abort', function(){ ctrl.abort(); });
+        }
+        return fetch(input, Object.assign({}, init, {signal: ctrl.signal})).finally(function(){ clearTimeout(t); });
+      };
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {global: {fetch: fetchWithTimeout}});
     }
   }catch(err){
     console.error('Supabase client 初始化失敗，退回純本機模式：', err);
@@ -4800,7 +4811,7 @@
     const msg = String((err && (err.message || err.details)) || err || '');
     const code = String((err && err.code) || '');
     if(status === 0 || (typeof navigator !== 'undefined' && navigator.onLine === false) ||
-       /failed to fetch|networkerror|load failed|network request failed|fetch failed|timeout/i.test(msg)) return 'network';
+       /failed to fetch|networkerror|load failed|network request failed|fetch failed|timeout|abort|network connection was lost|offline/i.test(msg)) return 'network';
     if(status === 401 || code === 'PGRST301' || code === 'PGRST303' || /jwt|not authenticated|invalid claim/i.test(msg)) return 'auth';
     return 'rejected';
   }
@@ -4898,6 +4909,21 @@
     syncRetryTimer = setTimeout(function(){ syncRetryTimer = null; flushPendingSync(); }, 15000);
   }
   window.addEventListener('online', function(){ flushPendingSync(); });
+  // 瀏覽器一偵測到斷線就先提示，不用等到存檔失敗
+  window.addEventListener('offline', function(){
+    if(!NOTEBOOK || syncOfflineNotified) return;
+    syncOfflineNotified = true;
+    showToast('目前連不上網路\n修改先存在這支裝置，連線後會自動上傳', 2600);
+  });
+  // 斷線時提示過，網路恢復、而且沒有東西要上傳：也告訴使用者已經恢復
+  window.addEventListener('online', function(){
+    setTimeout(function(){
+      if(syncOfflineNotified && !pendingSync.size && !syncFlushing){
+        syncOfflineNotified = false;
+        showToast('已重新連線', 1500);
+      }
+    }, 1500);
+  });
   // 登入過期、自動換新也失敗：請使用者重新登入（修改留在這支裝置，登入同一個帳號後會自動上傳）
   async function promptReloginForSync(){
     if(syncAuthPrompted) return;
