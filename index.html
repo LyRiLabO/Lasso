@@ -4742,37 +4742,176 @@
   // 把一批 {id, before, after} 的變動（跟復原/重做用的是同一份 diff）
   // 推上 Supabase：pickValue(change) 回傳「現在應該長怎樣」，null 代表
   // 這筆已經被刪除了。upsert 用 id 當衝突判斷欄位，刪除用 in(id列表)。
+  /* ---------------- 上傳到雲端：失敗時提示、自動重送 ----------------
+     每一筆要上傳的修改先放進「待上傳」清單（也存在這支裝置，關掉網頁再打開還在），
+     上傳成功才拿掉。失敗時依原因處理：
+     - 沒有網路／連不上：留著，網路恢復、切回頁面或每 15 秒自動重送；畫面提示一次。
+     - 登入過期：先自動換新登入憑證再送；換不了就請使用者重新登入，修改留著等登入後再送。
+     - 被資料庫拒絕（沒有權限、資料不合規則）：這筆不會成功，丟掉，提示使用者，
+       並重新抓雲端資料，讓畫面跟雲端一致。
+     同一筆資料連續改好幾次，只會留下最新的版本。 */
+  const pendingSync = new Map(); // 'table:id' -> {table, id, val, seq}
+  let pendingSeq = 0;
+  let syncFlushing = false, syncFlushAgain = false, syncRetryTimer = null;
+  let syncOfflineNotified = false, syncAuthPrompted = false;
+  function pendingKey(){ return 'shared-planner-pending-' + (NOTEBOOK ? NOTEBOOK.id : 'none'); }
+  function savePendingSync(){
+    try{
+      if(!NOTEBOOK) return;
+      if(!pendingSync.size){ localStorage.removeItem(pendingKey()); return; }
+      localStorage.setItem(pendingKey(), JSON.stringify(Array.from(pendingSync.values())));
+    }catch(err){}
+  }
+  function loadPendingSync(){
+    pendingSync.clear();
+    try{
+      const arr = JSON.parse(localStorage.getItem(pendingKey()) || '[]');
+      (Array.isArray(arr) ? arr : []).forEach(function(x){
+        if(x && x.table && x.id) pendingSync.set(x.table + ':' + x.id, {table: x.table, id: x.id, val: x.val === undefined ? null : x.val, seq: ++pendingSeq});
+      });
+    }catch(err){}
+  }
+  // 從雲端重新抓資料之後，把還沒上傳成功的修改蓋回去，畫面才不會「改了又不見」
+  function overlayPendingSync(){
+    pendingSync.forEach(function(p){
+      if(p.table !== 'events' && p.table !== 'columns') return;
+      const list = p.table === 'columns' ? columns : events;
+      const idx = list.findIndex(x => x.id === p.id);
+      if(p.val === null){ if(idx >= 0) list.splice(idx, 1); }
+      else {
+        const copy = JSON.parse(JSON.stringify(p.val));
+        if(idx >= 0) list[idx] = copy; else list.push(copy);
+      }
+    });
+  }
+  function hasPendingSync(table, id){ return pendingSync.has(table + ':' + id); }
+
   async function syncChangesToSupabase(table, changes, pickValue){
     if(!sb || !NOTEBOOK || !changes || changes.length === 0) return;
-    const toRow = table === 'columns' ? columnToRow : eventToRow;
-    const upsertRows = [];
-    const deleteIds = [];
     changes.forEach(ch => {
       const val = pickValue(ch);
-      if(val === null){ deleteIds.push(ch.id); noteSentForEcho(table, ch.id, null); }
-      else { const row = toRow(val); upsertRows.push(row); noteSentForEcho(table, ch.id, row); }
+      pendingSync.set(table + ':' + ch.id, {table: table, id: ch.id, val: val === null ? null : JSON.parse(JSON.stringify(val)), seq: ++pendingSeq});
     });
+    savePendingSync();
+    await flushPendingSync();
+  }
+
+  function classifySyncError(err, status){
+    const msg = String((err && (err.message || err.details)) || err || '');
+    const code = String((err && err.code) || '');
+    if(status === 0 || (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+       /failed to fetch|networkerror|load failed|network request failed|fetch failed|timeout/i.test(msg)) return 'network';
+    if(status === 401 || code === 'PGRST301' || code === 'PGRST303' || /jwt|not authenticated|invalid claim/i.test(msg)) return 'auth';
+    return 'rejected';
+  }
+
+  // 送出一組資料，回傳 {ok, kind, error}
+  async function sendSyncBatch(table, items){
+    const ups = items.filter(p => p.val !== null);
+    const dels = items.filter(p => p.val === null);
     try{
-      if(upsertRows.length){
-        let rowsToSend = upsertRows;
+      if(ups.length){
+        const toRow = table === 'columns' ? columnToRow : eventToRow;
+        const rows = ups.map(p => { const row = toRow(p.val); noteSentForEcho(table, p.id, row); return row; });
+        let rowsToSend = rows;
         if(table === 'events' && !eventPermSyncOk) rowsToSend = rowsToSend.map(stripPermField);
-        let { error } = table === 'columns' ? await upsertColumnRows(rowsToSend) : await sb.from(table).upsert(rowsToSend);
-        // 資料庫還沒執行 supabase-upgrade.sql（events 沒有 permission 欄位）：
-        // 這次連線先不送權限欄位，行程本身照常同步。
-        if(error && table === 'events' && eventPermSyncOk && /'permission' column|column .*permission/i.test(String(error.message || ''))){
-          console.warn('Supabase events 資料表還沒有 permission 欄位，先不同步權限：', error);
+        let r = table === 'columns' ? await upsertColumnRows(rowsToSend) : await sb.from(table).upsert(rowsToSend);
+        // 資料庫還沒執行 supabase-upgrade.sql（events 沒有 permission 欄位）：這次連線先不送權限欄位
+        if(r.error && table === 'events' && eventPermSyncOk && /'permission' column|column .*permission/i.test(String(r.error.message || ''))){
+          console.warn('Supabase events 資料表還沒有 permission 欄位，先不同步權限：', r.error);
           eventPermSyncOk = false;
-          ({ error } = await sb.from(table).upsert(upsertRows.map(stripPermField)));
+          r = await sb.from(table).upsert(rows.map(stripPermField));
         }
-        if(error) console.error('Supabase upsert 失敗（'+table+'）：', error);
+        if(r.error) return {ok: false, kind: classifySyncError(r.error, r.status), error: r.error};
       }
-      if(deleteIds.length){
-        const { error } = await sb.from(table).delete().in('id', deleteIds);
-        if(error) console.error('Supabase 刪除失敗（'+table+'）：', error);
+      if(dels.length){
+        dels.forEach(p => noteSentForEcho(table, p.id, null));
+        const r = await sb.from(table).delete().in('id', dels.map(p => p.id));
+        if(r.error) return {ok: false, kind: classifySyncError(r.error, r.status), error: r.error};
       }
+      return {ok: true};
     }catch(err){
-      console.error('Supabase 同步發生錯誤（'+table+'）：', err);
+      return {ok: false, kind: classifySyncError(err, 0), error: err};
     }
+  }
+
+  async function flushPendingSync(){
+    if(!sb || !NOTEBOOK || !pendingSync.size) return;
+    if(syncFlushing){ syncFlushAgain = true; return; }
+    syncFlushing = true;
+    let networkFail = false, authFail = false;
+    const rejected = [];
+    try{
+      for(const table of ['columns', 'events']){ // 先送欄位，行程才找得到它參與的欄位
+        const items = Array.from(pendingSync.values()).filter(p => p.table === table);
+        if(!items.length) continue;
+        let res = await sendSyncBatch(table, items);
+        if(!res.ok && res.kind === 'auth'){
+          // 登入憑證過期：自動換新一次再送
+          try{ const rr = await sb.auth.refreshSession(); if(!rr.error) res = await sendSyncBatch(table, items); }catch(e){}
+        }
+        if(res.ok){
+          items.forEach(p => { const cur = pendingSync.get(table + ':' + p.id); if(cur && cur.seq === p.seq) pendingSync.delete(table + ':' + p.id); });
+        } else if(res.kind === 'network'){ networkFail = true; break; }
+        else if(res.kind === 'auth'){ authFail = true; break; }
+        else {
+          // 整批被拒：一筆一筆送，找出是哪幾筆不行，其他照常存進去
+          for(const p of items){
+            const one = await sendSyncBatch(table, [p]);
+            const k = table + ':' + p.id;
+            const cur = pendingSync.get(k);
+            if(one.ok){ if(cur && cur.seq === p.seq) pendingSync.delete(k); }
+            else if(one.kind === 'network'){ networkFail = true; break; }
+            else if(one.kind === 'auth'){ authFail = true; break; }
+            else {
+              console.error('Supabase 拒絕這筆修改（' + table + '）：', one.error);
+              if(cur && cur.seq === p.seq) pendingSync.delete(k);
+              rejected.push(one.error);
+            }
+          }
+          if(networkFail || authFail) break;
+        }
+      }
+    } finally {
+      syncFlushing = false;
+      savePendingSync();
+    }
+    if(rejected.length){
+      const m = String((rejected[0] && rejected[0].message) || '');
+      showToast('有修改沒有存進雲端' + (/[\u4e00-\u9fff]/.test(m) ? '：\n' + m : '') + '\n畫面已恢復成雲端的內容', 2600);
+      refreshAllFromCloud();
+    }
+    if(networkFail){
+      if(!syncOfflineNotified){ syncOfflineNotified = true; showToast('目前連不上網路\n修改先存在這支裝置，連線後會自動上傳', 2600); }
+      scheduleSyncRetry();
+    } else if(authFail){
+      promptReloginForSync();
+      scheduleSyncRetry();
+    } else if(!pendingSync.size && syncOfflineNotified){
+      syncOfflineNotified = false;
+      showToast('已重新連線，修改都上傳完成', 1800);
+    }
+    if(syncFlushAgain){ syncFlushAgain = false; if(pendingSync.size) flushPendingSync(); }
+  }
+  function scheduleSyncRetry(){
+    if(syncRetryTimer) return;
+    syncRetryTimer = setTimeout(function(){ syncRetryTimer = null; flushPendingSync(); }, 15000);
+  }
+  window.addEventListener('online', function(){ flushPendingSync(); });
+  // 登入過期、自動換新也失敗：請使用者重新登入（修改留在這支裝置，登入同一個帳號後會自動上傳）
+  async function promptReloginForSync(){
+    if(syncAuthPrompted) return;
+    syncAuthPrompted = true;
+    const user = await currentAuthUser();
+    showConfirmDialog('登入狀態已經過期', function(){
+      syncAuthPrompted = false;
+      if(isRegistered(user) || !user){ openStartOverlay('welcome'); openAuth('login', 'welcome'); }
+      else location.reload();
+    }, {
+      okLabel: '重新登入',
+      cancelLabel: '稍後',
+      hint: '剛剛的修改還沒上傳，先存在這支裝置；重新登入同一個帳號後會自動上傳。'
+    });
   }
 
   async function pushNotificationToSupabase(n){
@@ -11394,11 +11533,13 @@
     }
     if(!seed) refreshNotebookName(); // 重新打開網頁：手帳名稱有可能是別人剛改的，核對一次
     const remote = seed || await fetchAllFromSupabase();
+    loadPendingSync(); // 上次沒上傳成功的修改（例如離線時改的）
     if(remote && remote.columns.length){
       columns = remote.columns;
       events = remote.events;
       notifications = remote.notifications;
     }
+    overlayPendingSync();
     // 欄位主人升級／認領（舊資料才會用到）：只在拿到權威資料（雲端抓成功，
     // 或根本沒接雲端）時才做，離線時先跳過，下次開啟再處理。認領是在下面
     // 重設 undo 基準點之前發生的，不會被 diff 到，所以要自己推上 Supabase。
@@ -11431,6 +11572,7 @@
     try{ await runPendingImport(); }catch(err){ console.error('匯入失敗：', err); }
     announcePendingJoin();
     startRealtime();
+    flushPendingSync();
     maybeRemindGuestToBind();
     // 讀取成員的帳號名稱（點別人的欄位名稱時顯示）；沒有那個函式就退回只查訪客名單（移除訪客用）
     (async function(){
@@ -13012,6 +13154,7 @@
     columns = remote.columns;
     events = remote.events;
     notifications = remote.notifications;
+    overlayPendingSync(); // 還沒上傳成功的修改蓋回去，不要被雲端的舊版本洗掉
     lastCommittedColumns = JSON.parse(JSON.stringify(columns));
     lastCommittedEvents = JSON.parse(JSON.stringify(events));
     remoteQueue.length = 0; // 整包都換新了，排隊中的零星更新不用再套用
@@ -13019,6 +13162,7 @@
     renderNotificationBadge();
     scheduleSaveToStorage();
     checkEditingStillExists();
+    flushPendingSync();
   }
 
   /* ---------------- 即時同步（Supabase Realtime） ----------------
@@ -13159,6 +13303,7 @@
     const sig = rowSig(table, row);
     if(consumeEcho(table, id, sig)) return false;     // 自己剛送出的內容
     if(type !== 'DELETE' && hasPendingEcho(table, id)) return false; // 自己還有更新的版本在路上，以自己的為準
+    if(hasPendingSync(table, id)) return false; // 自己的修改還沒上傳成功，先以自己的為準
 
     const list = isCols ? columns : events;
     const idx = list.findIndex(x => x.id === id);
