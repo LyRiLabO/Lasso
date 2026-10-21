@@ -2025,8 +2025,6 @@
   .todo-panel.full{ height:calc(100% - var(--kb-inset, 0px)); border-radius:0; }
   .todo-panel.full .todo-head{ padding-top:calc(14px + env(safe-area-inset-top, 0px)); }
   /* 面板開著時蓋在後面的透明層：點面板以外的地方只會收起清單，不會按到底下的按鍵 */
-  .todo-catcher{ position:absolute; inset:0; z-index:7; display:none; }
-  .todo-catcher.show{ display:block; }
   .todo-head{
     flex:0 0 auto;
     display:flex; align-items:center; gap:8px;
@@ -2103,6 +2101,8 @@
     transition:transform .22s cubic-bezier(.3,.7,.3,1), background-color .15s ease;
   }
   .todo-slide.swiping{ transition:background-color .15s ease; }
+  .todo-del{ transition:width .12s ease; }
+  .todo-row.full-swipe .todo-del{ text-align:right; padding-right:22px; }
   .todo-row.just-added{ animation:todo-row-in .32s cubic-bezier(.2,.8,.3,1); }
   @keyframes todo-row-in{ from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:none;} }
   .todo-row.leaving{ animation:todo-row-out .3s ease forwards; }
@@ -3015,6 +3015,14 @@
     cursor:pointer;
   }
   .picker-cancel-btn:active{opacity:.6;}
+  /* 底部那排（取消／清除截止日）：只有取消時跟原本一樣是一行字；
+     有「清除截止日」時兩顆並排、都加上框框，看起來是按鍵 */
+  .picker-bottom-row{ display:flex; justify-content:center; gap:10px; }
+  .picker-bottom-row.with-clear .picker-cancel-btn{
+    flex:1 1 0; padding:9px 8px; border-radius:12px;
+    border:1.5px solid var(--line); color:var(--ink-soft); font-size:14.5px; font-weight:700;
+  }
+  .picker-bottom-row.with-clear #pickerClearBtn{ border-color:var(--red); color:var(--red); }
 
   .picker-confirm{
     display:flex; flex-direction:column;
@@ -3128,6 +3136,9 @@
   .picker-overlay.popover-mode .picker-sheet.closing{ animation:popover-out .18s ease forwards; }
   /* 彈窗比較窄：年月與左右箭頭靠左，「回到今天」留在右邊，兩者才不會疊在一起 */
   .picker-overlay.popover-mode .picker-cal-head{ justify-content:flex-start; }
+  /* 時間滾輪：確定鍵撐滿寬度（原本從底部滑出時也是這樣排的） */
+  .picker-time:not([hidden]){ display:flex; flex-direction:column; gap:12px; }
+  .picker-time .picker-confirm-btn{ width:100%; }
   @keyframes popover-in{ from{ opacity:0; transform:scale(.92); } to{ opacity:1; transform:scale(1); } }
   @keyframes popover-out{ from{ opacity:1; transform:scale(1); } to{ opacity:0; transform:scale(.94); } }
   .picker-overlay.dialog-mode{
@@ -4149,7 +4160,6 @@
       </button>
     </div>
 
-    <div class="todo-catcher" id="todoCatcher"></div>
     <!-- 待辦清單面板：只有自己看得到、每本手帳各自一份 -->
     <div class="todo-panel" id="todoPanel" aria-hidden="true">
       <div class="todo-head" id="todoHead">
@@ -4394,7 +4404,10 @@
         </div>
       </div>
 
-      <button type="button" class="picker-cancel-btn" id="pickerCancelBtn">取消</button>
+      <div class="picker-bottom-row" id="pickerBottomRow">
+        <button type="button" class="picker-cancel-btn" id="pickerClearBtn" hidden>清除截止日</button>
+        <button type="button" class="picker-cancel-btn" id="pickerCancelBtn">取消</button>
+      </div>
     </div>
   </div>
 
@@ -4756,7 +4769,7 @@
       e.stopPropagation();
       if(!down) return;
       down = false;
-      if(Math.hypot(e.clientX - sx, e.clientY - sy) < 10){
+      if(Math.hypot(e.clientX - sx, e.clientY - sy) < 10 && !todoTapGuard){
         e.preventDefault();
         onTap();
       }
@@ -4787,7 +4800,7 @@
       e.stopPropagation();
       const wasTap = down && !moved && gen === pinchGen;
       down = false;
-      if(wasTap){
+      if(wasTap && !todoTapGuard){
         e.preventDefault();
         onTap();
       }
@@ -5966,6 +5979,23 @@
   const pickerDateView = document.getElementById('pickerDateView');
   const pickerTimeView = document.getElementById('pickerTimeView');
   const pickerCancelBtn = document.getElementById('pickerCancelBtn');
+  const pickerClearBtn = document.getElementById('pickerClearBtn');
+  const pickerBottomRow = document.getElementById('pickerBottomRow');
+  let pickerOnClear = null;
+  // 待辦清單開著時，在清單外按下的這一下只用來收清單：長按、點卡片等動作都先暫停（見待辦清單段落）
+  let todoTapGuard = false;
+  // 日期選擇器底部的「清除截止日」：只有從截止日按鍵打開時才出現
+  function setPickerClear(fn){
+    pickerOnClear = fn || null;
+    pickerClearBtn.hidden = !fn;
+    pickerBottomRow.classList.toggle('with-clear', !!fn);
+  }
+  pickerClearBtn.addEventListener('click', function(){
+    const fn = pickerOnClear;
+    closePicker(); // 按鍵留到下次打開時再重設，關閉動畫中不要忽然少一顆
+
+    if(fn) fn();
+  });
 
   const pickerConfirmView = document.getElementById('pickerConfirmView');
   const pickerConfirmMessage = document.getElementById('pickerConfirmMessage');
@@ -6252,8 +6282,10 @@
   // 使用者點選某一天之後立刻被呼叫（點了就套用，不用另外按確定，
   // 跟原本原生日期選擇器的手感一致）。
   // anchorEl：按下去的那個按鍵；有給的話用「彈窗模式」依附在它旁邊，沒給就照舊從底部滑出
-  function openDatePicker(initialDateStr, onSelect, anchorEl){
+  // opts.onClear：有給的話，底部會多一顆「清除截止日」跟取消並排
+  function openDatePicker(initialDateStr, onSelect, anchorEl, opts){
     pickerSheet.classList.remove('closing');
+    setPickerClear(opts && opts.onClear);
     const base = initialDateStr || todayStr();
     const [y,m] = base.split('-').map(Number);
     calViewYear = y; calViewMonth = m-1;
@@ -6353,7 +6385,8 @@
   // 按下「確定」之後才呼叫（時間要同時選「時」跟「分」兩個值，比較適合
   // 用一個明確的確定鍵，不像日期點了就能直接確定）。label 是標題文字，
   // 用來區分目前調的是開始還是結束時間，沒給的話退回「選擇時間」。
-  function openTimePicker(initialTimeStr, onSelect, label){
+  // anchorEl：按下去的按鍵；有給就用跟日期選擇器一樣的「彈窗模式」依附在它旁邊
+  function openTimePicker(initialTimeStr, onSelect, label, anchorEl){
     pickerSheet.classList.remove('closing');
     pickerTimeTitle.textContent = label || '選擇時間';
     const [h,mi] = (initialTimeStr || '09:00').split(':').map(Number);
@@ -6361,6 +6394,7 @@
     // 把分鐘吸附到最近的 5 分鐘刻度，跟原本 input[type=time] step=300 一致
     pickedMinute = MINUTES.reduce((closest, v) => Math.abs(v-mi) < Math.abs(closest-mi) ? v : closest, 0);
     pickerOnConfirm = onSelect;
+    setPickerClear(null);
     pickerDateView.hidden = true;
     pickerTimeView.hidden = false;
     pickerConfirmView.hidden = true;
@@ -6368,6 +6402,7 @@
     pickerOverlay.classList.remove('dialog-mode');
     clearPopoverMode();
     pickerOverlay.hidden = false;
+    if(anchorEl) placePickerPopover(anchorEl);
     markOverlayJustOpened();
     // 要等 overlay 從 hidden 變成可見、版面量得到高度之後才能量測捲動位置，
     // 用 rAF 讓瀏覽器先跑完一次排版。
@@ -6406,6 +6441,7 @@
     pickerConfirmCancelBtn.hidden = !!opts.hideCancel; // 純提示用（只有一顆按鍵）
     pickerConfirmCancelBtn.textContent = opts.cancelLabel || '取消';
     pickerOnConfirm = onConfirm;
+    setPickerClear(null);
     pickerDateView.hidden = true;
     pickerTimeView.hidden = true;
     pickerConfirmView.hidden = false;
@@ -9680,6 +9716,7 @@
 
       longPressTimer = setTimeout(function(){
         if(cancelledByScroll) return;
+        if(todoTapGuard) return; // 待辦清單開著：這一下只用來收清單
         if(pinchActive){ pinchTouched = true; return; } // 計時器觸發當下才是真正該檢查雙指縮放的時機
         phase = 'menu';
         if(navigator.vibrate) navigator.vibrate(15);
@@ -9754,6 +9791,8 @@
           startMomentumScroll(scrollVelocity);
         } else if(pinchActive || pinchTouched){
           // 這次手勢過程中發生過雙指縮放：不是真正的單擊，不開編輯頁
+        } else if(todoTapGuard){
+          // 待辦清單開著時的單擊只收清單，不開編輯頁
         } else {
           card.classList.add('card-tapped-feedback');
           setTimeout(function(){
@@ -9838,6 +9877,7 @@
 
       longPressTimer = setTimeout(function(){
         if(pinchActive) return; // 計時器觸發當下才是真正該檢查雙指縮放的時機，避免縮放時誤觸調整時長
+        if(todoTapGuard) return;
         resizing = true;
         card.classList.add('resizing');
         handle.classList.add('active');
@@ -10361,6 +10401,7 @@
         longPressTimer = setTimeout(function(){
           if(cancelled) return;
           if(pinchActive) return; // 計時器觸發當下才是真正該檢查雙指縮放的時機，避免縮放時誤建新行程
+          if(todoTapGuard) return;
           selecting = true;
           if(navigator.vibrate) navigator.vibrate(15);
           let top = Math.max(0, snapToFiveMin(anchorPx));
@@ -10530,14 +10571,14 @@
       fieldStart.value = timeStr;
       fieldStartBtn.textContent = timeStr;
       fieldStart.dispatchEvent(new Event('change'));
-    }, '開始時間');
+    }, '開始時間', fieldStartBtn);
   });
   fieldEndBtn.addEventListener('click', function(){
     openTimePicker(fieldEnd.value, function(timeStr){
       fieldEnd.value = timeStr;
       fieldEndBtn.textContent = timeStr;
       fieldEnd.dispatchEvent(new Event('change'));
-    }, '結束時間');
+    }, '結束時間', fieldEndBtn);
   });
   const fieldNotes = document.getElementById('fieldNotes');
   const participantsBox = document.getElementById('participantsBox');
@@ -13876,12 +13917,12 @@
   }
 
   // 時長、重複的選項與顯示文字（文字盡量短）
-  const TODO_DUR_OPTIONS = [15, 30, 45, 60, 90, 120, 180];
   const TODO_REPEAT_OPTIONS = [[null, '不重複'], ['day', '每天'], ['week', '每週'], ['month', '每月']];
   function fmtTodoDur(m){
-    if(!m) return '1小時';
-    if(m < 60) return m + '分';
-    return (m % 60 === 0 ? m / 60 : Math.round(m / 6) / 10) + '小時';
+    if(!m) m = 60;
+    const h = Math.floor(m / 60), mi = m % 60;
+    if(!h) return mi + '分';
+    return h + '小時' + (mi ? mi + '分' : '');
   }
   function todoRepeatLabel(r){ const o = TODO_REPEAT_OPTIONS.find(x => x[0] === r); return o ? o[1] : '不重複'; }
   // 重複待辦的下一次截止日：從原本的截止日往後推，推到今天或之後為止
@@ -13907,6 +13948,8 @@
     if(todoOpenSwipeRow){
       const sl = todoOpenSwipeRow.querySelector('.todo-slide');
       if(sl) sl.style.transform = '';
+      const dl = todoOpenSwipeRow.querySelector('.todo-del');
+      if(dl) dl.style.width = '';
       todoOpenSwipeRow.classList.remove('swipe-open');
       todoOpenSwipeRow = null;
     }
@@ -14012,9 +14055,12 @@
     return row;
   }
 
-  // 左滑露出刪除鍵：橫向滑動才算（上下滑還是捲動清單）；滑超過一半就停在打開的位置
+  // 左滑露出刪除鍵：橫向滑動才算（上下滑還是捲動清單）；滑超過一半就停在打開的位置。
+  // 再繼續往左滑超過整條的一半：整條變紅，放開就直接刪除（iPhone 的郵件、備忘錄也是這樣）。
   function attachTodoSwipe(row, slide){
     const OPEN_X = -76;
+    const del = row.querySelector('.todo-del');
+    let full = false;
     let sx = 0, sy = 0, base = 0, mode = null, pid = null;
     slide.addEventListener('pointerdown', function(e){
       if(e.target.closest('.todo-edit') || e.target.closest('.todo-title-input')) return;
@@ -14031,8 +14077,16 @@
         if(mode === 'swipe'){ slide.classList.add('swiping'); try{ slide.setPointerCapture(pid); }catch(err){} }
       }
       if(mode === 'swipe'){
-        const x = Math.max(OPEN_X - 20, Math.min(0, base + dx));
+        const w = row.offsetWidth;
+        const x = Math.max(-w, Math.min(0, base + dx));
         slide.style.transform = 'translateX(' + x + 'px)';
+        del.style.width = Math.max(76, -x) + 'px'; // 刪除鍵跟著拉長，整條變紅
+        const nowFull = -x > w * 0.5;
+        if(nowFull !== full){
+          full = nowFull;
+          row.classList.toggle('full-swipe', full);
+          if(full && navigator.vibrate) navigator.vibrate(12);
+        }
       }
     });
     const end = function(e){
@@ -14046,6 +14100,17 @@
       slide.classList.remove('swiping');
       const m = /translateX\((-?[\d.]+)px\)/.exec(slide.style.transform || '');
       const x = m ? parseFloat(m[1]) : 0;
+      if(full){
+        // 滑到底：整條滑出去，再收起這一列、刪掉
+        full = false;
+        slide.style.transform = 'translateX(' + (-row.offsetWidth) + 'px)';
+        del.style.width = row.offsetWidth + 'px';
+        if(todoOpenSwipeRow === row) todoOpenSwipeRow = null;
+        markSwiped();
+        setTimeout(function(){ del.click(); }, 160);
+        return;
+      }
+      del.style.width = '';
       if(x < OPEN_X / 2){
         slide.style.transform = 'translateX(' + OPEN_X + 'px)';
         row.classList.add('swipe-open');
@@ -14086,15 +14151,11 @@
     const dueBtn = chip(t.due ? '截止日 ' + todoDueLabel(t).replace('過期 ', '') : '截止日', t.due ? 'set' : '');
     dueBtn.addEventListener('click', function(){
       commitTitle();
-      openDatePicker(t.due || todayStr(), function(d){ update({due: d}); }, dueBtn);
+      // 已經有截止日、而且不是重複事項（重複要有起始日）才能清除
+      openDatePicker(t.due || todayStr(), function(d){ update({due: d}); }, dueBtn,
+        (t.due && !t.repeat) ? {onClear: function(){ update({due: null}); }} : null);
     });
     box.appendChild(dueBtn);
-    if(t.due && !t.repeat){
-      const clr = chip('清除');
-      clr.setAttribute('aria-label', '清除截止日');
-      clr.addEventListener('click', function(){ update({due: null}); });
-      box.appendChild(clr);
-    }
     const durBtn = chip('時長 ' + fmtTodoDur(t.duration), t.duration ? 'set' : '');
     const repBtn = chip('重複 ' + todoRepeatLabel(t.repeat), t.repeat ? 'set' : '');
     box.appendChild(durBtn);
@@ -14107,38 +14168,40 @@
     });
     box.appendChild(del);
 
-    // 點「時長」「重複」：下面展開一排選項，選了就收起
-    let opts = null, optsFor = null;
-    const toggleOpts = function(kind){
-      if(opts){ opts.remove(); opts = null; if(optsFor === kind){ optsFor = null; return; } }
-      optsFor = kind;
+    // 「時長」：跳出時間滾輪（幾小時：幾分），跟編輯行程時間是同一個滾輪
+    durBtn.addEventListener('click', function(){
+      commitTitle();
+      const m = t.duration || 60;
+      openTimePicker(pad2(Math.floor(m / 60)) + ':' + pad2(m % 60), function(hm){
+        const [h, mi] = hm.split(':').map(Number);
+        const total = Math.max(5, Math.min(24 * 60, h * 60 + mi)); // 最短 5 分鐘
+        update({duration: total === 60 ? null : total});
+      }, '時長（小時：分鐘）', durBtn);
+    });
+    // 「重複」：下面展開一排選項，選了就收起
+    let opts = null;
+    repBtn.addEventListener('click', function(){
+      if(opts){ opts.remove(); opts = null; return; }
       opts = document.createElement('div');
       opts.className = 'todo-opts';
-      const list = kind === 'dur' ? TODO_DUR_OPTIONS.map(m => [m, fmtTodoDur(m)]) : TODO_REPEAT_OPTIONS;
-      const cur = kind === 'dur' ? (t.duration || 60) : (t.repeat || null);
-      list.forEach(function(o){
-        const b = chip(o[1], o[0] === cur ? 'primary' : '');
+      TODO_REPEAT_OPTIONS.forEach(function(o){
+        const b = chip(o[1], o[0] === (t.repeat || null) ? 'primary' : '');
         b.addEventListener('click', function(){
-          if(kind === 'dur') update({duration: o[0] === 60 ? null : o[0]});
-          else update(o[0] && !t.due ? {repeat: o[0], due: todayStr()} : {repeat: o[0]}); // 重複要有一個起始日：沒設截止日就從今天開始
+          update(o[0] && !t.due ? {repeat: o[0], due: todayStr()} : {repeat: o[0]}); // 重複要有一個起始日：沒設截止日就從今天開始
         });
         opts.appendChild(b);
       });
       box.appendChild(opts);
-    };
-    durBtn.addEventListener('click', function(){ toggleOpts('dur'); });
-    repBtn.addEventListener('click', function(){ toggleOpts('rep'); });
+    });
     return box;
   }
 
   // ---- 開關面板、新增 ----
-  const todoCatcher = document.getElementById('todoCatcher');
   function openTodoPanel(){
     if(selectMode) return;
     renderTodos();
     todoPanel.classList.add('open');
     todoPanel.setAttribute('aria-hidden', 'false');
-    todoCatcher.classList.add('show');
   }
   function closeTodoPanel(){
     todoPanel.classList.remove('open', 'full');
@@ -14146,12 +14209,67 @@
     todoNew.hidden = true;
     todoExpandedId = null;
     if(document.activeElement && todoPanel.contains(document.activeElement)) document.activeElement.blur();
-    // 透明層晚一點才拿掉：手指放開時瀏覽器還會補一個 click，要讓它落在透明層上，
-    // 不然會按到底下的按鍵
-    setTimeout(function(){ if(!todoPanel.classList.contains('open')) todoCatcher.classList.remove('show'); }, 400);
   }
-  todoCatcher.addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); closeTodoPanel(); });
-  todoCatcher.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); });
+  // 清單開著時，在清單以外的地方「單擊」＝只收起清單，不觸發底下的按鍵或行程；
+  // 但上下捲動、左右滑動換日照常（手指有移動就不算單擊，清單也不收）。
+  // 做法：手指按下時不攔（不然捲動會被擋掉），只記下位置並打開 todoTapGuard，
+  // 讓時間軸的長按（建立行程、卡片選單、拖移）這一下先不要啟動；放開時如果幾乎沒移動，
+  // 就收起清單，並把瀏覽器接著補發的 click 吃掉。
+  const TODO_TAP_SLOP = 10;
+  let todoTapDown = null;
+  let todoSwallowClickUntil = 0;
+  function todoPanelBlocksTap(target){
+    if(!todoPanel.classList.contains('open')) return false;
+    if(todoPanel.contains(target)) return false;
+    if(!pickerOverlay.hidden && pickerOverlay.contains(target)) return false; // 日期／時間選擇器是清單自己打開的
+    return true;
+  }
+  document.addEventListener('pointerdown', function(e){
+    if(!todoPanelBlocksTap(e.target)){ todoTapGuard = false; todoTapDown = null; return; }
+    if(todoTapDown && todoTapDown.id !== e.pointerId){ todoTapDown.multi = true; return; } // 第二根手指：雙指縮放，不算單擊
+    todoTapGuard = true;
+    todoTapDown = {id: e.pointerId, x: e.clientX, y: e.clientY, multi: false};
+  }, true);
+  document.addEventListener('pointermove', function(e){
+    if(todoTapDown && todoTapDown.id === e.pointerId &&
+       Math.hypot(e.clientX - todoTapDown.x, e.clientY - todoTapDown.y) > TODO_TAP_SLOP) todoTapDown.moved = true;
+  }, true);
+  document.addEventListener('pointerup', function(e){
+    const d = todoTapDown;
+    if(!d || d.id !== e.pointerId) return;
+    todoTapDown = null;
+    if(d.moved || d.multi || Math.hypot(e.clientX - d.x, e.clientY - d.y) > TODO_TAP_SLOP) return; // 是捲動／滑動，不收
+    if(!todoPanel.classList.contains('open')) return;
+    e.preventDefault();
+    closeTodoPanel();
+    todoSwallowClickUntil = performance.now() + 700;
+    // todoTapGuard 保持 true 到下一次按下，讓之後才跑的 pointerup 處理（例如點卡片開編輯頁）也知道這一下不算
+  }, true);
+  document.addEventListener('pointercancel', function(e){
+    if(todoTapDown && todoTapDown.id === e.pointerId) todoTapDown = null;
+  }, true);
+  document.addEventListener('click', function(e){
+    if(performance.now() < todoSwallowClickUntil){
+      todoSwallowClickUntil = 0;
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    }
+  }, true);
+
+  // 展開編輯的那一項：點清單裡的其他地方（其他項目除外，點其他項目會直接換成編輯那一項）就收合
+  let todoExpandedAtDown = null;
+  todoPanel.addEventListener('pointerdown', function(){ todoExpandedAtDown = todoExpandedId; }, true);
+  todoPanel.addEventListener('click', function(e){
+    const id = todoExpandedAtDown;
+    todoExpandedAtDown = null;
+    if(!id || todoExpandedId !== id) return;
+    const row = todoList.querySelector('.todo-row[data-id="' + CSS.escape(id) + '"]');
+    if(row && (e.target.closest('.todo-title-input') || e.target.closest('.todo-edit'))) return;
+    if(row && row.contains(e.target) && e.target.closest('.todo-check')) return;
+    const input = row && row.querySelector('.todo-title-input');
+    if(input) input.blur(); // 先存名稱
+    todoExpandedId = null;
+    renderTodos();
+  });
   btnTodo.addEventListener('click', function(){ todoPanel.classList.contains('open') ? closeTodoPanel() : openTodoPanel(); });
   document.getElementById('todoCloseBtn').addEventListener('click', closeTodoPanel);
   // 標題列往上滑：佔滿整個畫面；往下滑：全螢幕時回到半頁，半頁時收起。▾ 按鍵一律完全收起。
@@ -14203,7 +14321,8 @@
   });
   document.getElementById('todoNewCancel').addEventListener('click', closeNewTodoRow);
   todoNewDue.addEventListener('click', function(){
-    openDatePicker(todoNewDueVal || todayStr(), function(d){ todoNewDueVal = d; renderNewDueChip(); }, todoNewDue);
+    openDatePicker(todoNewDueVal || todayStr(), function(d){ todoNewDueVal = d; renderNewDueChip(); }, todoNewDue,
+      todoNewDueVal ? {onClear: function(){ todoNewDueVal = null; renderNewDueChip(); }} : null);
   });
   function submitNewTodo(){
     const v = todoNewInput.value.trim();
