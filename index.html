@@ -2098,10 +2098,17 @@
     padding:11px 16px;
     background:var(--paper);
     touch-action:pan-y;
-    transition:transform .22s cubic-bezier(.3,.7,.3,1), background-color .15s ease;
+    /* 停下來時稍微衝過頭再回來（有彈性的感覺） */
+    transition:transform .42s cubic-bezier(.2,1.35,.4,1), background-color .15s ease;
   }
   .todo-slide.swiping{ transition:background-color .15s ease; }
-  .todo-del{ transition:width .12s ease; }
+  .todo-del{ transition:width .42s cubic-bezier(.2,1.35,.4,1); }
+  .todo-del.swiping{ transition:none; }
+  .todo-row.swipe-leaving{
+    transition:transform .26s cubic-bezier(.4,0,.8,.4), opacity .24s ease, height .22s ease .02s, border-color .2s ease;
+    border-bottom-color:transparent;
+  }
+  .todo-row.swipe-leaving .todo-slide{ transition:transform .16s ease-out; }
   .todo-row.full-swipe .todo-del{ text-align:right; padding-right:22px; }
   .todo-row.just-added{ animation:todo-row-in .32s cubic-bezier(.2,.8,.3,1); }
   @keyframes todo-row-in{ from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:none;} }
@@ -2135,7 +2142,13 @@
     font-family:'Noto Sans TC', sans-serif; font-variant-numeric:tabular-nums; font-size:12px; color:var(--ink-soft);
   }
   .todo-row.overdue .todo-due{ color:var(--red); font-weight:700; }
-  .todo-edit{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px; }
+  .todo-edit{ display:flex; flex-direction:column; gap:8px; margin-top:10px; margin-right:-36px; } /* 往右延伸到收合箭頭底下，四顆按鍵才排得下一排 */
+  .todo-edit-row{
+    display:flex; flex-wrap:nowrap; align-items:center; gap:6px;
+    overflow-x:auto; scrollbar-width:none; /* 真的太窄（字很大的手機）就左右滑，不換行 */
+  }
+  .todo-edit-row::-webkit-scrollbar{ display:none; }
+  .todo-edit-row .todo-chip{ padding:5px 8px; font-size:12px; }
   .todo-opts{ flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px; animation:todo-row-in .18s ease; }
   .todo-opts .todo-chip{ padding:5px 10px; font-size:12px; }
   /* 點開的那一項：名稱直接變成可以打字的輸入框，跟原本的文字同一個位置、同樣大小 */
@@ -2145,10 +2158,8 @@
     border:none; border-bottom:1.5px solid var(--btn-coffee); background:transparent;
     padding:0 0 2px; margin:0; outline:none; border-radius:0;
   }
-  .todo-title-wrap{ position:relative; }
-  .todo-title-wrap .todo-title-input{ padding-right:34px; }
   .todo-fold-btn{
-    position:absolute; right:-6px; top:50%; transform:translateY(-50%);
+    flex:0 0 auto; margin:-6px -8px -6px 0;
     width:34px; height:34px; border:none; background:none; padding:0;
     display:flex; align-items:center; justify-content:center;
     color:var(--ink-soft); cursor:pointer;
@@ -3032,6 +3043,7 @@
     border:1.5px solid var(--line); color:var(--ink-soft); font-size:14.5px; font-weight:700;
   }
   .picker-bottom-row.with-clear #pickerClearBtn{ border-color:var(--red); color:var(--red); }
+  .picker-bottom-row.with-clear #pickerClearBtn:disabled{ opacity:.35; cursor:default; }
 
   .picker-confirm{
     display:flex; flex-direction:column;
@@ -3147,7 +3159,25 @@
   .picker-overlay.popover-mode .picker-cal-head{ justify-content:flex-start; }
   /* 時間滾輪：確定鍵撐滿寬度（原本從底部滑出時也是這樣排的） */
   .picker-time:not([hidden]){ display:flex; flex-direction:column; gap:12px; }
-  .picker-time .picker-confirm-btn{ width:100%; }
+  .picker-time-actions{ display:flex; gap:8px; }
+  .picker-time-actions .picker-confirm-btn{ flex:1 1 0; }
+  .picker-time-cancel{ display:none; }
+  /* 依附在按鍵旁的時間滾輪：長寬都縮成約一半，取消跟確定並排 */
+  .picker-overlay.popover-mode .picker-sheet.time-pop{ width:184px; padding:12px 12px 10px; gap:8px; }
+  .time-pop .picker-time:not([hidden]){ gap:8px; }
+  .time-pop .picker-time-title{ font-size:11px; letter-spacing:.06em; }
+  .time-pop .picker-time-wheels{ height:105px; gap:2px; }
+  .time-pop .picker-wheel{ height:105px; width:54px; padding:37.5px 0; }
+  .time-pop .picker-wheel-item{ height:30px; font-size:15px; }
+  .time-pop .picker-wheel-item.picked{ font-size:18px; }
+  .time-pop .picker-wheel-colon{ font-size:16px; }
+  .time-pop .picker-wheel-highlight{ height:30px; left:8px; right:8px; }
+  .time-pop .picker-time-cancel{
+    display:block; flex:1 1 0; padding:7px 4px; border-radius:10px;
+    border:1.5px solid var(--line); background:none; color:var(--ink-soft);
+    font-family:'Noto Sans TC', sans-serif; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .time-pop .picker-confirm-btn{ padding:7px 4px; font-size:13px; }
   @keyframes popover-in{ from{ opacity:0; transform:scale(.92); } to{ opacity:1; transform:scale(1); } }
   @keyframes popover-out{ from{ opacity:1; transform:scale(1); } to{ opacity:0; transform:scale(.94); } }
   .picker-overlay.dialog-mode{
@@ -4402,7 +4432,10 @@
           <div class="picker-wheel-colon">:</div>
           <div class="picker-wheel" id="minuteWheel"></div>
         </div>
-        <button type="button" class="picker-confirm-btn" id="timeConfirmBtn">確定</button>
+        <div class="picker-time-actions">
+          <button type="button" class="picker-time-cancel" id="timeCancelBtn">取消</button>
+          <button type="button" class="picker-confirm-btn" id="timeConfirmBtn">確定</button>
+        </div>
       </div>
 
       <!-- 取代原生 window.confirm()／window.prompt()，樣式跟日期/時間選擇器
@@ -6006,9 +6039,11 @@
   // 待辦清單開著時，在清單外按下的這一下只用來收清單：長按、點卡片等動作都先暫停（見待辦清單段落）
   let todoTapGuard = false;
   // 日期選擇器底部的「清除截止日」：只有從截止日按鍵打開時才出現
-  function setPickerClear(fn){
+  // fn：按下清除要做的事；disabled：目前沒有截止日可以清（按鍵照樣顯示，只是淡掉不能按）
+  function setPickerClear(fn, disabled){
     pickerOnClear = fn || null;
     pickerClearBtn.hidden = !fn;
+    pickerClearBtn.disabled = !!(fn && disabled);
     pickerBottomRow.classList.toggle('with-clear', !!fn);
   }
   pickerClearBtn.addEventListener('click', function(){
@@ -6306,7 +6341,7 @@
   // opts.onClear：有給的話，底部會多一顆「清除截止日」跟取消並排
   function openDatePicker(initialDateStr, onSelect, anchorEl, opts){
     pickerSheet.classList.remove('closing');
-    setPickerClear(opts && opts.onClear);
+    setPickerClear(opts && opts.onClear, opts && opts.clearDisabled);
     const base = initialDateStr || todayStr();
     const [y,m] = base.split('-').map(Number);
     calViewYear = y; calViewMonth = m-1;
@@ -6325,7 +6360,7 @@
   }
   function clearPopoverMode(){
     pickerOverlay.classList.remove('popover-mode');
-    pickerSheet.classList.remove('pop-below', 'pop-above');
+    pickerSheet.classList.remove('pop-below', 'pop-above', 'time-pop');
     pickerSheet.style.left = pickerSheet.style.top = '';
     pickerSheet.style.removeProperty('--arrow-x');
   }
@@ -6347,7 +6382,8 @@
 
   const HOURS = Array.from({length:24}, (_,i) => i);
   const MINUTES = Array.from({length:12}, (_,i) => i*5); // 跟原本 step="300" 的 5 分鐘間隔一致
-  const WHEEL_ROW_H = 40;
+  // 每一格的高度：一般 40px，縮小的時間彈窗是 30px，直接量實際畫出來的大小
+  function wheelRowH(container){ return (container.firstElementChild && container.firstElementChild.offsetHeight) || 40; }
 
   function buildWheel(container, values, formatFn){
     container.innerHTML = '';
@@ -6363,7 +6399,7 @@
   buildWheel(minuteWheel, MINUTES, v => pad2(v));
 
   function nearestIndex(container){
-    return Math.round(container.scrollTop / WHEEL_ROW_H);
+    return Math.round(container.scrollTop / wheelRowH(container));
   }
   function markPicked(container, index){
     Array.from(container.children).forEach((el,i) => {
@@ -6371,7 +6407,7 @@
     });
   }
   function scrollWheelTo(container, index, smooth){
-    container.scrollTo({ top: index*WHEEL_ROW_H, behavior: smooth ? 'smooth' : 'auto' });
+    container.scrollTo({ top: index*wheelRowH(container), behavior: smooth ? 'smooth' : 'auto' });
   }
 
   let hourScrollTimer = null, minuteScrollTimer = null;
@@ -6419,11 +6455,11 @@
     pickerDateView.hidden = true;
     pickerTimeView.hidden = false;
     pickerConfirmView.hidden = true;
-    pickerCancelBtn.hidden = false;
+    pickerCancelBtn.hidden = !!anchorEl; // 小彈窗：取消改跟確定並排（timeCancelBtn）
     pickerOverlay.classList.remove('dialog-mode');
     clearPopoverMode();
     pickerOverlay.hidden = false;
-    if(anchorEl) placePickerPopover(anchorEl);
+    if(anchorEl){ pickerSheet.classList.add('time-pop'); placePickerPopover(anchorEl); }
     markOverlayJustOpened();
     // 要等 overlay 從 hidden 變成可見、版面量得到高度之後才能量測捲動位置，
     // 用 rAF 讓瀏覽器先跑完一次排版。
@@ -6436,6 +6472,7 @@
       markPicked(minuteWheel, mIdx);
     });
   }
+  document.getElementById('timeCancelBtn').addEventListener('click', function(){ closePicker(); });
   timeConfirmBtn.addEventListener('click', function(){
     const timeStr = pad2(pickedHour)+':'+pad2(pickedMinute);
     const cb = pickerOnConfirm;
@@ -14078,9 +14115,8 @@
         if(e.key === 'Enter'){ e.preventDefault(); commit(); input.blur(); todoExpandedId = null; renderTodos(); }
       });
       input.addEventListener('blur', commit);
-      // 輸入框最右邊留一個向上的箭頭：按了就收合編輯狀態
-      const wrap = document.createElement('div');
-      wrap.className = 'todo-title-wrap';
+      main.appendChild(input);
+      // 原本最右邊顯示截止日的位置，編輯時改放向上的箭頭：按了就收合（截止日在下面的按鍵就看得到）
       const fold = document.createElement('button');
       fold.type = 'button';
       fold.className = 'todo-fold-btn';
@@ -14094,9 +14130,7 @@
         input.blur();
         renderTodos();
       });
-      wrap.appendChild(input);
-      wrap.appendChild(fold);
-      main.appendChild(wrap);
+      row._foldBtn = fold;
       requestAnimationFrame(function(){ input.focus({preventScroll: true}); });
     } else {
       const text = document.createElement('div');
@@ -14107,7 +14141,6 @@
     const subParts = [];
     if(t.duration) subParts.push(fmtTodoDur(t.duration));
     if(t.repeat) subParts.push('↻ ' + todoRepeatLabel(t.repeat));
-    if(todoScheduledLabel(t)) subParts.push(todoScheduledLabel(t));
     if(subParts.length && !editing){
       const sub = document.createElement('div');
       sub.className = 'todo-sub';
@@ -14116,7 +14149,8 @@
     }
     slide.appendChild(chk);
     slide.appendChild(main);
-    const dueText = todoDueLabel(t);
+    const dueText = editing ? '' : todoDueLabel(t);
+    if(editing && row._foldBtn) slide.appendChild(row._foldBtn);
     if(dueText){
       const due = document.createElement('span');
       due.className = 'todo-due';
@@ -14151,30 +14185,45 @@
     return row;
   }
 
-  // 左滑露出刪除鍵：橫向滑動才算（上下滑還是捲動清單）；滑超過一半就停在打開的位置。
-  // 再繼續往左滑超過整條的七成：整條變紅，放開就直接刪除（iPhone 的郵件、備忘錄也是這樣）。
+  // 左滑露出刪除鍵：橫向滑動才算（上下滑還是捲動清單）。
+  // 放開時看「位置」也看「速度」：快速往左撥一下也會停在打開的位置（不會刪除鍵冒一下又縮回去），
+  // 停下來時用有一點回彈的曲線，手感比較有彈性。
+  // 繼續往左滑超過整條的七成：整條變紅，放開就整條往左滑出、同時淡出，再收起這一列。
   function attachTodoSwipe(row, slide){
     const OPEN_X = -76;
     const del = row.querySelector('.todo-del');
     let full = false;
-    let sx = 0, sy = 0, base = 0, mode = null, pid = null;
+    let sx = 0, sy = 0, base = 0, mode = null, pid = null, curX = 0;
+    let samples = []; // 最近幾個位置，用來算放開時的速度
     slide.addEventListener('pointerdown', function(e){
-      if(e.target.closest('.todo-edit') || e.target.closest('.todo-title-input')) return;
+      if(e.target.closest('.todo-edit') || e.target.closest('.todo-title-input') || e.target.closest('.todo-fold-btn')) return;
       if(todoOpenSwipeRow && todoOpenSwipeRow !== row) closeTodoSwipe();
       sx = e.clientX; sy = e.clientY; pid = e.pointerId; mode = null;
       base = row.classList.contains('swipe-open') ? OPEN_X : 0;
+      curX = base;
+      samples = [{x: e.clientX, t: performance.now()}];
     });
     slide.addEventListener('pointermove', function(e){
       if(e.pointerId !== pid || todoDrag) return;
       const dx = e.clientX - sx, dy = e.clientY - sy;
       if(mode === null){
-        if(Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) mode = 'swipe';
+        if(Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.2) mode = 'swipe';
         else if(Math.abs(dy) > 10) mode = 'scroll';
-        if(mode === 'swipe'){ slide.classList.add('swiping'); try{ slide.setPointerCapture(pid); }catch(err){} }
+        if(mode === 'swipe'){
+          slide.classList.add('swiping'); del.classList.add('swiping');
+          try{ slide.setPointerCapture(pid); }catch(err){}
+          sx = e.clientX; // 從判定成左滑的這一點開始跟手，不會一開始就跳一段
+        }
       }
       if(mode === 'swipe'){
+        const now = performance.now();
+        samples.push({x: e.clientX, t: now});
+        while(samples.length > 2 && now - samples[0].t > 90) samples.shift();
         const w = row.offsetWidth;
-        const x = Math.max(-w, Math.min(0, base + dx));
+        let x = base + (e.clientX - sx);
+        if(x > 0) x = x * 0.25; // 往右拉過頭：有阻力的橡皮筋
+        x = Math.max(-w, x);
+        curX = x;
         slide.style.transform = 'translateX(' + x + 'px)';
         del.style.width = Math.max(76, -x) + 'px'; // 刪除鍵跟著拉長，整條變紅
         const nowFull = -x > w * 0.7; // 滑超過整條的七成才變紅（一半太容易誤觸）
@@ -14185,6 +14234,11 @@
         }
       }
     });
+    const settle = function(x){
+      slide.classList.remove('swiping'); del.classList.remove('swiping');
+      slide.style.transform = x ? 'translateX(' + x + 'px)' : '';
+      del.style.width = '';
+    };
     const end = function(e){
       if(e.pointerId !== pid) return;
       pid = null;
@@ -14193,26 +14247,22 @@
         if(mode === null && row.classList.contains('swipe-open')){ closeTodoSwipe(); markSwiped(); }
         return;
       }
-      slide.classList.remove('swiping');
-      const m = /translateX\((-?[\d.]+)px\)/.exec(slide.style.transform || '');
-      const x = m ? parseFloat(m[1]) : 0;
+      const first = samples[0], last = samples[samples.length - 1];
+      const v = (last && first && last.t > first.t) ? (last.x - first.x) / (last.t - first.t) : 0; // px/ms，負的是往左
       if(full){
-        // 滑到底：整條滑出去，再收起這一列、刪掉
         full = false;
-        slide.style.transform = 'translateX(' + (-row.offsetWidth) + 'px)';
-        del.style.width = row.offsetWidth + 'px';
         if(todoOpenSwipeRow === row) todoOpenSwipeRow = null;
         markSwiped();
-        setTimeout(function(){ del.click(); }, 160);
+        swipeDeleteRow(row, slide, del);
         return;
       }
-      del.style.width = '';
-      if(x < OPEN_X / 2){
-        slide.style.transform = 'translateX(' + OPEN_X + 'px)';
+      const open = v < -0.3 ? true : v > 0.3 ? false : curX < OPEN_X / 2;
+      if(open){
+        settle(OPEN_X);
         row.classList.add('swipe-open');
         todoOpenSwipeRow = row;
       } else {
-        slide.style.transform = '';
+        settle(0);
         row.classList.remove('swipe-open');
         if(todoOpenSwipeRow === row) todoOpenSwipeRow = null;
       }
@@ -14221,6 +14271,26 @@
     function markSwiped(){ row.dataset.swiped = '1'; setTimeout(function(){ delete row.dataset.swiped; }, 320); }
     slide.addEventListener('pointerup', end);
     slide.addEventListener('pointercancel', end);
+  }
+  // 滑到底刪除：整條（紅色）往左滑出畫面、同時淡出，接著這一列的高度收起來，再真的刪掉
+  function swipeDeleteRow(row, slide, del){
+    const id = row.dataset.id;
+    const w = row.offsetWidth;
+    slide.classList.remove('swiping'); del.classList.remove('swiping');
+    slide.style.transform = 'translateX(' + (-w) + 'px)';
+    del.style.width = w + 'px';
+    row.style.height = row.offsetHeight + 'px';
+    requestAnimationFrame(function(){
+      row.classList.add('swipe-leaving');
+      row.style.transform = 'translateX(-60%)';
+      row.style.opacity = '0';
+      setTimeout(function(){ row.style.height = '0px'; }, 200);
+    });
+    setTimeout(function(){
+      deleteTodo(id);
+      if(todoExpandedId === id) todoExpandedId = null;
+      renderTodos();
+    }, 460);
   }
 
   // 點開那一項下面的按鍵：截止日、時長、重複、刪除（名稱的輸入框在上面，見 buildTodoRow）
@@ -14247,22 +14317,26 @@
     const dueBtn = chip(t.due ? todoDueDateText(t.due) + '截止' : '截止日', t.due ? 'set' : '');
     dueBtn.addEventListener('click', function(){
       commitTitle();
-      // 已經有截止日、而且不是重複事項（重複要有起始日）才能清除
+      // 「清除截止日」一律顯示；沒有截止日時淡掉。重複事項要有起始日，所以清除截止日＝同時取消重複
       openDatePicker(t.due || todayStr(), function(d){ update({due: d}); }, dueBtn,
-        (t.due && !t.repeat) ? {onClear: function(){ update({due: null}); }} : null);
+        {onClear: function(){ update({due: null, repeat: null}); }, clearDisabled: !t.due});
     });
-    box.appendChild(dueBtn);
+    // 四顆按鍵排在同一排，不換行（「重複」的選項另外展開在下面一排）
+    const chipRow = document.createElement('div');
+    chipRow.className = 'todo-edit-row';
+    box.appendChild(chipRow);
+    chipRow.appendChild(dueBtn);
     const durBtn = chip('時長 ' + fmtTodoDur(t.duration), t.duration ? 'set' : '');
     const repBtn = chip(todoRepeatLabel(t.repeat), t.repeat ? 'set' : '');
-    box.appendChild(durBtn);
-    box.appendChild(repBtn);
+    chipRow.appendChild(durBtn);
+    chipRow.appendChild(repBtn);
     const del = chip('刪除', 'danger');
     del.addEventListener('click', function(){
       const row = box.closest('.todo-row');
       if(row) row.classList.add('leaving');
       setTimeout(function(){ deleteTodo(t.id); todoExpandedId = null; renderTodos(); }, 280);
     });
-    box.appendChild(del);
+    chipRow.appendChild(del);
 
     // 「時長」：跳出時間滾輪（幾小時：幾分），跟編輯行程時間是同一個滾輪
     durBtn.addEventListener('click', function(){
@@ -14418,7 +14492,7 @@
   document.getElementById('todoNewCancel').addEventListener('click', closeNewTodoRow);
   todoNewDue.addEventListener('click', function(){
     openDatePicker(todoNewDueVal || todayStr(), function(d){ todoNewDueVal = d; renderNewDueChip(); }, todoNewDue,
-      todoNewDueVal ? {onClear: function(){ todoNewDueVal = null; renderNewDueChip(); }} : null);
+      {onClear: function(){ todoNewDueVal = null; renderNewDueChip(); }, clearDisabled: !todoNewDueVal});
   });
   function submitNewTodo(){
     const v = todoNewInput.value.trim();
