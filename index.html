@@ -460,12 +460,15 @@
   /* 整個介面預設不能被框選文字，這是像手機 App 一樣操作的關鍵：
      手指誤觸不會選到文字。整個網頁的雙擊/雙指縮放由 viewport 的
      user-scalable=no 擋掉，再加上 JS 裡擋 iOS 的 gesture 事件與電腦版的
-     Ctrl+滾輪（見「禁止整個網頁本身縮放」那一段）；這裡刻意不再疊加 touch-action:manipulation——
-     那樣會讓瀏覽器提早搶走垂直滑動的判斷權，害長按拖曳（移動行程、
-     空白處拉框建立行程）的 400ms 判斷來不及生效，整個被當成頁面捲動。
+     Ctrl+滾輪（見「禁止整個網頁本身縮放」那一段）。
+     但 iOS Safari 不理會 user-scalable=no，雙擊畫面還是會放大（10/21 使用者回報很妨礙操作），
+     所以整頁加上 touch-action:manipulation：只關掉「雙擊放大」，捲動照常。
+     時間軸、行程卡片這些自己處理手勢的地方本來就各自寫了 touch-action:none／pan-y，
+     瀏覽器會取兩者的交集，所以那些地方的長按拖曳、捲動判斷不受影響。
      真正需要輸入文字的欄位（文字框、日期、時間、數字、多行備註）
      則保留正常的選取/游標行為，不然沒辦法編輯內容。 */
   html, body{
+    touch-action:manipulation;
     -webkit-user-select:none; user-select:none;
     -webkit-touch-callout:none;
     overscroll-behavior:none;
@@ -709,20 +712,22 @@
     width:38px; height:38px; box-sizing:border-box;
     display:flex; align-items:center; justify-content:center;
     padding:0; border-radius:50%;
-    border:1.5px solid var(--btn-brown); background:var(--card); color:var(--btn-brown);
+    border:none; background:var(--card); color:var(--btn-brown); /* 不畫外框線，用陰影讓它浮起來 */
+    box-shadow:0 2px 6px rgba(32,38,58,0.22), 0 0 0 0.5px rgba(32,38,58,0.06);
     font-family:'Noto Serif TC', serif; font-weight:700; font-size:18px;
     cursor:pointer; touch-action:manipulation; overflow:hidden;
   }
   .account-avatar[hidden]{display:none;}
   /* 訪客還沒綁定 email：頭像外框改成紅色，提醒去帳號頁面備份 */
-  .account-avatar.needs-bind{border-color:var(--red); box-shadow:0 0 0 1.5px color-mix(in srgb, var(--red) 35%, transparent);}
+  .account-avatar.needs-bind{box-shadow:0 0 0 1.5px var(--red), 0 2px 6px rgba(32,38,58,0.22);}
   .account-avatar svg{width:23px; height:23px;}
   .account-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
   .acct-photo-row{display:flex; align-items:center; gap:14px; margin-bottom:6px;}
   .acct-photo{
     flex:0 0 auto; width:64px; height:64px; box-sizing:border-box; border-radius:50%; overflow:hidden;
     display:flex; align-items:center; justify-content:center;
-    border:1.5px solid var(--btn-brown); background:var(--card); color:var(--btn-brown);
+    border:none; background:var(--card); color:var(--btn-brown);
+    box-shadow:0 3px 10px rgba(32,38,58,0.22), 0 0 0 0.5px rgba(32,38,58,0.06);
     font-family:'Noto Serif TC', serif; font-weight:700; font-size:28px;
   }
   .acct-photo img{width:100%; height:100%; object-fit:cover; display:block;}
@@ -2368,23 +2373,23 @@
     padding:16px; box-sizing:border-box;
   }
   .icon-picker-card{
-    width:100%; max-width:324px; max-height:calc(100% - 8px); max-height:calc(100dvh - 32px);
+    width:100%; max-width:296px; max-height:calc(100% - 8px); max-height:min(620px, calc(100dvh - 32px));
     display:flex; flex-direction:column; overflow:hidden; /* 標題、顏色、按鈕固定，只有中間的圖示格子可以捲動（圖示變多了） */
     background:var(--card); color:var(--ink);
-    border-radius:18px; padding:14px 14px 12px; box-sizing:border-box;
+    border-radius:16px; padding:12px 12px 10px; box-sizing:border-box;
     box-shadow:0 10px 30px rgba(0,0,0,.28);
     font-family:'Noto Sans TC', sans-serif;
   }
   .icon-picker-card > *{flex:0 0 auto;}
   .icon-picker-scroll{flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; margin:0 -6px; padding:2px 6px;}
-  .icon-picker-title{font-size:16px; font-weight:700; margin-bottom:2px;}
+  .icon-picker-title{font-size:15px; font-weight:700; margin-bottom:2px;}
   .icon-picker-input{
-    width:100%; box-sizing:border-box; font-family:'Noto Serif TC', serif; font-size:17px; color:var(--ink);
+    width:100%; box-sizing:border-box; font-family:'Noto Serif TC', serif; font-size:16px; color:var(--ink);
     border:none; border-bottom:1.5px solid var(--line); background:transparent; padding:4px 2px 8px; outline:none;
     border-radius:0;
   }
-  .icon-picker-sub{font-size:12px; color:var(--ink-faint); margin-bottom:10px;}
-  .icon-picker-label{font-size:12px; color:var(--ink-faint); margin:10px 0 6px; display:flex; align-items:center; justify-content:space-between;}
+  .icon-picker-sub{font-size:11.5px; color:var(--ink-faint); margin-bottom:8px;}
+  .icon-picker-label{font-size:12px; color:var(--ink-faint); margin:8px 0 5px; display:flex; align-items:center; justify-content:space-between;}
   .icon-picker-none{
     font:inherit; font-size:12px; color:var(--ink-soft); background:transparent;
     border:1px solid var(--line); border-radius:999px; padding:2px 10px; cursor:pointer;
@@ -2407,10 +2412,10 @@
     box-shadow:0 1px 3px rgba(0,0,0,.28);
   }
   .color-dot.selected{box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--btn-brown);}
-  .icon-picker-error{min-height:18px; margin-top:10px; font-size:12.5px; color:var(--red); white-space:pre-line;}
+  .icon-picker-error{min-height:16px; margin-top:8px; font-size:12px; color:var(--red); white-space:pre-line;}
   .icon-picker-actions{display:flex; gap:10px; margin-top:6px;}
   .icon-picker-actions button{
-    flex:1; border:none; border-radius:12px; padding:11px 0; font-size:15px; cursor:pointer;
+    flex:1; border:none; border-radius:11px; padding:9px 0; font-size:14px; cursor:pointer;
     font-family:'Noto Sans TC', sans-serif; background:var(--paper-deep); color:var(--ink);
   }
   .icon-picker-actions button.primary{background:var(--btn-coffee); color:var(--card);}
@@ -7815,7 +7820,8 @@
     }).observe(colHeadViewport);
   }
 
-  // 本機的欄位排列順序（只存在這支裝置、依手帳分開存，不會同步給其他共編者）
+  // 欄位排列順序：每個人自己的，不會同步給其他共編者。依手帳分開存在本機，
+  // 另外存一份到自己的帳號資料（user_metadata.col_order），換裝置登入同一個帳號也是同樣的順序。
   function colOrderKey(){ return COL_ORDER_KEY_PREFIX + (NOTEBOOK ? NOTEBOOK.id : ''); }
   function applyLocalColumnOrder(){
     let ids = null;
@@ -7826,8 +7832,36 @@
       .sort((a, b) => a.p - b.p).map(x => x.c);
     if(next.some((c, i) => c !== columns[i])) columns.splice(0, columns.length, ...next);
   }
+  let colOrderSaveTimer = null;
   function saveLocalColumnOrder(){
-    try{ localStorage.setItem(colOrderKey(), JSON.stringify(columns.map(c => c.id))); }catch(err){}
+    const ids = columns.map(c => c.id);
+    try{ localStorage.setItem(colOrderKey(), JSON.stringify(ids)); }catch(err){}
+    if(!sb || !NOTEBOOK) return;
+    const nbId = NOTEBOOK.id;
+    clearTimeout(colOrderSaveTimer);
+    colOrderSaveTimer = setTimeout(async function(){ // 連續拖好幾次只存最後一次
+      try{
+        const u = await currentAuthUser();
+        if(!u) return;
+        const all = Object.assign({}, (u.user_metadata && u.user_metadata.col_order) || {});
+        all[nbId] = ids;
+        const r = await sb.auth.updateUser({data: {col_order: all}});
+        if(r.error) throw r.error;
+      }catch(err){ console.warn('欄位順序存到帳號失敗（只存在這支裝置）：', err); }
+    }, 800);
+  }
+  // 打開手帳時：帳號裡有存這本手帳的欄位順序，就用帳號的（其他裝置排過的順序）
+  async function loadColumnOrderFromAccount(){
+    if(!NOTEBOOK) return;
+    const nbId = NOTEBOOK.id;
+    const u = await currentAuthUser();
+    const ids = u && u.user_metadata && u.user_metadata.col_order && u.user_metadata.col_order[nbId];
+    if(!Array.isArray(ids) || !NOTEBOOK || NOTEBOOK.id !== nbId) return;
+    let cur = null;
+    try{ cur = localStorage.getItem(colOrderKey()); }catch(err){}
+    if(cur === JSON.stringify(ids)) return;
+    try{ localStorage.setItem(colOrderKey(), JSON.stringify(ids)); }catch(err){}
+    try{ renderColumnHeader(); renderColumnDividers(); renderEvents(); }catch(err){}
   }
 
   // 平滑捲動到指定位置（毫秒 dur），期間若使用者開始自己滑就中止
@@ -8248,6 +8282,23 @@
       '<div class="icon-picker-actions"><button type="button" id="ipCancel">取消</button><button type="button" class="primary" id="ipOk">確定</button></div>' +
       '</div>';
     document.body.appendChild(overlay);
+    // 開啟動畫：有給 anchorEl（例如「新增欄位」鍵）就從那顆按鍵的位置放大展開，沒給就原地淡入放大
+    const card = overlay.querySelector('.icon-picker-card');
+    let fromTransform = 'scale(.92)';
+    if(opts.anchorEl){
+      const a = opts.anchorEl.getBoundingClientRect(), c = card.getBoundingClientRect();
+      if(c.width){
+        const dx = (a.left + a.width / 2) - (c.left + c.width / 2);
+        const dy = (a.top + a.height / 2) - (c.top + c.height / 2);
+        fromTransform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + Math.max(0.08, a.width / c.width) + ')';
+      }
+    }
+    const animOk = typeof card.animate === 'function';
+    if(animOk){
+      overlay.animate([{opacity: 0}, {opacity: 1}], {duration: 200, easing: 'ease-out'});
+      card.animate([{transform: fromTransform, opacity: 0, borderRadius: '24px'}, {transform: 'none', opacity: 1, borderRadius: '16px'}],
+        {duration: 280, easing: 'cubic-bezier(.2,.9,.3,1)'});
+    }
     const iconsEl = overlay.querySelector('#ipIcons'), colorsEl = overlay.querySelector('#ipColors'), errEl = overlay.querySelector('#ipError');
     const nameInput = overlay.querySelector('#ipName');
     if(nameInput){
@@ -8281,7 +8332,17 @@
       });
     }
     draw();
-    function close(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+    let closing = false;
+    function close(){
+      if(closing) return;
+      closing = true;
+      const remove = function(){ if(overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+      if(!animOk) return remove();
+      overlay.style.pointerEvents = 'none';
+      // 關閉：縮回按鍵的位置（跟打開的路線相反）
+      card.animate([{transform: 'none', opacity: 1}, {transform: fromTransform, opacity: 0}], {duration: 200, easing: 'cubic-bezier(.4,0,.8,.6)', fill: 'forwards'});
+      overlay.animate([{opacity: 1}, {opacity: 0}], {duration: 200, easing: 'ease-in', fill: 'forwards'}).onfinish = remove;
+    }
     overlay.querySelector('#ipCancel').addEventListener('click', close);
     overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
     overlay.querySelector('#ipOk').addEventListener('click', function(){
@@ -10587,6 +10648,7 @@
     // 新欄位先沿用自己現有欄位的圖示（想換、想拿掉都可以）；名稱和圖示至少要有一個
     const mineIcon = userIconOf(columns.find(c => c.ownerId === DEVICE_ID && c.icon) || {});
     openIconPicker({
+      anchorEl: this,
       title: '新增欄位',
       sub: '名稱和圖示可以只留一個（至少要有一個）。圖示與顏色的組合在同一本手帳裡不能跟別人重複。',
       requireOne: true, iconOptional: true,
@@ -12115,6 +12177,7 @@
     // 創建／加入手帳時勾了「匯入舊手帳的行程」：載入完成後才執行匯入
     try{ await runPendingImport(); }catch(err){ console.error('匯入失敗：', err); }
     announcePendingJoin();
+    loadColumnOrderFromAccount();
     renderTodos();
     startRealtime();
     flushPendingSync();
