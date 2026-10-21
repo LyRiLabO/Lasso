@@ -2145,6 +2145,15 @@
     border:none; border-bottom:1.5px solid var(--btn-coffee); background:transparent;
     padding:0 0 2px; margin:0; outline:none; border-radius:0;
   }
+  .todo-title-wrap{ position:relative; }
+  .todo-title-wrap .todo-title-input{ padding-right:34px; }
+  .todo-fold-btn{
+    position:absolute; right:-6px; top:50%; transform:translateY(-50%);
+    width:34px; height:34px; border:none; background:none; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .todo-fold-btn:active{ opacity:.5; }
   .todo-section-toggle{
     width:100%; border:none; background:none; text-align:left; cursor:pointer;
     padding:12px 16px 8px;
@@ -3518,6 +3527,15 @@
     background:var(--red);
     color:#fff;
   }
+  /* 「每月 X 日」：跟星期幾的圓鈕互斥，樣式一樣只是做成長條 */
+  .recur-month-row{ margin-top:10px; display:flex; }
+  .recur-month-chip{
+    height:34px; padding:0 14px; border-radius:17px;
+    border:1.5px solid var(--line); background:var(--card);
+    font-family:'Noto Sans TC', sans-serif; font-weight:700; font-size:13.5px; color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .recur-month-chip.selected{ border-color:var(--red); background:var(--red); color:#fff; }
 
   /* 重複範圍（從哪天到哪天／無限期）：選了任何一個星期才會出現 */
   .recur-range{
@@ -4240,6 +4258,9 @@
       <div class="field">
         <span class="field-label">重複</span>
         <div class="weekday-box" id="weekdayBox"></div>
+        <div class="recur-month-row">
+          <button type="button" class="recur-month-chip" id="recurMonthBtn">每月 1 日</button>
+        </div>
         <div class="recur-range" id="recurRange" hidden>
           <div class="recur-range-row">
             <span class="recur-range-label">從</span>
@@ -6497,6 +6518,25 @@
   // recurrence.weekdays 裡、且 dateStr >= 起始日期、且沒有被排除，
   // 就會展開出一個實例；若這個日期有獨立編輯過的 overrides，
   // 就用 overrides 蓋掉原本的欄位（同步編輯模式關閉時的效果）。
+  // 重複規則：{weekdays:[0..6]}＝每週的那幾天（七天全選＝每天）；
+  // {weekdays:[], monthly:true}＝每月一次，日子跟起始日同一天（那個月沒有這一天，例如 31 日，就排在月底）。
+  // monthly 的 weekdays 故意留空陣列，舊版程式讀到也不會出錯，只是看不到這個行程。
+  function recurMatches(rec, startDate, dateStr){
+    if(!rec) return false;
+    if(rec.monthly){
+      const want = Number(String(startDate).slice(8, 10));
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const last = new Date(y, m, 0).getDate();
+      return d === Math.min(want, last);
+    }
+    return (rec.weekdays || []).includes(weekdayOf(dateStr));
+  }
+  function cloneRecurrence(rec){
+    if(!rec) return null;
+    const c = rec.monthly ? {weekdays: [], monthly: true} : {weekdays: (rec.weekdays || []).slice()};
+    if(rec.until) c.until = rec.until;
+    return c;
+  }
   function getInstancesForDate(dateStr){
     const list = [];
     events.forEach(ev => {
@@ -6507,7 +6547,7 @@
         const excluded = ev.excluded || [];
         if(dateStr >= ev.date &&
            (!ev.recurrence.until || dateStr <= ev.recurrence.until) &&
-           ev.recurrence.weekdays.includes(weekdayOf(dateStr)) &&
+           recurMatches(ev.recurrence, ev.date, dateStr) &&
            excluded.indexOf(dateStr) === -1){
           const ov = (ev.overrides && ev.overrides[dateStr]) || {};
           list.push({
@@ -6645,7 +6685,7 @@
     const shift = amCreatorOf(inst) ? Math.max(0, Math.min(DUPLICATE_SHIFT_MIN, 1440 - eMin)) : 0; // 已經貼近 24:00 就不再往後挪
     const hh = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
     const rec = inst.isRecurring && master && master.recurrence
-      ? Object.assign({weekdays: master.recurrence.weekdays.slice()}, master.recurrence.until ? {until: master.recurrence.until} : {})
+      ? cloneRecurrence(master.recurrence)
       : null;
     events.push({
       id: newId,
@@ -8595,6 +8635,11 @@
           const notesEl = card.querySelector('.ecard-notes');
           if(notesEl) notesEl.remove();
         }
+        // 名稱很長、換行後把時間擠出去了：先把名稱截成放得下的行數（結尾刪節號），
+        // 時間照常顯示在下面；連一行名稱＋時間都放不下，才退到下面「只留名稱」
+        if(!tooShortToRead && !card.classList.contains('compact') && overflowCheck()){
+          clampTitleAboveTime(card);
+        }
 
         if(tooShortToRead || overflowCheck()){
           const fitted = tooShortToRead ? false : fitTitleOnly(card, '', title);
@@ -8798,6 +8843,22 @@
   // 格子裝不下「標題＋時間＋備註」時的退讓順序：先拿掉備註，再拿掉時間、
   // 只留標題（字體大小不變，永遠不縮小）。
   // 回傳 true 表示標題塞得進去；false 表示連標題單獨顯示都放不下。
+  // 名稱＋時間兩行版：把名稱限制在「卡片內高扣掉時間那一行」放得下的行數
+  function clampTitleAboveTime(card){
+    const titleEl = card.querySelector('.ecard-title');
+    const timeEl = card.querySelector('.ecard-time');
+    if(!titleEl || !timeEl) return;
+    const cs = getComputedStyle(card);
+    const inner = card.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    const timeH = timeEl.offsetHeight + (parseFloat(getComputedStyle(timeEl).marginTop) || 0);
+    const lh = parseFloat(getComputedStyle(titleEl).lineHeight) || 15.6;
+    const lines = Math.floor((inner - timeH + 1) / lh);
+    if(lines < 1) return; // 放不下：交給後面的「只留名稱」
+    titleEl.style.display = '-webkit-box';
+    titleEl.style.webkitBoxOrient = 'vertical';
+    titleEl.style.webkitLineClamp = String(lines);
+  }
+
   function fitTitleOnly(card, recurMark, title){
     card.classList.remove('compact');
     // 只剩標題這一行時，讓它在格子裡「垂直置中、水平靠左」：錨點是最
@@ -10417,7 +10478,7 @@
     });
   })();
 
-  function createNewEvent(startMin, endMin, participantIds, title){
+  function createNewEvent(startMin, endMin, participantIds, title, recurrence){
     startMin = Math.max(0, Math.min(23*60+55, startMin));
     endMin = Math.max(startMin+5, Math.min(24*60, endMin));
     const creatorId = pickMyColumnId(participantIds);
@@ -10436,7 +10497,7 @@
       participants: participantIds.slice(),
       creatorId: creatorId,
       color: (function(){ const pal = themeEventColorList(); return pal[events.length % pal.length].id; })(),
-      recurrence: null,
+      recurrence: recurrence || null,
       permission: defaultPermission // 新行程用帳號設定裡的預設權限
     };
     events.push(ev);
@@ -10760,9 +10821,19 @@
   const recurForever = document.getElementById('recurForever');
   let recurFromVal = '';
   let recurUntilVal = '';
+  const recurMonthBtn = document.getElementById('recurMonthBtn');
+  let recurMonthly = false; // 每月一次（跟星期幾的選項互斥）
+  recurMonthBtn.addEventListener('click', function(){
+    recurMonthly = !recurMonthly;
+    if(recurMonthly) renderWeekdayChips([]); // 選了每月，就把星期幾清掉
+    else syncRecurRangeUI();
+  });
   let recurFromTouched = false; // 使用者有沒有自己改過起始日（沒改的話，單一行程改日期時起始日跟著走）
   function syncRecurRangeUI(){
-    recurRange.hidden = selectedWeekdays.size === 0;
+    recurRange.hidden = selectedWeekdays.size === 0 && !recurMonthly;
+    const fromD = recurFromVal || fieldDate.value || todayStr();
+    recurMonthBtn.textContent = '每月 ' + Number(fromD.slice(8, 10)) + ' 日';
+    recurMonthBtn.classList.toggle('selected', recurMonthly);
     recurFromBtn.textContent = formatDateForDisplay(recurFromVal);
     recurUntilBtn.textContent = recurForever.checked ? '永遠（沒有結束日）' : formatDateForDisplay(recurUntilVal);
     recurUntilBtn.classList.toggle('disabled', recurForever.checked);
@@ -10800,7 +10871,7 @@
       chip.textContent = label.slice(1); // 週日→日、週一→一...
       chip.addEventListener('click', function(){
         if(selectedWeekdays.has(idx)) selectedWeekdays.delete(idx);
-        else selectedWeekdays.add(idx);
+        else { selectedWeekdays.add(idx); recurMonthly = false; } // 選了星期幾，就取消每月
         chip.classList.toggle('selected', selectedWeekdays.has(idx));
         syncRecurRangeUI();
       });
@@ -10857,7 +10928,7 @@
       date: instanceDate, start: data.start, end: data.end,
       title: data.title || '', notes: data.notes || '',
       color: data.color || master.color || DEFAULT_EVENT_COLOR,
-      weekdays: master.recurrence ? master.recurrence.weekdays.slice().sort((a,b)=>a-b).join(',') : '',
+      weekdays: master.recurrence ? (master.recurrence.monthly ? 'monthly' : master.recurrence.weekdays.slice().sort((a,b)=>a-b).join(',')) : '',
       recurRange: master.recurrence ? (master.date + '|' + (master.recurrence.until || '')) : ''
     };
     recurFromVal = master.recurrence ? master.date : instanceDate;
@@ -10865,6 +10936,7 @@
     recurForever.checked = !recurUntilVal;
     recurFromTouched = false;
     fillEditForm(data, instanceDate, !!master.recurrence);
+    recurMonthly = !!(master.recurrence && master.recurrence.monthly);
     renderWeekdayChips(master.recurrence ? master.recurrence.weekdays : []);
     syncField.style.display = master.recurrence ? 'flex' : 'none';
     fieldSyncEdit.checked = false;
@@ -11370,7 +11442,8 @@
     const newWeekdays = Array.from(selectedWeekdays).sort((a,b)=>a-b);
     const newFrom = recurFromVal || checkDate;
     const newUntil = recurForever.checked ? null : (recurUntilVal || null);
-    if(newWeekdays.length && newUntil && newUntil < newFrom){
+    const hasRecur = newWeekdays.length > 0 || recurMonthly;
+    if(hasRecur && newUntil && newUntil < newFrom){
       showConfirmDialog('重複的結束日期不能早於起始日期', function(){}, {okLabel:'知道了', hideCancel:true});
       return;
     }
@@ -11386,8 +11459,8 @@
     if(newStart !== o.start || newEnd !== o.end) changeLabels.push('時間');
     if(newNotes !== (o.notes || '')) changeLabels.push('備註');
     if(selectedColor !== pairedEventColorId(o.color)) changeLabels.push('顏色');
-    const newRangeSig = newWeekdays.length ? (newFrom + '|' + (newUntil || '')) : '';
-    if(newWeekdays.join(',') !== o.weekdays || newRangeSig !== o.recurRange) changeLabels.push('重複');
+    const newRangeSig = hasRecur ? (newFrom + '|' + (newUntil || '')) : '';
+    if((recurMonthly ? 'monthly' : newWeekdays.join(',')) !== o.weekdays || newRangeSig !== o.recurRange) changeLabels.push('重複');
 
     // 顏色是整個行程系列共用的分類標籤，不像時間/備註那樣需要區分「只改這一天」，
     // 一律直接寫回本體，不放進 override。
@@ -11395,7 +11468,8 @@
     if(!master.color || selectedColor !== pairedEventColorId(master.color)) master.color = selectedColor;
 
     // 「重複」規則永遠套用到整個系列，跟同步編輯開關無關（單一日期沒有自己的重複規則）
-    master.recurrence = newWeekdays.length ? (newUntil ? {weekdays:newWeekdays, until:newUntil} : {weekdays:newWeekdays}) : null;
+    master.recurrence = !hasRecur ? null
+      : Object.assign(recurMonthly ? {weekdays: [], monthly: true} : {weekdays: newWeekdays}, newUntil ? {until: newUntil} : {});
     if(master.recurrence) master.date = newFrom; // 重複行程的「起始日」就是本體的 date
 
     if(!wasRecurring && !master.recurrence){
@@ -12941,7 +13015,7 @@
     if(ev.recurrence){
       if(dateStr < ev.date) return null;
       if(ev.recurrence.until && dateStr > ev.recurrence.until) return null;
-      if(!(ev.recurrence.weekdays || []).includes(weekdayOf(dateStr))) return null;
+      if(!recurMatches(ev.recurrence, ev.date, dateStr)) return null;
       if((ev.excluded || []).indexOf(dateStr) !== -1) return null;
       const ov = (ev.overrides && ev.overrides[dateStr]) || {};
       return {
@@ -12964,7 +13038,7 @@
         participants: [tgtColId], creatorId: tgtColId,
         color: ev.color || '',
         permission: defaultPermission,
-        recurrence: ev.recurrence ? Object.assign({weekdays: (ev.recurrence.weekdays || []).slice()}, ev.recurrence.until ? {until: ev.recurrence.until} : {}) : null,
+        recurrence: cloneRecurrence(ev.recurrence),
         excluded: ev.excluded ? ev.excluded.slice() : null,
         overrides: null
       };
@@ -13836,14 +13910,18 @@
   function newTodoId(){ return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function myTodos(){ return todos; }
   function isTodoOverdue(t){ return !t.done && !!t.due && t.due < todayStr(); }
+  // 截止日的日期文字：今天／明天／10/24（六）；不是今年的加上年份
+  function todoDueDateText(due){
+    const today = todayStr();
+    if(due === today) return '今天';
+    if(due === dateByOffset(today, 1)) return '明天';
+    const [y, m, d] = due.split('-').map(Number);
+    return (y !== Number(today.slice(0, 4)) ? y + '/' : '') + m + '/' + d + '（' + WEEKDAYS[weekdayOf(due)].slice(1) + '）';
+  }
+  // 清單右側：「今天截止」「10/24（六）截止」；已經過了就是「過期 10/20（一）」
   function todoDueLabel(t){
     if(!t.due) return '';
-    const today = todayStr();
-    if(t.due === today) return '今天';
-    if(t.due === dateByOffset(today, 1)) return '明天';
-    const [y, m, d] = t.due.split('-').map(Number);
-    const label = m + '/' + d + (y !== Number(today.slice(0, 4)) ? '/' + String(y).slice(2) : '');
-    return t.due < today ? '過期 ' + label : label;
+    return t.due < todayStr() ? '過期 ' + todoDueDateText(t.due) : todoDueDateText(t.due) + '截止';
   }
   function todoScheduledLabel(t){
     if(!t.scheduled || !t.scheduled.date) return '';
@@ -14000,7 +14078,25 @@
         if(e.key === 'Enter'){ e.preventDefault(); commit(); input.blur(); todoExpandedId = null; renderTodos(); }
       });
       input.addEventListener('blur', commit);
-      main.appendChild(input);
+      // 輸入框最右邊留一個向上的箭頭：按了就收合編輯狀態
+      const wrap = document.createElement('div');
+      wrap.className = 'todo-title-wrap';
+      const fold = document.createElement('button');
+      fold.type = 'button';
+      fold.className = 'todo-fold-btn';
+      fold.setAttribute('aria-label', '收合');
+      fold.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
+      fold.addEventListener('pointerdown', function(e){ e.stopPropagation(); e.preventDefault(); }); // preventDefault：不讓輸入框先失焦跳鍵盤
+      fold.addEventListener('click', function(e){
+        e.stopPropagation();
+        commit();
+        todoExpandedId = null;
+        input.blur();
+        renderTodos();
+      });
+      wrap.appendChild(input);
+      wrap.appendChild(fold);
+      main.appendChild(wrap);
       requestAnimationFrame(function(){ input.focus({preventScroll: true}); });
     } else {
       const text = document.createElement('div');
@@ -14056,7 +14152,7 @@
   }
 
   // 左滑露出刪除鍵：橫向滑動才算（上下滑還是捲動清單）；滑超過一半就停在打開的位置。
-  // 再繼續往左滑超過整條的一半：整條變紅，放開就直接刪除（iPhone 的郵件、備忘錄也是這樣）。
+  // 再繼續往左滑超過整條的七成：整條變紅，放開就直接刪除（iPhone 的郵件、備忘錄也是這樣）。
   function attachTodoSwipe(row, slide){
     const OPEN_X = -76;
     const del = row.querySelector('.todo-del');
@@ -14081,7 +14177,7 @@
         const x = Math.max(-w, Math.min(0, base + dx));
         slide.style.transform = 'translateX(' + x + 'px)';
         del.style.width = Math.max(76, -x) + 'px'; // 刪除鍵跟著拉長，整條變紅
-        const nowFull = -x > w * 0.5;
+        const nowFull = -x > w * 0.7; // 滑超過整條的七成才變紅（一半太容易誤觸）
         if(nowFull !== full){
           full = nowFull;
           row.classList.toggle('full-swipe', full);
@@ -14148,7 +14244,7 @@
     };
     const update = function(patch){ commitTitle(); t = Object.assign({}, t, patch); saveTodo(t); renderTodos(); };
 
-    const dueBtn = chip(t.due ? '截止日 ' + todoDueLabel(t).replace('過期 ', '') : '截止日', t.due ? 'set' : '');
+    const dueBtn = chip(t.due ? todoDueDateText(t.due) + '截止' : '截止日', t.due ? 'set' : '');
     dueBtn.addEventListener('click', function(){
       commitTitle();
       // 已經有截止日、而且不是重複事項（重複要有起始日）才能清除
@@ -14157,7 +14253,7 @@
     });
     box.appendChild(dueBtn);
     const durBtn = chip('時長 ' + fmtTodoDur(t.duration), t.duration ? 'set' : '');
-    const repBtn = chip('重複 ' + todoRepeatLabel(t.repeat), t.repeat ? 'set' : '');
+    const repBtn = chip(todoRepeatLabel(t.repeat), t.repeat ? 'set' : '');
     box.appendChild(durBtn);
     box.appendChild(repBtn);
     const del = chip('刪除', 'danger');
@@ -14305,7 +14401,7 @@
   }
   function renderNewDueChip(){
     todoNewDue.classList.toggle('set', !!todoNewDueVal);
-    todoNewDue.textContent = todoNewDueVal ? todoDueLabel({due: todoNewDueVal}).replace('過期 ', '') : '截止日';
+    todoNewDue.textContent = todoNewDueVal ? todoDueDateText(todoNewDueVal) + '截止' : '截止日';
   }
   function closeNewTodoRow(){
     todoNewInput.blur(); // 收起鍵盤
@@ -14509,7 +14605,12 @@
     if(slot.reason){ bounceTodoBack(slot.reason === 'notMine' ? '只能排進自己的欄位' : MOVE_CONFLICT_MSG); return; }
     // 在這個時段建立行程，待辦留在清單、記下排到哪裡
     const col = columns[slot.idx];
-    const newId = createNewEvent(slot.startMin, slot.endMin, [col.id], d.todo.title);
+    // 重複的待辦：排進去的行程也跟著重複（從放下的這一天開始）
+    const rep = d.todo.repeat;
+    const rec = rep === 'day' ? {weekdays: [0, 1, 2, 3, 4, 5, 6]}
+      : rep === 'week' ? {weekdays: [weekdayOf(currentDate)]}
+      : rep === 'month' ? {weekdays: [], monthly: true} : null;
+    const newId = createNewEvent(slot.startMin, slot.endMin, [col.id], d.todo.title, rec);
     if(!newId){ bounceTodoBack(null); return; }
     const t = Object.assign({}, d.todo, {scheduled: {date: currentDate, start: minutesToTime(slot.startMin)}});
     saveTodo(t);
