@@ -3,7 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual">
-<title>手帳曆 · 共編行事曆</title>
+<title>日日貼</title>
+<!-- PWA：加到主畫面後像 App 一樣打開（App 名稱、圖示、沒網路也能打開，見 manifest.webmanifest、sw.js） -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F6F1E4" id="metaThemeColor">
+<link rel="icon" type="image/png" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="日日貼">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -3668,25 +3677,11 @@
 </style>
 <!-- 一進頁面就先套用使用者上次選的介面主題（存在 localStorage），趕在畫面
      真的畫出來之前設定好 <html data-theme>，才不會先閃一下預設配色、
-     再跳成使用者選的主題。主題色彩是每本手帳各自存的，key 跟下面主程式的
-     THEME_STORAGE_PREFIX 一樣（plannerTheme:<手帳 id>）。 -->
+     再跳成使用者選的主題。跟下面主程式共用同一個 THEME_STORAGE_KEY。 -->
 <script>
   (function(){
     try{
-      // 主題色彩每本手帳各自存（plannerTheme:<手帳 id>），這裡先讀「目前這本」的。
-      let nbId = null;
-      try{ const nb = JSON.parse(localStorage.getItem('shared-planner-notebook') || 'null'); nbId = nb && nb.id; }catch(e){}
-      // 舊版只存一個共用的 plannerTheme：第一次升級時，複製給這支裝置已經加入的每一本手帳
-      // （大家看到的顏色跟升級前一樣），之後就不再用這個共用的值。
-      const legacy = localStorage.getItem('plannerTheme');
-      if(legacy !== null){
-        let ids = [];
-        try{ ids = (JSON.parse(localStorage.getItem('shared-planner-notebooks') || '[]') || []).map(n => n && n.id); }catch(e){}
-        if(nbId) ids.push(nbId);
-        ids.forEach(function(id){ if(id && localStorage.getItem('plannerTheme:' + id) === null) localStorage.setItem('plannerTheme:' + id, legacy); });
-        localStorage.removeItem('plannerTheme');
-      }
-      const saved = nbId ? localStorage.getItem('plannerTheme:' + nbId) : null;
+      const saved = localStorage.getItem('plannerTheme');
       if(saved && saved !== 'default') document.documentElement.setAttribute('data-theme', saved);
       if(localStorage.getItem('plannerTimeGrid') === 'cells') document.documentElement.setAttribute('data-timegrid', 'cells');
       const a = parseInt(localStorage.getItem('plannerCardAlpha'), 10);
@@ -3740,7 +3735,7 @@
   <div class="device-user-card">
     <!-- 第一頁：註冊／登入 或 訪客。還沒有登入狀態才會出現。 -->
     <div class="nb-step" data-step="welcome" hidden>
-      <div class="device-user-title">Lasso-手帳曆</div>
+      <div class="device-user-title">日日貼</div>
       <div class="device-user-hint">自由自在的安排時間</div>
       <div class="device-user-list">
         <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnLogin">
@@ -3776,7 +3771,7 @@
 
     <!-- 第二頁：我的手帳（有手帳才顯示）／創建新的手帳／加入其他人的手帳 -->
     <div class="nb-step" data-step="choice">
-      <div class="device-user-title">Lasso-手帳曆</div>
+      <div class="device-user-title">日日貼</div>
       <div class="device-user-hint">自由自在的安排時間</div>
       <div class="device-user-list">
         <button type="button" class="device-user-btn nb-choice-btn" id="nbBtnMyBooks">
@@ -3976,11 +3971,11 @@
     <div class="nav-item" data-nav="share">
       <button type="button" class="nav-head" aria-expanded="false">
         <svg width="18" height="18" class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <!-- 鑰匙圖示（使用者 2026-10-21 提供的新圖）：直接用原圖的黑色區域輪廓（外框＋鑰匙頭的
-                 圓孔＋小圓點），以 evenodd 填色畫出，形狀跟原圖一致。縮成 24 格裡的 21 格寬、置中；
-                 線條粗細換算後約 1.8，跟旁邊的圖示接近。 -->
-            <g transform="translate(1.52 1.50) scale(0.04751) translate(-220 -366)" fill="currentColor" stroke="none" fill-rule="evenodd">
-              <path d="M514 477 L506 480 L498 487 L493 496 L492 507 L496 519 L505 528 L515 532 L525 532 L537 527 L543 521 L548 510 L548 498 L542 486 L533 479 Z M613 406 L584 385 L557 373 L531 367 L498 366 L469 371 L447 379 L421 394 L397 415 L377 442 L362 479 L357 515 L362 555 L221 697 L220 781 L225 792 L235 802 L246 807 L332 806 L352 786 L354 752 L387 752 L405 735 L408 729 L409 697 L439 697 L471 666 L496 670 L524 670 L558 663 L593 646 L622 621 L639 598 L654 565 L660 535 L660 499 L655 474 L641 441 L628 422 Z M583 430 L597 444 L612 467 L619 485 L623 505 L623 532 L619 552 L608 577 L594 596 L570 616 L540 629 L503 633 L469 626 L459 626 L452 630 L423 660 L384 660 L377 663 L371 674 L371 714 L328 715 L318 722 L316 726 L316 768 L314 770 L259 770 L258 713 L398 572 L400 554 L395 533 L397 493 L410 460 L426 439 L446 422 L467 411 L502 403 L527 404 L540 407 L566 418 Z"></path>
+            <!-- 鑰匙圖示（依使用者提供的圖描出來的輪廓）：外形是一條封閉的線＋鑰匙頭的小圓孔，
+                 線寬 1.6（換算成 24 格的座標），跟旁邊的鈴鐺、月曆粗細接近。 -->
+            <g transform="translate(-8.860 -8.794) scale(0.03343)" stroke-width="47.9">
+              <path d="M680.3 625 L611 699 L616 760 L603 767 L552 769 L557 805 L552 825 L489 831 L491 887 L479 893 L441 895 L436 938 L426 951 L410 952 L349 925 L341 880 L346 816 L596.2 562.9 A171.3 171.3 0 1 1 680.3 625 Z"></path>
+              <circle cx="792" cy="415" r="51.5"></circle>
             </g>
           </svg>
         <span class="nav-label">分享手帳密碼</span>
@@ -4029,9 +4024,9 @@
             <input type="range" id="cardRadiusRange" min="0" max="20" step="1" value="8" aria-label="行程卡片邊角圓潤程度">
             <span class="card-alpha-val" id="cardRadiusVal">8</span>
           </div>
-          <div class="timegrid-title">便利貼不透明度</div>
+          <div class="timegrid-title">行程卡片底色不透明度</div>
           <div class="card-alpha-row">
-            <input type="range" id="cardAlphaRange" min="10" max="100" step="5" value="100" aria-label="便利貼不透明度">
+            <input type="range" id="cardAlphaRange" min="10" max="100" step="5" value="100" aria-label="行程卡片底色不透明度">
             <span class="card-alpha-val" id="cardAlphaVal">100%</span>
           </div>
         </div>
@@ -11902,7 +11897,6 @@
     }
     NOTEBOOK = nb;
     setStoredNotebook(nb);
-    applyTheme(storedThemeFor(nb.id), {noSave: true, noRedraw: true}); // 換成這本手帳自己的主題色彩
     if(newColumn){
       await syncChangesToSupabase('columns', [{id:newColumn.id, after:newColumn}], ch => ch.after);
     }
@@ -13344,14 +13338,7 @@
   // 不隨手帳資料同步、不影響其他共編者看到的畫面（跟 DEVICE_ID 一樣是
   // 純本機的東西）。<head> 裡有一小段提早執行的 script 會在畫面畫出來
   // 之前先套用一次，這裡的 applyTheme() 負責之後使用者手動切換時用。
-  // 每本手帳的主題色彩各自存（使用者要求）：key 是 plannerTheme:<手帳 id>，
-  // 沒選過的手帳用「經典」。切換手帳會重新載入頁面，由 <head> 那段套用新手帳的主題。
-  const THEME_STORAGE_PREFIX = 'plannerTheme:';
-  function storedThemeFor(nbId){
-    let t = 'default';
-    try{ t = (nbId && localStorage.getItem(THEME_STORAGE_PREFIX + nbId)) || 'default'; }catch(err){}
-    return THEMES.some(x => x.id === t) ? t : 'default'; // 存的值不是現在支援的主題就退回經典
-  }
+  const THEME_STORAGE_KEY = 'plannerTheme';
   const THEMES = [
     // 選單裡一排三個，依使用者指定的順序排列（由左到右、由上到下）
     { id: 'default', name: '經典', colors: ['#FBD3C4', '#8FA1B0', '#FCEFB4'] },
@@ -13369,22 +13356,30 @@
   ];
   let currentTheme = 'default';
   (function initTheme(){
-    currentTheme = storedThemeFor(NOTEBOOK && NOTEBOOK.id);
+    let saved = 'default';
+    try{ saved = localStorage.getItem(THEME_STORAGE_KEY) || 'default'; }catch(err){}
+    if(!THEMES.some(t => t.id === saved)) saved = 'default'; // 存的值不是現在支援的主題就退回經典，不要整頁跑不出樣式
+    currentTheme = saved;
     // data-theme 屬性本身 <head> 那段小 script 已經先設好了（避免閃一下），
     // 這裡不用重設，只需要讓 currentTheme 這個變數跟畫面實際狀態同步。
   })();
-  // opts.noSave：只套用不存（例如剛進入某本手帳時，套用它自己存的主題）
-  // opts.noRedraw：不重畫畫面（手帳資料還沒載入時用）
-  function applyTheme(themeId, opts){
-    opts = opts || {};
+  // 手機最上面狀態列、工作切換畫面的顏色跟著目前的風格（紙張底色）
+  function syncThemeColorMeta(){
+    try{
+      const c = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
+      const m = document.getElementById('metaThemeColor');
+      if(c && m) m.setAttribute('content', c);
+    }catch(err){}
+  }
+  syncThemeColorMeta();
+  function applyTheme(themeId){
     currentTheme = themeId;
     if(themeId === 'default') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', themeId);
-    if(!opts.noSave && NOTEBOOK){
-      try{ localStorage.setItem(THEME_STORAGE_PREFIX + NOTEBOOK.id, themeId); }catch(err){}
-    }
+    try{ localStorage.setItem(THEME_STORAGE_KEY, themeId); }catch(err){}
+    syncThemeColorMeta();
     // 行程顏色會跟著風格換成配對色，已經畫在畫面上的卡片要重畫
-    if(NOTEBOOK && !opts.noRedraw){
+    if(NOTEBOOK){
       try{
         refreshColumnIconColors();
         renderEvents();
@@ -15055,6 +15050,14 @@
   setInterval(renderNowLine, 60*1000);
 
 })();
+</script>
+<script>
+  // PWA：註冊 service worker（只有 https 的正式網址才會註冊；本機直接開檔案不會）
+  if('serviceWorker' in navigator && location.protocol === 'https:'){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(err){ console.warn('service worker 註冊失敗：', err); });
+    });
+  }
 </script>
 </body>
 </html>
