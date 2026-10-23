@@ -624,7 +624,7 @@
   .nb-books-dd.open .nb-dd-chevron{ transform:rotate(180deg); }
   .nb-books-body{ max-height:0; overflow:hidden; transition:max-height .3s cubic-bezier(.2,.8,.3,1); }
   .nb-books-inner{ padding-top:10px; }
-  .nb-books-inner .nav-rows{ max-height:220px; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+  .nb-books-inner .nav-rows{ max-height:222px; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
   .device-user-actions{
     display:flex;
     gap:10px;
@@ -988,6 +988,19 @@
   /* 手帳管理：清單一次最多看到三本（高度由 JS 量），多的捲動 */
   .nav-book-scroll{ overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
   .nav-pair-row{ display:flex; gap:8px; }
+  .book-pin-menu{
+    position:fixed; z-index:100002;
+    background:var(--card); border-radius:12px; overflow:hidden;
+    box-shadow:0 8px 24px rgba(32,38,58,0.28);
+    animation:popover-in .16s cubic-bezier(.2,.8,.3,1);
+  }
+  .book-pin-menu button{
+    display:flex; align-items:center; gap:8px; padding:11px 18px;
+    border:none; background:none; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; font-size:14.5px; color:var(--ink);
+  }
+  .book-pin-menu button svg{ color:var(--red); }
+  .book-pin-menu button:active{ background:var(--paper-deep); }
   .nav-pair-row .nav-btn{
     flex:1 1 0; min-width:0; padding:8px 4px;
     flex-direction:column; gap:4px; font-size:12px; line-height:1.3; text-align:center; /* 選單比較窄：圖示在上、文字在下 */
@@ -3349,9 +3362,10 @@
     background:var(--line);
   }
   .month-cell{
+    --cell-bg:var(--paper);
     width:100%; height:100%;
     display:flex; flex-direction:column;
-    background:var(--paper);
+    background:var(--cell-bg);
     padding:3px 2px 2px 2px;
     overflow:hidden;
     cursor:pointer;
@@ -3363,6 +3377,8 @@
     filter:brightness(0.88); /* 加深格子原本的顏色，不換色 */
     transition:filter .1s ease;
   }
+  /* 週末／國定假日（設定 → 顯示 → 月曆）：格子底色混一點強調紅 */
+  .month-cell.day-off{ --cell-bg:color-mix(in srgb, var(--red) 9%, var(--paper)); }
   .month-cell.outside-month{opacity:.6;} /* 上／下個月的日期：格子半透明會透出底下格線色，像蒙了一層顏色；不透明度調高（.4→.6）＝那層顏色變淡 */
   .month-cell .cell-date{
     flex:0 0 auto;
@@ -3423,7 +3439,7 @@
     position:absolute;
     left:2px; right:2px; bottom:2px;
     height:12px;
-    background:linear-gradient(to bottom, rgba(246,241,228,0), var(--paper) 78%);
+    background:linear-gradient(to bottom, color-mix(in srgb, var(--cell-bg) 0%, transparent), var(--cell-bg) 78%);
     pointer-events:none;
     opacity:0;
     transition:opacity .15s ease;
@@ -3492,16 +3508,25 @@
     color:var(--ink-faint);
   }
 
+  /* 說明文字沒有內容時整行收起來，不留空白 */
+  .device-user-hint:empty, .perm-hint:empty, .nav-hint:empty{ display:none; }
   /* ---- 帳號頁面 ---- */
-  .device-user-overlay.acct-mode{ align-items:flex-start; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-top:calc(14px + env(safe-area-inset-top, 0px)); }
-  .acct-topbar{ position:relative; display:flex; align-items:center; justify-content:center; min-height:40px; margin-bottom:6px; }
+  .device-user-overlay.acct-mode{ align-items:flex-start; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-top:0; }
+  /* 最上面那一行（返回箭頭＋標題）固定在頂端，往下捲也按得到返回 */
+  .acct-topbar{
+    position:sticky; top:0; z-index:6;
+    display:flex; align-items:center; justify-content:center; box-sizing:border-box;
+    min-height:calc(56px + env(safe-area-inset-top, 0px));
+    margin:0 -24px 6px; padding:calc(10px + env(safe-area-inset-top, 0px)) 24px 6px;
+    background:var(--paper);
+  }
   .acct-back-btn{
-    position:absolute; left:-8px; top:50%; transform:translateY(-50%);
+    position:absolute; left:16px; top:calc(10px + env(safe-area-inset-top, 0px));
     width:40px; height:40px; border:none; background:none; padding:0; cursor:pointer;
     display:flex; align-items:center; justify-content:center; color:var(--btn-brown);
   }
   .acct-back-btn:active{ opacity:.6; }
-  .acct-topbar-title{ font-family:'Noto Serif TC', serif; font-weight:700; font-size:18px; color:var(--ink); }
+  .acct-topbar-title{ font-family:'Noto Serif TC', serif; font-weight:700; font-size:18px; line-height:40px; color:var(--ink); }
   .acct-profile{ display:flex; align-items:center; gap:14px; }
   .acct-profile .acct-photo{ padding:0; cursor:default; }
   .acct-profile .acct-photo:disabled{ opacity:1; color:var(--btn-brown); }
@@ -3514,7 +3539,7 @@
   .acct-name-input[hidden]{ display:none; }
   .acct-page{ position:relative; }
   .acct-photo-menu{
-    position:absolute; left:0; top:126px; z-index:5; /* 蓋在頭像下方，不推動下面的內容 */
+    position:absolute; left:0; top:calc(140px + env(safe-area-inset-top, 0px)); z-index:5; /* 蓋在頭像下方，不推動下面的內容 */
     display:flex; flex-direction:column;
     background:var(--card); border-radius:12px; overflow:hidden;
     box-shadow:0 6px 18px rgba(32,38,58,0.22);
@@ -3547,17 +3572,80 @@
   .acct-sec-title::after{ content:''; flex:1; height:1px; background:var(--line-soft); }
   .acct-settings[hidden]{ display:none; }
   .seg-small button{ padding:8px 2px; font-size:13px; }
+  /* 清單式設定（像手機的設定 App）：左邊名稱、右邊目前的值＋›，或右邊開關 */
+  .set-list{ display:flex; flex-direction:column; border-radius:12px; background:var(--card); overflow:hidden; box-shadow:0 0 0 1px var(--line-soft); }
+  .set-row{
+    display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
+    min-height:46px; padding:10px 14px; border:none; background:none; text-align:left; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; font-size:14.5px; color:var(--ink);
+  }
+  .set-row[hidden]{ display:none; }
+  .set-row + .set-row{ border-top:1px solid var(--line-soft); }
+  button.set-row:active{ background:var(--paper-deep); }
+  .set-label{ flex:1 1 auto; min-width:0; }
+  .set-value{ color:var(--ink-faint); font-size:14px; }
+  .set-chev{ color:var(--ink-faint); font-size:20px; line-height:1; margin-left:2px; }
+  .set-switch-input{ display:none; }
+  .set-switch-input:checked + .toggle-switch{ background:var(--red); }
+  .set-switch-input:checked + .toggle-switch::after{ transform:translateX(16px); }
+  .set-choice-menu{
+    position:fixed; z-index:100002; min-width:150px;
+    background:var(--card); border-radius:12px; overflow:hidden;
+    box-shadow:0 8px 24px rgba(32,38,58,0.28);
+    animation:popover-in .16s cubic-bezier(.2,.8,.3,1);
+  }
+  .set-choice-menu button{
+    display:flex; align-items:center; gap:6px; width:100%; padding:11px 16px 11px 12px;
+    border:none; background:none; cursor:pointer; text-align:left;
+    font-family:'Noto Sans TC', sans-serif; font-size:14.5px; color:var(--ink);
+  }
+  .set-choice-menu button + button{ border-top:1px solid var(--line-soft); }
+  .set-choice-menu button:active{ background:var(--paper-deep); }
+  .set-choice-menu button.on{ font-weight:700; }
+  .set-check{ width:16px; color:var(--red); font-weight:700; }
+  /* 外觀：三張小預覽圖＋圓形選項 */
+  .appear-cards{ display:flex; gap:10px; }
+  .appear-card{
+    flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:6px;
+    border:none; background:none; padding:0; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; font-size:13.5px; color:var(--ink);
+  }
+  .appear-thumb{
+    position:relative; width:100%; aspect-ratio:1/1; border-radius:10px; overflow:hidden;
+    box-shadow:0 0 0 1px var(--line), 0 2px 6px rgba(32,38,58,0.12);
+    display:flex; flex-direction:column; gap:5px; padding:10px 8px; box-sizing:border-box;
+  }
+  .appear-thumb i{ display:block; height:7px; border-radius:3px; }
+  .appear-thumb i:nth-child(1){ width:60%; }
+  .appear-thumb i:nth-child(2){ width:85%; height:18px; }
+  .appear-thumb i:nth-child(3){ width:70%; height:18px; }
+  .thumb-light{ background:#F6F1E4; }
+  .thumb-light i{ background:#DBD0B4; }
+  .thumb-light i:nth-child(2){ background:#E8C9C1; }
+  .thumb-dark{ background:#1C1F27; }
+  .thumb-dark i{ background:#3A3F4D; }
+  .thumb-dark i:nth-child(2){ background:#8A5A54; }
+  .thumb-auto{ background:linear-gradient(135deg, #F6F1E4 50%, #1C1F27 50%); }
+  .thumb-auto i{ background:#9C9486; }
+  .appear-card.selected .appear-thumb{ box-shadow:0 0 0 2px var(--red), 0 2px 6px rgba(32,38,58,0.12); }
+  .appear-radio{ width:16px; height:16px; border-radius:50%; box-sizing:border-box; border:1.5px solid var(--ink-faint); }
+  .appear-card.selected .appear-radio{ border:5px solid var(--red); }
   .sync-toggle.acct-toggle{ margin:2px 0; font-family:'Noto Sans TC', sans-serif; font-size:14.5px; font-weight:500; }
   .acct-soon{ color:var(--ink-faint); font-size:11.5px; }
-  .acct-bottom-btns{ display:flex; gap:10px; margin-top:22px; padding-bottom:10px; }
+  .acct-bottom-btns{ display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:24px; padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px)); }
   .acct-bottom-btns[hidden]{ display:none; }
   .acct-box-btn{
-    flex:1 1 0; padding:11px 8px; border-radius:12px;
-    border:1.5px solid var(--btn-coffee); background:transparent; color:var(--ink);
-    font-family:'Noto Sans TC', sans-serif; font-size:14.5px; font-weight:700; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    min-width:150px; padding:8px 18px; border-radius:10px;
+    border:1.5px solid var(--red); background:transparent; color:var(--red);
+    font-family:'Noto Sans TC', sans-serif; font-size:14px; font-weight:700; cursor:pointer;
   }
+  .acct-text-btn{
+    border:none; background:none; padding:8px 12px; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; font-size:13px; color:var(--red);
+  }
+  .acct-text-btn:active{ opacity:.6; }
   .acct-box-btn[hidden]{ display:none; }
-  .acct-box-btn.danger{ border-color:var(--red); color:var(--red); }
   .acct-box-btn:active{ opacity:.6; }
   /* 帳號頁面的「設定」 */
   .acct-settings{
@@ -3832,7 +3920,7 @@
 <div id="deviceUserPickerOverlay" class="device-user-overlay" hidden>
   <div class="device-user-card">
     <div class="device-user-title">哪些欄位是你的？</div>
-    <div class="device-user-hint">可以選好幾個。只有欄位的主人能編輯那個欄位的行程；都不是的話按「略過」，之後自己新增欄位就好。</div>
+    <div class="device-user-hint">可以選好幾個；都不是就按「略過」。</div>
     <div class="device-user-list" id="deviceUserList"></div>
     <div class="device-user-actions">
       <button type="button" class="device-user-action" id="deviceUserSkip">略過</button>
@@ -3847,7 +3935,6 @@
 <div class="crop-overlay" id="cropOverlay" hidden>
   <div class="crop-card" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
     <div class="device-user-title" id="cropTitle" style="margin:0">裁切頭像</div>
-    <div class="device-user-hint" style="margin:0">拖曳移動照片，用雙指或下方滑桿放大縮小，圓圈裡的範圍就是頭像。</div>
     <div class="crop-stage" id="cropStage">
       <img id="cropImg" alt="">
       <div class="crop-ring"></div>
@@ -3893,7 +3980,7 @@
           <span>訪客</span>
         </button>
       </div>
-      <div class="device-user-hint" style="margin:10px 0 0">訪客不用註冊就能馬上開始，之後可以在帳號頁面綁定 email 備份。手帳裡已註冊的人可以隨時移除訪客的欄位，綁定 email 就不會被移除。</div>
+      <div class="device-user-hint" style="margin:10px 0 0">訪客資料只存在這支裝置，之後可以綁定 email 備份。</div>
       <div class="nb-error" id="nbWelcomeError"></div>
     </div>
 
@@ -3923,12 +4010,11 @@
 
     <div class="nb-step" data-step="create" hidden>
       <div class="device-user-title">創建新的手帳</div>
-      <div class="device-user-hint">建好後會得到一組密碼，可以分享給朋友一起編輯。</div>
       <div class="nb-field-label">手帳名稱</div>
       <input type="text" id="nbCreateNotebookName" class="nb-input" autocomplete="off" placeholder="例如：我們的行程表">
       <div class="nb-field-label">你的欄位名稱</div>
       <input type="text" id="nbCreateName" class="nb-input" autocomplete="off">
-      <div class="nb-field-label">你的圖示（顯示在欄位名稱後面，用來區分使用者）</div>
+      <div class="nb-field-label">你的圖示</div>
       <button type="button" class="icon-pick-btn" id="nbCreateIconBtn"></button>
       <div class="nb-import-box" id="nbCreateImportBox" hidden></div>
       <div class="nb-error" id="nbCreateError"></div>
@@ -3940,7 +4026,6 @@
 
     <div class="nb-step" data-step="join" hidden>
       <div class="device-user-title">加入其他人的手帳</div>
-      <div class="device-user-hint">輸入對方提供給你的密碼。</div>
       <div class="nb-field-label">手帳密碼</div>
       <input type="text" id="nbJoinCode" class="nb-input code" inputmode="text" autocapitalize="characters" maxlength="9" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="－－－－－－">
       <div class="nb-error" id="nbJoinError"></div>
@@ -3952,10 +4037,9 @@
 
     <div class="nb-step" data-step="joinName" hidden>
       <div class="device-user-title">你要用什麼名字？</div>
-      <div class="device-user-hint">這會是你在這本手帳裡的欄位名稱。</div>
       <div class="nb-field-label">你的欄位名稱</div>
       <input type="text" id="nbJoinName" class="nb-input" autocomplete="off">
-      <div class="nb-field-label">你的圖示（顯示在欄位名稱後面，用來區分使用者）</div>
+      <div class="nb-field-label">你的圖示</div>
       <button type="button" class="icon-pick-btn" id="nbJoinIconBtn"></button>
       <div class="nb-import-box" id="nbJoinImportBox" hidden></div>
       <div class="nb-error" id="nbJoinNameError"></div>
@@ -3999,7 +4083,7 @@
     <div class="nb-step" data-step="setPw" hidden>
       <div class="device-user-title" id="nbPwTitle">設定密碼</div>
       <div class="device-user-hint" id="nbPwHint"></div>
-      <div class="nb-field-label">密碼（至少 8 個字元）</div>
+      <div class="nb-field-label">密碼（至少 8 碼）</div>
       <input type="password" id="nbPwNew" class="nb-input" autocomplete="new-password">
       <div class="nb-field-label">再輸入一次</div>
       <input type="password" id="nbPwNew2" class="nb-input" autocomplete="new-password">
@@ -4037,7 +4121,7 @@
 
       <!-- 訪客 -->
       <div id="nbAcctGuest">
-        <div class="device-user-hint acct-guest-hint">訪客的資料只存在這個瀏覽器，清除瀏覽器資料就找不回來。註冊並綁定 email 之後，目前的手帳和行程都會保留，換手機也能用同一個 email 登入找回。<br>在共用手帳裡，已註冊的成員可以隨時移除訪客的欄位和行程。綁定 email 之後就不會被移除。</div>
+        <div class="device-user-hint acct-guest-hint">訪客資料只存在這支裝置，也可能被手帳成員移除。綁定 email 就能保留，換手機也找得回來。</div>
         <button type="button" class="device-user-action primary" id="nbAcctBind" style="width:100%">註冊並綁定</button>
         <button type="button" class="device-user-action" id="nbAcctLogin" style="width:100%;margin-top:10px">已有帳號？登入</button>
       </div>
@@ -4046,7 +4130,6 @@
       <div id="nbAcctUser" hidden>
         <button type="button" class="nb-link acct-edit-link" id="nbAcctEdit">編輯資料</button>
         <div class="acct-edit-area" id="nbAcctEditArea" hidden>
-          <div class="device-user-hint acct-edit-hint">點頭像可以換照片。</div>
           <button type="button" class="acct-edit-row" id="nbAcctChangePw"><span>修改密碼</span><span class="acct-row-arrow">›</span></button>
           <button type="button" class="acct-edit-row" id="nbAcctChangeEmail"><span>更改綁定的 email</span><span class="acct-row-arrow">›</span></button>
           <div class="nb-error" id="nbAcctError"></div>
@@ -4062,7 +4145,6 @@
         <div class="acct-settings-title">設定</div>
 
         <div class="acct-sec-title">預設權限</div>
-        <div class="nb-field-label" style="margin-top:0">之後建立的行程，手帳裡的其他人可以…</div>
         <div class="perm-seg" id="nbPermSeg">
           <button type="button" data-perm="view">僅檢視</button>
           <button type="button" data-perm="join">可加入</button>
@@ -4071,59 +4153,37 @@
         <div class="perm-hint" id="nbPermHint"></div>
 
         <div class="acct-sec-title">通知</div>
-        <label class="sync-toggle acct-toggle">
-          <input type="checkbox" id="nbNotifyOn">
-          <span class="toggle-switch" aria-hidden="true"></span>
-          <span>行程開始前提醒我</span>
-        </label>
-        <div id="nbNotifyMore" hidden>
-          <div class="nb-field-label" style="margin-top:4px">提前多久</div>
-          <div class="perm-seg seg-small" id="nbNotifyLead">
-            <button type="button" data-v="0">準時</button>
-            <button type="button" data-v="5">5分</button>
-            <button type="button" data-v="10">10分</button>
-            <button type="button" data-v="30">30分</button>
-            <button type="button" data-v="60">1小時</button>
-          </div>
-          <div class="perm-hint" id="nbNotifyStatus"></div>
+        <div class="set-list">
+          <label class="set-row"><span class="set-label">行程開始前提醒我</span><input type="checkbox" id="nbNotifyOn" class="set-switch-input"><span class="toggle-switch" aria-hidden="true"></span></label>
+          <button type="button" class="set-row" id="nbNotifyLeadRow" hidden><span class="set-label">提前</span><span class="set-value" id="nbNotifyLeadVal"></span><span class="set-chev">›</span></button>
         </div>
-        <div class="perm-hint acct-soon">準備中：設定會先記下來，App 關掉後的提醒還沒開始寄送。</div>
+        <div class="perm-hint" id="nbNotifyStatus"></div>
+        <div class="perm-hint acct-soon">提醒功能準備中，暫時不會發送。</div>
 
         <div class="acct-sec-title">顯示</div>
-        <div class="nb-field-label" style="margin-top:0">外觀</div>
-        <div class="perm-seg seg-small" id="nbAppearSeg">
-          <button type="button" data-v="light">日間</button>
-          <button type="button" data-v="dark">夜間</button>
-          <button type="button" data-v="auto">自動</button>
+        <div class="appear-cards" id="nbAppearSeg">
+          <button type="button" class="appear-card" data-v="light"><span class="appear-thumb thumb-light"><i></i><i></i><i></i></span><span class="appear-radio"></span><span class="appear-name">日間</span></button>
+          <button type="button" class="appear-card" data-v="dark"><span class="appear-thumb thumb-dark"><i></i><i></i><i></i></span><span class="appear-radio"></span><span class="appear-name">夜間</span></button>
+          <button type="button" class="appear-card" data-v="auto"><span class="appear-thumb thumb-auto"><i></i><i></i><i></i></span><span class="appear-radio"></span><span class="appear-name">自動</span></button>
         </div>
         <div class="perm-hint" id="nbAppearHint"></div>
-        <div class="nb-field-label">每週從哪天開始</div>
-        <div class="perm-seg seg-small" id="nbWeekStartSeg">
-          <button type="button" data-v="0">星期日</button>
-          <button type="button" data-v="1">星期一</button>
+        <div class="set-list">
+          <button type="button" class="set-row" id="nbWeekStartRow"><span class="set-label">每週開始</span><span class="set-value" id="nbWeekStartVal"></span><span class="set-chev">›</span></button>
+          <button type="button" class="set-row" id="nbTimeStepRow"><span class="set-label">時間最小刻度</span><span class="set-value" id="nbTimeStepVal"></span><span class="set-chev">›</span></button>
+          <label class="set-row"><span class="set-label">月曆標示週末</span><input type="checkbox" id="nbMarkWeekend" class="set-switch-input"><span class="toggle-switch" aria-hidden="true"></span></label>
+          <label class="set-row"><span class="set-label">月曆標示國定假日</span><input type="checkbox" id="nbMarkHoliday" class="set-switch-input"><span class="toggle-switch" aria-hidden="true"></span></label>
         </div>
-        <div class="nb-field-label">時間最小刻度</div>
-        <div class="perm-seg seg-small" id="nbTimeStepSeg">
-          <button type="button" data-v="1">1</button>
-          <button type="button" data-v="5">5</button>
-          <button type="button" data-v="10">10</button>
-          <button type="button" data-v="15">15</button>
-          <button type="button" data-v="20">20</button>
-          <button type="button" data-v="30">30</button>
-        </div>
-        <div class="perm-hint">單位是分鐘。拖曳行程時吸附到的時間、時間滾輪的分鐘都照這個刻度。</div>
       </div>
 
       <div class="acct-bottom-btns" id="nbAcctBottom">
-        <button type="button" class="acct-box-btn" id="nbAcctSignOut" hidden>登出</button>
-        <button type="button" class="acct-box-btn danger" id="nbAcctDelete">刪除帳號</button>
+        <button type="button" class="acct-box-btn" id="nbAcctSignOut" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>登出</span></button>
+        <button type="button" class="acct-text-btn" id="nbAcctDelete">刪除帳號</button>
       </div>
     </div>
 
     <!-- 第一次註冊：請輸入名字（設定完密碼之後） -->
     <div class="nb-step" data-step="askName" hidden>
       <div class="device-user-title">你叫什麼名字？</div>
-      <div class="device-user-hint">名字會顯示在你的帳號上，之後可以在帳號頁面修改。</div>
       <input type="text" id="nbAskName" class="nb-input" autocomplete="name" placeholder="名字">
       <div class="nb-error" id="nbAskNameError"></div>
       <div class="device-user-actions">
@@ -4184,7 +4244,6 @@
             <div class="nav-code" id="navCode"></div>
             <button type="button" class="nav-btn" id="navCopy">複製</button>
           </div>
-          <div class="nav-hint">分享密碼<br>和朋友們一起安排行程</div>
         </div>
       </div>
     </div>
@@ -4218,7 +4277,6 @@
       <div class="nav-body">
         <div class="nav-body-inner">
           <div class="timegrid-title">主題色彩</div>
-          <div class="nav-hint">選一種介面色彩搭配，只有你自己看到的畫面會變，不影響其他共編者。</div>
           <div class="theme-swatch-row" id="themeSwatchRow"></div>
           <div class="timegrid-title">背景格線</div>
           <div class="timegrid-row" id="timeGridRow"></div>
@@ -5106,9 +5164,9 @@
   const PERMS = ['view', 'join', 'edit'];
   const PERM_LABELS = {view:'僅供檢視', join:'可供加入', edit:'可供編輯'};
   const PERM_HINTS = {
-    view: '其他人只能查看內容、複製這個行程到自己的欄位。',
-    join: '其他人可以自由加入、退出，但不能修改內容或刪除。',
-    edit: '其他人可以修改內容、調整時間、刪除這個行程。'
+    view: '其他人只能查看、複製。',
+    join: '其他人可以加入或退出。',
+    edit: '其他人可以修改、刪除。'
   };
   function normPerm(p){ return PERMS.indexOf(p) >= 0 ? p : 'view'; }
   function creatorColumnExists(creatorId){ return !!creatorId && columns.some(c => c.id === creatorId); }
@@ -5240,7 +5298,7 @@
     ov.className = 'device-user-overlay';
     ov.style.zIndex = '100002';
     ov.innerHTML = '<div class="device-user-card"><div class="device-user-title"></div>' +
-      '<div class="device-user-hint">同一個瀏覽器同時只能登入一個帳號。要同時用兩個帳號，請用不同的瀏覽器，或一個一般視窗、一個無痕視窗。</div>' +
+      '<div class="device-user-hint">同一個瀏覽器一次只能登入一個帳號。</div>' +
       '<div class="device-user-actions"><button type="button" class="device-user-action primary">重新載入</button></div></div>';
     ov.querySelector('.device-user-title').textContent = msg;
     ov.querySelector('button').addEventListener('click', function(){ location.reload(); });
@@ -6269,6 +6327,56 @@
   let timeStep = 5;
   try{ const v = Number(localStorage.getItem(TIME_STEP_KEY)); if(TIME_STEPS.indexOf(v) >= 0) timeStep = v; }catch(e){}
   function snapMin(m){ return Math.round(m / timeStep) * timeStep; }
+
+  // 月曆標示週末／國定假日（兩個開關，預設都關）
+  const MARK_WEEKEND_KEY = 'plannerMarkWeekend', MARK_HOLIDAY_KEY = 'plannerMarkHoliday';
+  let markWeekend = false, markHoliday = false;
+  try{ markWeekend = localStorage.getItem(MARK_WEEKEND_KEY) === '1'; markHoliday = localStorage.getItem(MARK_HOLIDAY_KEY) === '1'; }catch(e){}
+  function setDayOffMarks(w, h){
+    markWeekend = !!w; markHoliday = !!h;
+    try{ localStorage.setItem(MARK_WEEKEND_KEY, markWeekend ? '1' : '0'); localStorage.setItem(MARK_HOLIDAY_KEY, markHoliday ? '1' : '0'); }catch(e){}
+    try{ if(pageMonth.classList.contains('active')) renderMonthGrid(); }catch(e){}
+  }
+  /* 國定假日：資料來源是政府資料開放平台「中華民國政府行政機關辦公日曆表」（整理版：
+     github.com/ruyut/TaiwanCalendar）。2025～2027 直接寫在這裡（沒網路也能用）；
+     其他年份第一次用到時從 jsDelivr 抓，存在這支裝置。
+     holidays：週一到週五放假的日子＋有名稱的假日（月日 MMDD）；workdays：週末補班的日子。 */
+  const TW_HOLIDAYS = {
+    2025: {holidays: ['0101','0127','0128','0129','0130','0131','0228','0403','0404','0530','0531','0928','0929','1006','1010','1024','1025','1225'], workdays: ['0208']},
+    2026: {holidays: ['0101','0215','0216','0217','0218','0219','0220','0227','0228','0403','0404','0405','0406','0501','0619','0925','0928','1009','1010','1025','1026','1225'], workdays: []},
+    2027: {holidays: ['0101','0204','0205','0206','0207','0208','0209','0210','0228','0301','0404','0405','0406','0430','0501','0609','0915','0928','1010','1011','1025','1224','1225','1231'], workdays: []}
+  };
+  const holidayFetching = {};
+  function holidayYear(y){
+    if(TW_HOLIDAYS[y]) return TW_HOLIDAYS[y];
+    try{ const c = JSON.parse(localStorage.getItem('plannerHolidays:' + y) || 'null'); if(c && Array.isArray(c.holidays)){ TW_HOLIDAYS[y] = c; return c; } }catch(e){}
+    if(!holidayFetching[y] && typeof fetch === 'function'){
+      holidayFetching[y] = true;
+      fetch('https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/' + y + '.json').then(r => r.ok ? r.json() : null).then(function(list){
+        if(!Array.isArray(list)) return;
+        const weekend = w => w === '六' || w === '日';
+        const data = {
+          holidays: list.filter(x => x.isHoliday && (x.description || !weekend(x.week))).map(x => String(x.date).slice(4)),
+          workdays: list.filter(x => !x.isHoliday && weekend(x.week)).map(x => String(x.date).slice(4))
+        };
+        TW_HOLIDAYS[y] = data;
+        try{ localStorage.setItem('plannerHolidays:' + y, JSON.stringify(data)); }catch(e){}
+        try{ if(pageMonth.classList.contains('active')) renderMonthGrid(); }catch(e){}
+      }).catch(function(){});
+    }
+    return null; // 還沒抓到：這次先不標
+  }
+  function isMarkedDayOff(dateStr){
+    if(!markWeekend && !markHoliday) return false;
+    const y = Number(dateStr.slice(0, 4)), md = dateStr.slice(5, 7) + dateStr.slice(8, 10);
+    const data = (markWeekend || markHoliday) ? holidayYear(y) : null;
+    if(markHoliday && data && data.holidays.indexOf(md) !== -1) return true;
+    if(markWeekend){
+      const wd = weekdayOf(dateStr);
+      if((wd === 0 || wd === 6) && !(data && data.workdays.indexOf(md) !== -1)) return true; // 補班的週末不標
+    }
+    return false;
+  }
   function setTimeStep(v){
     if(TIME_STEPS.indexOf(v) < 0) return;
     timeStep = v;
@@ -8529,7 +8637,7 @@
     overlay.className = 'icon-picker-overlay';
     overlay.innerHTML = '<div class="icon-picker-card" role="dialog" aria-modal="true">' +
       '<div class="icon-picker-title">' + (opts.title || '選擇你的圖示') + '</div>' +
-      '<div class="icon-picker-sub">' + (opts.sub || '會顯示在你的欄位名稱後面。圖示與顏色的組合在同一本手帳裡不能跟別人重複。') + '</div>' +
+      (opts.sub ? '<div class="icon-picker-sub">' + opts.sub + '</div>' : '') +
       (opts.nameField ? '<div class="icon-picker-label" style="margin-top:0">名稱</div><input type="text" class="icon-picker-input" id="ipName" autocomplete="off">' : '') +
       '<div class="icon-picker-label">圖示' + (opts.iconOptional ? '<button type="button" class="icon-picker-none" id="ipNone">不使用圖示</button>' : '') + '</div><div class="icon-picker-scroll"><div class="icon-picker-grid" id="ipIcons"></div></div>' +
       '<div class="icon-picker-label">顏色</div><div class="icon-picker-colors" id="ipColors"></div>' +
@@ -8623,7 +8731,7 @@
     const cur = userIconOf(col);
     openIconPicker({
       title: '編輯欄位',
-      sub: '名稱和圖示可以只留一個（至少要有一個）。圖示與顏色的組合在同一本手帳裡不能跟別人重複。',
+      sub: '名稱、圖示至少留一個。',
       requireOne: true,
       nameField: {
         value: col.name,
@@ -10905,7 +11013,7 @@
     openIconPicker({
       anchorEl: this,
       title: '新增欄位',
-      sub: '名稱和圖示可以只留一個（至少要有一個）。圖示與顏色的組合在同一本手帳裡不能跟別人重複。',
+      sub: '名稱、圖示至少留一個。',
       requireOne: true, iconOptional: true,
       nameField: {
         value: '',
@@ -11036,8 +11144,8 @@
     fieldLockHint.hidden = editCanEditFields;
     if(!editCanEditFields){
       fieldLockHint.textContent = perm === 'join'
-        ? '建立者設定為「可供加入」：你可以加入或退出，但不能修改內容。'
-        : '建立者設定為「僅供檢視」：你可以查看內容，或長按卡片複製到自己的欄位。';
+        ? '只能加入或退出，不能修改。'
+        : '只能查看；長按卡片可以複製到自己的欄位。';
     }
     // 權限那一排：建立者可以改；其他人看得到建立者開放到哪裡，但不能點
     editPermission = normPerm(inst && inst.permission);
@@ -11055,7 +11163,7 @@
     }
     // 能刪除又能退出（建立者、或開放編輯時的參與者）：另外顯示一顆「退出此行程」
     btnLeaveEvent.hidden = !(editHasDeleteRight && canLeaveInstance(inst));
-    editLeaveHint = amCreatorOf(inst) ? '你是建立者：退出後，行程交給其他參與者共同管理' : '';
+    editLeaveHint = amCreatorOf(inst) ? '退出後，行程交給其他參與者管理' : '';
     btnJoin.hidden = !canJoinInstance(inst);
   }
   const btnLeaveEvent = document.getElementById('btnLeaveEvent');
@@ -11356,7 +11464,8 @@
       cell.className = 'month-cell'
         + (outside ? ' outside-month' : '')
         + (cellDate === today ? ' today' : '')
-        + (cellDate === currentDate ? ' current-day' : '');
+        + (cellDate === currentDate ? ' current-day' : '')
+        + (isMarkedDayOff(cellDate) ? ' day-off' : '');
 
       const dateEl = document.createElement('div');
       dateEl.className = 'cell-date';
@@ -12301,7 +12410,7 @@
   function confirmRemoveGuest(col){
     const ownerId = col.ownerId;
     const names = columns.filter(c => c.ownerId === ownerId).map(c => '「' + colLabel(c) + '」').join('、');
-    showConfirmDialog('移除訪客' + names + '？\n他在這本手帳的欄位，以及只有他參與的行程都會刪除，無法還原；共同行程只會把他拿掉。',
+    showConfirmDialog('移除訪客' + names + '？\n他的欄位和行程會刪除，無法還原。',
       function(){ removeGuest(ownerId); }, {okLabel: '移除', danger: true});
   }
   async function removeGuest(ownerId){
@@ -12386,8 +12495,8 @@
         clearStoredNotebook();
         NOTEBOOK = null;
         showConfirmDialog(isRegistered(user)
-          ? '你已經不在「' + notebookDisplayName(gone) + '」這本手帳裡了（可能在其他裝置退出過）。'
-          : '你在「' + notebookDisplayName(gone) + '」的訪客欄位已經被手帳裡的其他人移除了。需要的話，請向他們要密碼重新加入；綁定 email 之後就不會再被移除。',
+          ? '你已經不在「' + notebookDisplayName(gone) + '」裡了。'
+          : '你在「' + notebookDisplayName(gone) + '」的欄位已被移除，可以向成員要密碼重新加入。',
           function(){ location.reload(); }, {okLabel: '知道了', hideCancel: true});
         return;
       }
@@ -12925,7 +13034,7 @@
     document.getElementById('nbAcctGuest').hidden = reg;
     document.getElementById('nbAcctUser').hidden = !reg;
     nbAcctSignOut.hidden = !reg;
-    nbAcctSignOut.textContent = '登出';
+    nbAcctSignOut.lastElementChild.textContent = '登出';
     clearTimeout(signOutArmTimer);
     setAcctEditMode(false);
     fillAvatar(nbAcctPhoto, user);
@@ -12985,22 +13094,22 @@
   }
   function setNotifySetting(o){ try{ localStorage.setItem(NOTIFY_KEY, JSON.stringify(o)); }catch(e){} }
   const nbNotifyOn = document.getElementById('nbNotifyOn');
-  const nbNotifyLead = document.getElementById('nbNotifyLead');
+  const NOTIFY_LEADS = [[0, '準時'], [5, '5 分鐘'], [10, '10 分鐘'], [30, '30 分鐘'], [60, '1 小時']];
   function notifyStatusText(){
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
     if(!('Notification' in window)){
-      return ios && !standalone ? '這支手機要先把日日貼「加入主畫面」，從主畫面打開才能開啟通知。' : '這個瀏覽器不支援通知。';
+      return ios && !standalone ? '請先把日日貼加到主畫面再開啟。' : '這個瀏覽器不支援通知。';
     }
-    if(Notification.permission === 'granted') return '已允許通知。';
-    if(Notification.permission === 'denied') return '通知被封鎖了：請到手機（或瀏覽器）的設定裡，打開日日貼的通知。';
-    return '還沒允許通知：打開開關時會詢問你。';
+    if(Notification.permission === 'denied') return '通知被封鎖了，請到手機設定開啟。';
+    return '';
   }
   function renderNotifySetting(){
     const o = getNotifySetting();
     nbNotifyOn.checked = o.on;
-    document.getElementById('nbNotifyMore').hidden = !o.on;
-    nbNotifyLead.querySelectorAll('button').forEach(b => b.classList.toggle('selected', Number(b.dataset.v) === o.lead));
+    document.getElementById('nbNotifyLeadRow').hidden = !o.on;
+    const lead = NOTIFY_LEADS.find(x => x[0] === o.lead) || NOTIFY_LEADS[2];
+    document.getElementById('nbNotifyLeadVal').textContent = lead[1];
     document.getElementById('nbNotifyStatus').textContent = notifyStatusText();
   }
   nbNotifyOn.addEventListener('change', async function(){
@@ -13012,42 +13121,106 @@
     }
     renderNotifySetting();
   });
-  nbNotifyLead.addEventListener('click', function(e){
-    const b = e.target.closest('button[data-v]'); if(!b) return;
-    const o = getNotifySetting(); o.lead = Number(b.dataset.v); setNotifySetting(o); renderNotifySetting();
+  document.getElementById('nbNotifyLeadRow').addEventListener('click', function(){
+    const o = getNotifySetting();
+    openSettingChoice(this, NOTIFY_LEADS, o.lead, function(v){ o.lead = v; setNotifySetting(o); renderNotifySetting(); });
   });
 
   /* ---------------- 設定：顯示（外觀、每週從哪天開始、時間最小刻度）----------------
-     都只存在這支裝置（每支手機可以不一樣）。 */
+     跟著帳號走：存在本機，也存一份到帳號資料（user_metadata.display_prefs），換手機登入是同樣的設定。
+     （通知設定則是每支手機各自的，見上面。） */
+  let displaySaveTimer = null;
+  function saveDisplayPrefsToAccount(){
+    if(!sb) return;
+    clearTimeout(displaySaveTimer);
+    displaySaveTimer = setTimeout(async function(){
+      try{
+        const r = await sb.auth.updateUser({data: {display_prefs: {appearance: getAppearance(), weekStart: weekStart, timeStep: timeStep, markWeekend: markWeekend, markHoliday: markHoliday}}});
+        if(r.error) throw r.error;
+      }catch(err){ console.warn('顯示設定存到帳號失敗（只存在這支裝置）：', err); }
+    }, 600);
+  }
+  async function loadDisplayPrefsFromAccount(){
+    try{
+      const u = await currentAuthUser();
+      const d = u && u.user_metadata && u.user_metadata.display_prefs;
+      if(!d || typeof d !== 'object') return;
+      if(d.appearance === 'light' || d.appearance === 'dark' || d.appearance === 'auto'){
+        if(d.appearance !== getAppearance()){ try{ localStorage.setItem(APPEARANCE_KEY, d.appearance); }catch(e){} applyAppearance(); }
+      }
+      if((d.weekStart === 0 || d.weekStart === 1) && d.weekStart !== weekStart) setWeekStart(d.weekStart);
+      if(TIME_STEPS.indexOf(d.timeStep) >= 0 && d.timeStep !== timeStep) setTimeStep(d.timeStep);
+      if(typeof d.markWeekend === 'boolean' || typeof d.markHoliday === 'boolean'){
+        const w = typeof d.markWeekend === 'boolean' ? d.markWeekend : markWeekend;
+        const h = typeof d.markHoliday === 'boolean' ? d.markHoliday : markHoliday;
+        if(w !== markWeekend || h !== markHoliday) setDayOffMarks(w, h);
+      }
+      renderDisplaySettings();
+    }catch(e){}
+  }
+  authReady.then(loadDisplayPrefsFromAccount);
   const nbAppearSeg = document.getElementById('nbAppearSeg');
-  const nbWeekStartSeg = document.getElementById('nbWeekStartSeg');
-  const nbTimeStepSeg = document.getElementById('nbTimeStepSeg');
+  const WEEK_START_OPTS = [[0, '星期日'], [1, '星期一']];
+  const TIME_STEP_OPTS = TIME_STEPS.map(v => [v, v + ' 分鐘']);
+  // 清單式設定的小選單：在那一列下方跳出選項，目前的選項前面打勾，點一個就關掉
+  let settingChoiceMenu = null;
+  function closeSettingChoice(){
+    if(settingChoiceMenu){ settingChoiceMenu.remove(); settingChoiceMenu = null; }
+    document.removeEventListener('pointerdown', onSettingChoiceOutside, true);
+  }
+  function onSettingChoiceOutside(e){ if(settingChoiceMenu && !settingChoiceMenu.contains(e.target)) closeSettingChoice(); }
+  function openSettingChoice(rowEl, opts, current, onPick){
+    closeSettingChoice();
+    const m = document.createElement('div');
+    m.className = 'set-choice-menu';
+    opts.forEach(function(o){
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = o[0] === current ? 'on' : '';
+      b.innerHTML = '<span class="set-check">' + (o[0] === current ? '✓' : '') + '</span><span></span>';
+      b.lastChild.textContent = o[1];
+      b.addEventListener('click', function(e){ e.stopPropagation(); closeSettingChoice(); onPick(o[0]); });
+      m.appendChild(b);
+    });
+    document.body.appendChild(m);
+    const r = rowEl.getBoundingClientRect();
+    const mw = m.offsetWidth, mh = m.offsetHeight;
+    let top = r.bottom + 4;
+    if(top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);
+    m.style.left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.right - mw)) + 'px';
+    m.style.top = top + 'px';
+    settingChoiceMenu = m;
+    setTimeout(function(){ document.addEventListener('pointerdown', onSettingChoiceOutside, true); }, 0);
+  }
   function renderDisplaySettings(){
     const mode = getAppearance();
     nbAppearSeg.querySelectorAll('button').forEach(b => b.classList.toggle('selected', b.dataset.v === mode));
-    document.getElementById('nbAppearHint').textContent =
-      mode === 'auto' ? '跟著手機的深色模式切換（手機設定成日落後自動變深色，App 也會跟著變）。'
-      : mode === 'dark' ? '一直用夜間配色。夜間目前只有一套配色，選了其他主題色彩也會用這一套。'
-      : '一直用日間配色。';
-    nbWeekStartSeg.querySelectorAll('button').forEach(b => b.classList.toggle('selected', Number(b.dataset.v) === weekStart));
-    nbTimeStepSeg.querySelectorAll('button').forEach(b => b.classList.toggle('selected', Number(b.dataset.v) === timeStep));
+    document.getElementById('nbAppearHint').textContent = mode === 'auto' ? '跟著手機的深色模式。' : '';
+    document.getElementById('nbWeekStartVal').textContent = WEEK_START_OPTS[weekStart][1];
+    document.getElementById('nbTimeStepVal').textContent = timeStep + ' 分鐘';
+    document.getElementById('nbMarkWeekend').checked = markWeekend;
+    document.getElementById('nbMarkHoliday').checked = markHoliday;
   }
+  ['nbMarkWeekend', 'nbMarkHoliday'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(){
+      setDayOffMarks(document.getElementById('nbMarkWeekend').checked, document.getElementById('nbMarkHoliday').checked);
+      saveDisplayPrefsToAccount();
+    });
+  });
   nbAppearSeg.addEventListener('click', function(e){
     const b = e.target.closest('button[data-v]'); if(!b) return;
     try{ localStorage.setItem(APPEARANCE_KEY, b.dataset.v); }catch(err){}
     applyAppearance();
     renderDisplaySettings();
+    saveDisplayPrefsToAccount();
   });
-  nbWeekStartSeg.addEventListener('click', function(e){
-    const b = e.target.closest('button[data-v]'); if(!b) return;
-    setWeekStart(Number(b.dataset.v));
-    renderDisplaySettings();
+  document.getElementById('nbWeekStartRow').addEventListener('click', function(){
+    openSettingChoice(this, WEEK_START_OPTS, weekStart, function(v){ setWeekStart(v); renderDisplaySettings(); saveDisplayPrefsToAccount(); });
   });
-  nbTimeStepSeg.addEventListener('click', function(e){
-    const b = e.target.closest('button[data-v]'); if(!b) return;
-    setTimeStep(Number(b.dataset.v));
-    renderDisplaySettings();
+  document.getElementById('nbTimeStepRow').addEventListener('click', function(){
+    openSettingChoice(this, TIME_STEP_OPTS, timeStep, function(v){ setTimeStep(v); renderDisplaySettings(); saveDisplayPrefsToAccount(); });
   });
+  nbStartOverlay.addEventListener('scroll', closeSettingChoice, {passive: true});
 
   async function loadDefaultPermFromAccount(){
     const u = await currentAuthUser();
@@ -13171,13 +13344,9 @@
     const titles = {bind:'註冊並綁定', register:'註冊', login:'登入', reset:'忘記密碼', changeemail:'更改 email'};
     document.getElementById('nbAuthTitle').textContent = titles[mode] || '登入';
     document.getElementById('nbAuthHint').textContent =
-      mode === 'changeemail' ? '輸入新的 email，我們會寄一組驗證碼到新信箱，確認是你的信箱之後才會換過去。之後登入要用新的 email。'
-      : mode === 'bind' ? '輸入 email，目前的手帳和行程都會保留。驗證信箱後設定密碼，之後用 email＋密碼就能在任何裝置登入。'
-      : mode === 'register' ? '輸入 email，我們會寄一組驗證碼確認信箱，接著設定密碼。已經註冊過的話，請回上一頁按「登入」。'
-      : mode === 'reset' ? '輸入註冊時用的 email，我們會寄驗證碼確認身分，接著設定新密碼。'
-      : (from === 'acct'
-          ? '輸入 email 與密碼登入。注意：目前訪客的手帳和行程不會帶過去，只會看到該帳號自己的資料。'
-          : '輸入 email 與密碼登入。');
+      mode === 'bind' ? '目前的手帳和行程都會保留。'
+      : (mode === 'login' && from === 'acct') ? '訪客的手帳不會帶過去。'
+      : '';
     const isLogin = mode === 'login';
     document.getElementById('nbAuthPwLabel').hidden = !isLogin;
     nbAuthPw.hidden = !isLogin;
@@ -13196,9 +13365,7 @@
     document.getElementById('nbPwTitle').textContent =
       mode === 'reset' ? '設定新密碼' : (mode === 'changepw' ? '修改密碼' : '設定密碼');
     document.getElementById('nbPwHint').textContent =
-      mode === 'changepw' ? '輸入新的密碼，之後用 email＋密碼登入。'
-      : mode === 'reset' ? 'email 驗證完成了。請設定一組新密碼，之後用它登入。'
-      : 'email 驗證完成了。請設定密碼，之後用 email＋密碼就能登入。';
+      '';
     nbPwNew.value = ''; nbPwNew2.value = '';
     document.getElementById('nbPwBack').hidden = mode !== 'changepw';
     showNbStep('setPw');
@@ -13232,7 +13399,7 @@
   function openCodeStep(email){
     authFlow.email = email;
     document.getElementById('nbCodeHint').textContent =
-      '已經寄出到 ' + email + '。請輸入信裡的驗證碼；沒收到的話，也看一下垃圾郵件匣。';
+      '已寄到 ' + email + '（沒收到請看垃圾郵件匣）';
     showNbStep('authCode');
     nbCodeInput.value = '';
     startResendCooldown(60); // Supabase 同一個帳號 60 秒內只能寄一封
@@ -13297,7 +13464,7 @@
     }
     emailChangeOld = oldEmail || (user && user.email) || '';
     document.getElementById('nbCode2Hint').textContent =
-      '新信箱確認好了。為了安全，我們也寄了一組驗證碼到你原本的信箱 ' + emailChangeOld + '，請輸入那一組，確認是你本人要更換。';
+      '請輸入寄到原本信箱 ' + emailChangeOld + ' 的驗證碼。';
     document.getElementById('nbCode2Input').value = '';
     showNbStep('emailCode2');
   }
@@ -13354,6 +13521,7 @@
     try{ list = await loadNotebookListFromCloud(); }catch(err){ console.error('讀取手帳清單失敗：', err); }
     purgeLocalNotebookData();
     saveNotebookList(list);
+    loadDisplayPrefsFromAccount(); // 換帳號登入：顯示設定換成這個帳號的
     authFlow = null;
     clearInterval(resendTimer);
     renderAccountAvatar();
@@ -13434,10 +13602,10 @@
   }
   // 登出要按兩次（第一次變成「再按一次確認」，4 秒內沒按就恢復），不另外開彈窗，才不會被開始畫面蓋住。
   async function signOutAccount(){
-    if(nbAcctSignOut.textContent === '登出'){
-      nbAcctSignOut.textContent = '再按一次確認登出';
+    if(nbAcctSignOut.lastElementChild.textContent === '登出'){
+      nbAcctSignOut.lastElementChild.textContent = '再按一次確認登出';
       clearTimeout(signOutArmTimer);
-      signOutArmTimer = setTimeout(function(){ nbAcctSignOut.textContent = '登出'; }, 4000);
+      signOutArmTimer = setTimeout(function(){ nbAcctSignOut.lastElementChild.textContent = '登出'; }, 4000);
       return;
     }
     nbAcctSignOut.disabled = true;
@@ -13449,7 +13617,7 @@
       console.error('登出失敗：', err);
       showToast('登出失敗：' + describeError(err));
       nbAcctSignOut.disabled = false;
-      nbAcctSignOut.textContent = '登出';
+      nbAcctSignOut.lastElementChild.textContent = '登出';
     }
   }
   // 第一頁選「訪客」：建立匿名帳號，進第二頁。
@@ -13528,7 +13696,7 @@
   const nbAcctDelete = document.getElementById('nbAcctDelete');
   async function deleteAccount(){
     if(!sb){ showToast('目前連不上雲端，沒辦法刪除帳號'); return; }
-    const choice = await chooseOption('確定要永久刪除帳號嗎？你的欄位和只有你參與的行程都會刪除，共同行程只會把你拿掉。刪除後無法復原。',
+    const choice = await chooseOption('確定永久刪除帳號？你的欄位和行程會刪除，無法復原。',
       ['永久刪除我的帳號']);
     if(choice !== 0) return;
     nbAcctDelete.disabled = true;
@@ -13732,7 +13900,7 @@
         (plan.conflicts.length ? '，並覆蓋了 ' + plan.conflicts.length + ' 個時間相衝的行程。' : '。'));
     };
     if(plan.conflicts.length){
-      showConfirmDialog('有 ' + plan.conflicts.length + ' 個時段跟「' + tgtName + '」現有的行程相衝，匯入會用舊的行程覆蓋。確定要匯入嗎？',
+      showConfirmDialog('有 ' + plan.conflicts.length + ' 個時段跟「' + tgtName + '」的行程重疊，匯入會覆蓋。確定匯入？',
         run, {okLabel:'確定覆蓋', danger:true});
     } else {
       run();
@@ -14160,18 +14328,48 @@
       timer = setTimeout(function(){
         row.dataset.longPressed = '1';
         if(navigator.vibrate) navigator.vibrate(12);
-        const ids = getPinnedBooks();
-        const i = ids.indexOf(nb.id);
-        if(i === -1) ids.unshift(nb.id); else ids.splice(i, 1);
-        setPinnedBooks(ids);
-        showToast(i === -1 ? '已置頂' : '已取消置頂', 900);
-        refreshBookLists();
+        openBookPinMenu(row, nb);
       }, 480);
     });
     row.addEventListener('pointermove', function(e){ if(Math.hypot(e.clientX - sx, e.clientY - sy) > 8) clearTimeout(timer); });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => row.addEventListener(t, function(){ clearTimeout(timer); }));
     row.addEventListener('contextmenu', e => e.preventDefault());
     return row;
+  }
+  // 長按手帳跳出的小選單：「置頂」或「取消置頂」
+  let bookPinMenu = null;
+  function closeBookPinMenu(){
+    if(bookPinMenu){ bookPinMenu.remove(); bookPinMenu = null; }
+    document.removeEventListener('pointerdown', onPinMenuOutside, true);
+  }
+  function onPinMenuOutside(e){ if(bookPinMenu && !bookPinMenu.contains(e.target)) closeBookPinMenu(); }
+  function openBookPinMenu(row, nb){
+    closeBookPinMenu();
+    const pinned = getPinnedBooks().indexOf(nb.id) !== -1;
+    const m = document.createElement('div');
+    m.className = 'book-pin-menu';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = PIN_SVG + '<span>' + (pinned ? '取消置頂' : '置頂') + '</span>';
+    b.addEventListener('click', function(e){
+      e.stopPropagation();
+      const ids = getPinnedBooks();
+      const i = ids.indexOf(nb.id);
+      if(i === -1) ids.unshift(nb.id); else ids.splice(i, 1);
+      setPinnedBooks(ids);
+      closeBookPinMenu();
+      refreshBookLists();
+    });
+    m.appendChild(b);
+    document.body.appendChild(m);
+    const r = row.getBoundingClientRect();
+    const mw = m.offsetWidth, mh = m.offsetHeight;
+    let top = r.bottom - 6;
+    if(top + mh > window.innerHeight - 8) top = r.top - mh + 6;
+    m.style.left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.right - mw - 10)) + 'px';
+    m.style.top = top + 'px';
+    bookPinMenu = m;
+    setTimeout(function(){ document.addEventListener('pointerdown', onPinMenuOutside, true); }, 0);
   }
   function refreshBookLists(){
     if(NOTEBOOK) renderNavBookList();
@@ -14185,8 +14383,9 @@
   function fitNavBookScroll(){
     const rows = navBookList.querySelectorAll('.nav-row');
     if(rows.length <= 3){ navBookList.style.maxHeight = ''; return; }
-    const r0 = rows[0].getBoundingClientRect(), r2 = rows[2].getBoundingClientRect();
-    if(r2.bottom > r0.top) navBookList.style.maxHeight = Math.ceil(r2.bottom - r0.top + 1) + 'px';
+    const r0 = rows[0].getBoundingClientRect(), r3 = rows[3].getBoundingClientRect();
+    // 三本完整露出，第四本露出一小截（約 1/3），提示還可以往下捲
+    if(r3.top > r0.top) navBookList.style.maxHeight = Math.ceil(r3.top - r0.top + r3.height * 0.35) + 'px';
   }
   function renderNavBookList(){
     navBookList.innerHTML = '';
@@ -14250,10 +14449,7 @@
   // 網址用不帶 ?參數／#片段 的乾淨版本，並去掉結尾的 index.html。
   navCopy.addEventListener('click', async function(){
     if(!NOTEBOOK) return;
-    const pageUrl = location.protocol === 'file:'
-      ? location.href.replace(/[?#].*$/, '')
-      : location.origin + location.pathname.replace(/index\.html$/, '');
-    const ok = await copyText('手帳密碼：' + formatJoinCode(NOTEBOOK.code) + '\n' + pageUrl);
+    const ok = await copyText(String(NOTEBOOK.code)); // 只複製密碼本身
     if(ok) showToast('已複製', 800); // 顯示 0.8 秒後開始淡出
     else navCopy.textContent = '複製失敗，請長按密碼手動複製'; // 成功就維持原樣顯示「複製」，不特別換字
   });
@@ -14308,7 +14504,7 @@
   navLeave.addEventListener('click', function(){
     if(!NOTEBOOK) return;
     closeDrawer(); // 先收起選單，才不會跟退出確認彈窗疊在一起打架
-    const msg = '退出後將永久刪除你在這本手帳的行程資料，無法還原。\n此動作不影響其他手帳。\n確定退出？';
+    const msg = '退出後，你在這本手帳的行程會永久刪除。確定退出？';
     showConfirmDialog(msg, function(){ leaveCurrentNotebook(); }, {okLabel:'退出', danger:true});
   });
 
@@ -14665,7 +14861,7 @@
     if(!all.length){
       const empty = document.createElement('div');
       empty.className = 'todo-empty';
-      empty.textContent = '還沒有待辦。按右上角的 ＋ 新增，\n或在行程卡片的長按選單選「加到待辦」。';
+      empty.textContent = '還沒有待辦';
       empty.style.whiteSpace = 'pre-line';
       todoList.appendChild(empty);
     }
