@@ -3536,6 +3536,14 @@
     display:flex; align-items:center; justify-content:center; color:var(--btn-brown);
   }
   .acct-back-btn:active{ opacity:.6; }
+  /* 第二頁左上角：回第一頁重新選登入／註冊／訪客 */
+  .nb-step-back{
+    position:absolute; left:12px; top:calc(10px + env(safe-area-inset-top, 0px)); z-index:2;
+    width:40px; height:40px; border:none; background:none; padding:0; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; color:var(--btn-brown);
+  }
+  .nb-step-back[hidden]{ display:none; }
+  .nb-step-back:active{ opacity:.6; }
   .acct-topbar-title{ font-family:'Noto Serif TC', serif; font-weight:700; font-size:18px; line-height:40px; color:var(--ink); }
   .acct-profile{ display:flex; align-items:center; gap:14px; }
   .acct-profile .acct-photo{ padding:0; cursor:default; }
@@ -3579,7 +3587,7 @@
   .acct-edit-row:active{ background:var(--paper-deep); }
   .acct-row-arrow{ color:var(--ink-faint); font-size:20px; line-height:1; }
   .acct-sec-title{
-    margin-top:10px; font-family:'Noto Sans TC', sans-serif; font-weight:700; font-size:13.5px; color:var(--ink-soft);
+    margin-top:10px; font-family:'Noto Sans TC', sans-serif; font-weight:700; font-size:13.5px; color:var(--ink);
     display:flex; align-items:center; gap:8px;
   }
   .acct-sec-title::after{ content:''; flex:1; height:1px; background:var(--line-soft); }
@@ -3953,7 +3961,7 @@
 </style>
 <!-- 一進頁面就先套用使用者上次選的介面主題（存在 localStorage），趕在畫面
      真的畫出來之前設定好 <html data-theme>，才不會先閃一下預設配色、
-     再跳成使用者選的主題。跟下面主程式共用同一個 THEME_STORAGE_KEY。 -->
+     再跳成使用者選的主題。主題是每本手帳分開存的（plannerTheme:<手帳id>，見主程式的 themeStorageKey）。 -->
 <script>
   (function(){
     try{
@@ -3961,7 +3969,19 @@
       const ap = localStorage.getItem('plannerAppearance');
       if(ap === 'dark' || (ap === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches))
         document.documentElement.setAttribute('data-dark', '');
-      const saved = localStorage.getItem('plannerTheme');
+      // 主題色彩每本手帳分開存（plannerTheme:<手帳id>）。舊版只有一個共用的 plannerTheme：
+      // 第一次升級時複製給這支裝置加入過的每一本手帳（已經有自己的就不蓋掉），然後刪掉舊的。
+      const legacy = localStorage.getItem('plannerTheme');
+      if(legacy !== null){
+        let ids = [];
+        try{ (JSON.parse(localStorage.getItem('shared-planner-notebooks') || '[]') || []).forEach(function(n){ if(n && n.id) ids.push(n.id); }); }catch(e){}
+        try{ const cur = JSON.parse(localStorage.getItem('shared-planner-notebook') || 'null'); if(cur && cur.id) ids.push(cur.id); }catch(e){}
+        ids.forEach(function(id){ if(localStorage.getItem('plannerTheme:' + id) === null) localStorage.setItem('plannerTheme:' + id, legacy); });
+        localStorage.removeItem('plannerTheme');
+      }
+      let nbId = '';
+      try{ const cur = JSON.parse(localStorage.getItem('shared-planner-notebook') || 'null'); nbId = cur && cur.id ? cur.id : ''; }catch(e){}
+      const saved = nbId ? localStorage.getItem('plannerTheme:' + nbId) : null;
       if(saved && saved !== 'default') document.documentElement.setAttribute('data-theme', saved);
       if(localStorage.getItem('plannerTimeGrid') === 'cells') document.documentElement.setAttribute('data-timegrid', 'cells');
       const a = parseInt(localStorage.getItem('plannerCardAlpha'), 10);
@@ -4011,6 +4031,8 @@
   </div>
 </div>
 <div id="notebookStartOverlay" class="device-user-overlay" hidden>
+  <!-- 第二頁左上角的返回（放在卡片外面，卡片進場動畫時才不會跟著動） -->
+  <button type="button" class="nb-step-back" id="nbChoiceBack" aria-label="返回" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 6 9 12 15 18"></polyline></svg></button>
   <div class="device-user-card">
     <!-- 第一頁：註冊／登入 或 訪客。還沒有登入狀態才會出現。 -->
     <div class="nb-step" data-step="welcome" hidden>
@@ -4226,7 +4248,7 @@
 
         <div class="acct-sec-title">行程共編</div>
         <div class="set-list">
-          <button type="button" class="set-row" id="nbPermRow"><span class="set-label">新行程，其他人可以</span><span class="set-value" id="nbPermVal"></span><span class="set-chev">›</span></button>
+          <button type="button" class="set-row" id="nbPermRow"><span class="set-label" id="nbPermVal"></span><span class="set-chev">›</span></button>
         </div>
         <div class="perm-hint" id="nbPermHint"></div>
 
@@ -4305,14 +4327,9 @@
   <aside id="navDrawer" class="nav-drawer" aria-hidden="true">
     <div class="nav-item" data-nav="share">
       <button type="button" class="nav-head" aria-expanded="false">
-        <svg width="18" height="18" class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <!-- 鑰匙圖示（依使用者提供的圖描出來的輪廓）：外形是一條封閉的線＋鑰匙頭的小圓孔，
-                 線寬 1.6（換算成 24 格的座標），跟旁邊的鈴鐺、月曆粗細接近。 -->
-            <g transform="translate(-8.860 -8.794) scale(0.03343)" stroke-width="47.9">
-              <path d="M680.3 625 L611 699 L616 760 L603 767 L552 769 L557 805 L552 825 L489 831 L491 887 L479 893 L441 895 L436 938 L426 951 L410 952 L349 925 L341 880 L346 816 L596.2 562.9 A171.3 171.3 0 1 1 680.3 625 Z"></path>
-              <circle cx="792" cy="415" r="51.5"></circle>
-            </g>
-          </svg>
+        <!-- 鑰匙圖示：照使用者提供的圖（10/23）把黑色輪廓描成填色的形狀（外框、鑰匙頭的洞、小圓點三個輪廓，
+             用 evenodd 挖空），顏色跟著主題（currentColor）。 -->
+        <svg width="18" height="18" class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M15.69 6.53 L15.29 6.68 L15.08 6.83 L14.87 7.05 L14.62 7.50 L14.57 8.03 L14.62 8.10 L14.62 8.28 L14.77 8.63 L15.24 9.11 L15.54 9.25 L15.68 9.25 L15.74 9.30 L16.23 9.30 L16.29 9.25 L16.58 9.20 L16.66 9.12 L16.82 9.06 L17.15 8.73 L17.30 8.48 L17.30 8.40 L17.40 8.18 L17.40 7.60 L17.35 7.54 L17.30 7.30 L17.10 7.00 L16.92 6.83 L16.63 6.63 L16.54 6.63 L16.33 6.53ZM20.67 3.04 L20.55 2.98 L20.01 2.49 L19.17 1.95 L18.47 1.60 L17.98 1.45 L17.82 1.35 L17.68 1.35 L17.47 1.25 L17.34 1.25 L17.07 1.15 L16.59 1.10 L16.53 1.05 L16.14 1.05 L16.08 1.00 L14.89 1.00 L14.83 1.05 L14.40 1.05 L14.33 1.10 L14.15 1.10 L14.09 1.15 L13.90 1.15 L13.84 1.20 L13.45 1.25 L13.39 1.30 L12.85 1.45 L12.44 1.65 L12.35 1.65 L11.51 2.10 L11.06 2.39 L10.67 2.73 L10.55 2.79 L10.38 2.98 L10.25 3.04 L9.89 3.40 L9.83 3.53 L9.34 4.06 L8.84 4.81 L8.45 5.61 L8.45 5.69 L8.30 6.01 L8.30 6.09 L8.20 6.30 L8.20 6.44 L8.10 6.65 L8.10 6.79 L8.00 7.05 L8.00 7.29 L7.95 7.35 L7.95 7.69 L7.90 7.75 L7.90 8.38 L7.85 8.45 L7.85 8.73 L7.90 8.79 L7.90 9.43 L7.95 9.49 L8.00 10.18 L8.05 10.24 L8.08 10.44 L1.17 17.35 L1.07 17.51 L1.07 17.60 L1.02 17.66 L1.02 21.68 L1.07 21.74 L1.07 21.88 L1.27 22.23 L1.73 22.70 L2.05 22.90 L2.13 22.90 L2.34 23.00 L6.42 23.00 L6.48 22.95 L6.62 22.95 L6.93 22.75 L7.49 22.19 L7.64 21.93 L7.64 21.79 L7.69 21.73 L7.69 20.30 L7.72 20.26 L9.35 20.26 L9.52 20.16 L10.28 19.39 L10.43 19.09 L10.43 17.56 L10.46 17.52 L11.94 17.52 L12.11 17.42 L12.96 16.56 L13.03 16.44 L13.43 16.04 L13.55 15.98 L13.99 16.03 L14.05 16.08 L14.33 16.08 L14.40 16.13 L14.73 16.13 L14.80 16.18 L16.18 16.18 L16.24 16.13 L16.92 16.08 L16.99 16.03 L17.12 16.03 L17.19 15.98 L17.32 15.98 L17.38 15.93 L17.52 15.93 L17.58 15.88 L17.87 15.83 L18.03 15.73 L18.52 15.58 L19.61 14.98 L20.22 14.53 L21.03 13.77 L21.10 13.65 L21.53 13.16 L21.93 12.57 L22.33 11.82 L22.33 11.73 L22.48 11.47 L22.48 11.38 L22.68 10.92 L22.68 10.79 L22.73 10.72 L22.73 10.59 L22.78 10.52 L22.78 10.39 L22.88 10.13 L22.88 9.84 L22.93 9.78 L22.93 9.49 L22.98 9.43 L22.98 7.65 L22.93 7.59 L22.93 7.30 L22.88 7.24 L22.88 7.05 L22.78 6.79 L22.73 6.40 L22.68 6.34 L22.53 5.81 L22.43 5.64 L22.43 5.56 L22.03 4.76 L21.68 4.21 L21.33 3.75 L21.10 3.53 L21.03 3.40ZM19.14 4.24 L19.79 4.88 L20.29 5.58 L20.45 5.94 L20.53 6.03 L20.90 6.95 L20.90 7.09 L21.00 7.35 L21.00 7.54 L21.05 7.60 L21.05 7.89 L21.10 7.95 L21.10 9.28 L21.05 9.34 L21.05 9.63 L21.00 9.69 L21.00 9.88 L20.95 9.94 L20.90 10.28 L20.70 10.74 L20.70 10.82 L20.34 11.55 L19.64 12.49 L19.04 13.04 L18.49 13.44 L17.82 13.80 L17.73 13.80 L17.57 13.90 L17.48 13.90 L16.97 14.10 L16.59 14.15 L16.53 14.20 L16.29 14.20 L16.23 14.25 L15.14 14.30 L15.08 14.25 L14.65 14.25 L14.58 14.20 L14.05 14.15 L13.99 14.10 L13.85 14.10 L13.44 13.95 L12.95 13.95 L12.89 14.00 L12.80 14.00 L12.54 14.20 L12.42 14.38 L11.15 15.64 L9.22 15.64 L8.87 15.79 L8.59 16.16 L8.59 16.30 L8.54 16.36 L8.54 18.34 L8.51 18.38 L6.43 18.38 L6.18 18.48 L5.91 18.75 L5.81 18.95 L5.81 21.03 L5.74 21.11 L2.99 21.12 L2.95 21.08 L2.97 18.28 L3.35 17.91 L3.44 17.77 L3.70 17.56 L3.76 17.43 L3.99 17.27 L4.11 17.09 L4.71 16.49 L4.80 16.45 L4.81 16.39 L4.96 16.24 L5.02 16.23 L5.13 16.08 L5.25 16.02 L5.31 15.89 L5.51 15.69 L5.57 15.68 L5.61 15.59 L5.72 15.53 L5.86 15.34 L5.98 15.28 L6.09 15.12 L6.23 15.03 L9.23 12.03 L9.44 11.76 L9.58 11.68 L9.64 11.56 L9.93 11.27 L10.03 11.02 L10.03 10.39 L9.98 10.33 L9.98 10.19 L9.88 9.93 L9.83 9.39 L9.78 9.33 L9.78 7.95 L9.83 7.89 L9.88 7.35 L9.93 7.29 L9.93 7.15 L9.98 7.09 L9.98 6.95 L10.03 6.89 L10.08 6.65 L10.54 5.68 L10.99 5.03 L11.27 4.76 L11.33 4.64 L11.58 4.39 L11.65 4.37 L11.88 4.14 L12.28 3.84 L13.35 3.28 L13.44 3.28 L13.95 3.08 L14.28 3.03 L14.35 2.98 L14.58 2.98 L14.65 2.93 L15.03 2.93 L15.09 2.88 L15.83 2.88 L15.89 2.93 L16.33 2.93 L16.39 2.98 L16.58 2.98 L16.64 3.03 L16.97 3.08 L17.04 3.13 L17.57 3.28 L18.54 3.79Z"/></svg>
         <span class="nav-label">分享手帳密碼</span>
         <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </button>
@@ -4363,9 +4380,9 @@
             <input type="range" id="cardRadiusRange" min="0" max="20" step="1" value="8" aria-label="行程卡片邊角圓潤程度">
             <span class="card-alpha-val" id="cardRadiusVal">8</span>
           </div>
-          <div class="timegrid-title">行程卡片底色不透明度</div>
+          <div class="timegrid-title">便利貼不透明度</div>
           <div class="card-alpha-row">
-            <input type="range" id="cardAlphaRange" min="10" max="100" step="5" value="100" aria-label="行程卡片底色不透明度">
+            <input type="range" id="cardAlphaRange" min="10" max="100" step="5" value="100" aria-label="便利貼不透明度">
             <span class="card-alpha-val" id="cardAlphaVal">100%</span>
           </div>
         </div>
@@ -4680,7 +4697,7 @@
       <div class="field" id="permField">
         <span class="field-label">行程共編</span>
         <div class="set-list">
-          <button type="button" class="set-row" id="permRow"><span class="set-label">其他人可以</span><span class="set-value" id="permVal"></span><span class="set-chev">›</span></button>
+          <button type="button" class="set-row" id="permRow"><span class="set-label" id="permVal"></span><span class="set-chev">›</span></button>
         </div>
         <div class="perm-hint" id="permHint"></div>
       </div>
@@ -8707,10 +8724,8 @@
   const ICON_LIGHT_THIN = 0.6;    // 淺色圖示本身線條要削掉多少（總量，每側 0.3）：用遮罩把填色圖案往內縮
   const ICON_LIGHT_SW_SCALE = 0.65; // 淺色的真線條圖示（圓、方…）線寬縮成原本的幾倍
   const ICON_EDGE_DARKEN = 0.12;  // 輪廓色比圖示色深多少（原本 0.22，太深）
-  // 背景偏深的主題（英倫學院）：淺色圖示在深底上本來就看得清楚，不需要輪廓；
-  // 改成「圖示明度跟手帳底色接近」才加輪廓（不論圖示比底色亮或暗）。
-  // 其他主題的底色都很淺，維持原本「淺色圖示就加輪廓」的規則。
-  const ICON_OUTLINE_BY_CONTRAST_THEMES = {'british-academy': true};
+  // 所有主題（含夜間模式）一律看「圖示明度跟手帳底色 --paper 的明度差」：差太小（看不清楚）才加輪廓，
+  // 不論圖示比底色亮或暗。（原本只有英倫學院這樣判斷、其他主題是「淺色圖示就加輪廓」，10/23 統一。）
   const ICON_OUTLINE_NEAR_L = 12; // 跟底色的明度差（CIE L*，0～100）小於這個值才加輪廓
   function perceivedL(hex){
     const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
@@ -8721,7 +8736,6 @@
     return Y > 0.008856 ? 116 * Math.cbrt(Y) - 16 : 903.3 * Y;
   }
   function iconNeedsOutline(hex){
-    if(!ICON_OUTLINE_BY_CONTRAST_THEMES[activeThemeId()]) return isLightIconColor(hex);
     let bg = '';
     try{ bg = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim(); }catch(err){}
     const li = perceivedL(hex), lb = perceivedL(bg);
@@ -12310,6 +12324,7 @@
     if(step === 'create') createImport = mountImportBox(document.getElementById('nbCreateImportBox'));
     if(step === 'joinName') joinImport = mountImportBox(document.getElementById('nbJoinImportBox'));
     if(step === 'choice') renderStartBooksDropdown(); // 還沒有手帳就不顯示「我的手帳」
+    document.getElementById('nbChoiceBack').hidden = !(step === 'choice' && !NOTEBOOK);
     if(step === 'acct') refreshAcctPage();
     nbStartOverlay.classList.toggle('acct-mode', step === 'acct'); // 帳號頁面比較長：從上面開始排、可以上下捲動
   }
@@ -12414,6 +12429,7 @@
     }
     NOTEBOOK = nb;
     setStoredNotebook(nb);
+    applyNotebookTheme(); // 第一次進這本手帳（沒重新載入頁面）：換成這本手帳的主題（新手帳＝經典）
     if(newColumn){
       await syncChangesToSupabase('columns', [{id:newColumn.id, after:newColumn}], ch => ch.after);
     }
@@ -13765,6 +13781,12 @@
     setNbError('nbWelcomeError', '');
     btn.disabled = true;
     try{
+      // 從第二頁返回後改選訪客：原本登入的是正式帳號的話，先登出，再建立新的訪客身分
+      const cur = await currentAuthUser();
+      if(isRegistered(cur)){
+        await sb.auth.signOut({scope: 'local'});
+        purgeLocalNotebookData();
+      }
       await ensureSession();
       renderAccountAvatar();
       showNbStep('choice');
@@ -13780,6 +13802,8 @@
   document.getElementById('nbBtnLogin').addEventListener('click', function(){ openAuth('login'); });
   document.getElementById('nbAcctLogin').addEventListener('click', function(){ openAuth('login', 'acct'); });
   document.getElementById('nbBtnGuest').addEventListener('click', startGuest);
+  // 第二頁的返回：回第一頁重新選（還沒進任何手帳時才有）
+  document.getElementById('nbChoiceBack').addEventListener('click', function(){ showNbStep('welcome'); });
   document.getElementById('nbAcctBind').addEventListener('click', function(){ openAuth('bind'); });
   document.getElementById('nbAuthBack').addEventListener('click', function(){
     if(authFlow && authFlow.mode === 'reset'){ openAuth('login', authFlow.from, nbAuthEmail.value.trim()); return; }
@@ -14217,7 +14241,8 @@
   // 不隨手帳資料同步、不影響其他共編者看到的畫面（跟 DEVICE_ID 一樣是
   // 純本機的東西）。<head> 裡有一小段提早執行的 script 會在畫面畫出來
   // 之前先套用一次，這裡的 applyTheme() 負責之後使用者手動切換時用。
-  const THEME_STORAGE_KEY = 'plannerTheme';
+  // 每本手帳分開存：plannerTheme:<手帳id>（沒存過＝經典）
+  function themeStorageKey(nbId){ return 'plannerTheme:' + (nbId || ''); }
   const THEMES = [
     // 選單裡一排三個，依使用者指定的順序排列（由左到右、由上到下）
     { id: 'default', name: '經典', colors: ['#FBD3C4', '#8FA1B0', '#FCEFB4'] },
@@ -14234,14 +14259,23 @@
     { id: 'cocoa-rum', name: '可可蘭姆', colors: ['#552229', '#9A817A', '#F4F1FA'] }
   ];
   let currentTheme = 'default';
-  (function initTheme(){
+  // 讀某本手帳存的主題（沒有手帳、沒存過、或是現在不支援的主題＝經典）
+  function storedThemeFor(nbId){
     let saved = 'default';
-    try{ saved = localStorage.getItem(THEME_STORAGE_KEY) || 'default'; }catch(err){}
-    if(!THEMES.some(t => t.id === saved)) saved = 'default'; // 存的值不是現在支援的主題就退回經典，不要整頁跑不出樣式
-    currentTheme = saved;
-    // data-theme 屬性本身 <head> 那段小 script 已經先設好了（避免閃一下），
-    // 這裡不用重設，只需要讓 currentTheme 這個變數跟畫面實際狀態同步。
-  })();
+    if(nbId){ try{ saved = localStorage.getItem(themeStorageKey(nbId)) || 'default'; }catch(err){} }
+    return THEMES.some(t => t.id === saved) ? saved : 'default';
+  }
+  function setThemeAttr(themeId){
+    currentTheme = themeId;
+    if(themeId === 'default') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', themeId);
+  }
+  // 套用目前這本手帳的主題（開頁時校正 <head> 的猜測；從開始畫面進入手帳、不重新載入頁面時也呼叫）
+  function applyNotebookTheme(){
+    setThemeAttr(storedThemeFor(NOTEBOOK && NOTEBOOK.id));
+    try{ syncThemeColorMeta(); }catch(e){}
+  }
+  applyNotebookTheme();
   // 手機最上面狀態列、工作切換畫面的顏色跟著目前的風格（紙張底色）
   function syncThemeColorMeta(){
     try{
@@ -14252,10 +14286,8 @@
   }
   syncThemeColorMeta();
   function applyTheme(themeId){
-    currentTheme = themeId;
-    if(themeId === 'default') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', themeId);
-    try{ localStorage.setItem(THEME_STORAGE_KEY, themeId); }catch(err){}
+    setThemeAttr(themeId);
+    if(NOTEBOOK){ try{ localStorage.setItem(themeStorageKey(NOTEBOOK.id), themeId); }catch(err){} } // 只存給目前這本手帳
     syncThemeColorMeta();
     // 行程顏色會跟著風格換成配對色，已經畫在畫面上的卡片要重畫
     if(NOTEBOOK){
