@@ -1854,6 +1854,16 @@
   /* 這則通知有明確指向的行程，點了會跳過去（見 jumpToNotificationTarget）；
      沒有這個 class 的（例如比較舊、儲存時還沒有這個欄位的通知）維持
      原本不能點的樣子，不給假的可點提示。 */
+  .notif-panel-item{ display:flex; align-items:flex-start; gap:10px; }
+  .notif-body{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+  .notif-avatar{
+    flex:0 0 auto; width:30px; height:30px; border-radius:50%; overflow:hidden; margin-top:1px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--card); color:var(--btn-brown);
+    font-family:'Noto Serif TC', serif; font-weight:700; font-size:14px;
+  }
+  .notif-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .notif-avatar svg{ width:17px; height:17px; }
   .notif-panel-item.clickable{cursor:pointer;}
   .notif-panel-item.clickable:active{background:rgba(246,241,228,0.1);}
   .notif-panel-item .notif-msg{
@@ -5614,8 +5624,11 @@
     };
   }
   function notificationToRow(n){
-    return { id: n.id, recipient_id: n.recipientId, message: n.message, event_master_id: n.masterId || null, event_date: n.instanceDate || null, created_at: n.createdAt, read: n.read, notebook_id: NOTEBOOK ? NOTEBOOK.id : null };
+    const row = { id: n.id, recipient_id: n.recipientId, message: n.message, event_master_id: n.masterId || null, event_date: n.instanceDate || null, created_at: n.createdAt, read: n.read, notebook_id: NOTEBOOK ? NOTEBOOK.id : null };
+    if(notifActorSyncOk && n.actorId) row.actor_id = n.actorId; // 是誰做的（通知面板顯示對方頭像）；資料庫還沒更新就先不送
+    return row;
   }
+  let notifActorSyncOk = true;
   function todoToRow(t){
     return { id: t.id, notebook_id: NOTEBOOK ? NOTEBOOK.id : null, owner_id: DEVICE_ID,
       title: t.title || '', due: t.due || null, done: !!t.done, done_at: t.doneAt || null,
@@ -5628,7 +5641,7 @@
       duration: row.duration_min || null, repeat: row.repeat_rule || null };
   }
   function rowToNotification(row){
-    return { id: row.id, recipientId: row.recipient_id, message: row.message, masterId: row.event_master_id || null, instanceDate: row.event_date || null, createdAt: row.created_at, read: row.read };
+    return { id: row.id, recipientId: row.recipient_id, message: row.message, masterId: row.event_master_id || null, instanceDate: row.event_date || null, createdAt: row.created_at, read: row.read, actorId: row.actor_id || null };
   }
 
   // 把一批 {id, before, after} 的變動（跟復原/重做用的是同一份 diff）
@@ -5831,7 +5844,12 @@
   async function pushNotificationToSupabase(n){
     if(!sb || !NOTEBOOK) return;
     try{
-      const { error } = await sb.from('notifications').insert(notificationToRow(n));
+      let { error } = await sb.from('notifications').insert(notificationToRow(n));
+      // 資料庫還沒執行 supabase-upgrade.sql 的 G 段（沒有 actor_id 欄位）：這次連線先不送，再試一次
+      if(error && notifActorSyncOk && /actor_id/i.test(String(error.message || error.details || ''))){
+        notifActorSyncOk = false;
+        ({ error } = await sb.from('notifications').insert(notificationToRow(n)));
+      }
       if(error) console.error('Supabase 通知寫入失敗：', error);
     }catch(err){
       console.error('Supabase 通知寫入發生錯誤：', err);
@@ -5899,7 +5917,8 @@
       masterId: masterId || null,       // 這則通知指向哪一場行程，點通知跳過去用
       instanceDate: instanceDate || null, // 指向系列中的哪一天（非重複行程就是它唯一的日期）
       createdAt: new Date().toISOString(),
-      read: false
+      read: false,
+      actorId: DEVICE_ID || null // 是誰做的
     };
     notifications.push(n);
     scheduleSaveToStorage();
@@ -7754,6 +7773,59 @@
   const notifDot = document.getElementById('notifDot');
   let notifPanelEl = null;
 
+  /* ---------------- 成員資料（名字、頭像）：通知面板顯示是誰做的 ----------------
+     自己的資料：開 App、改名字、換頭像時寫進 profiles 表（同一本手帳的人才讀得到）。
+     別人的資料：打開通知面板時才讀，存在記憶體裡。資料庫還沒更新（沒有 profiles 表）就不顯示頭像。 */
+  const profileCache = new Map(); // user id → {name, avatar}
+  let profilesOk = true;
+  async function upsertMyProfile(){
+    if(!sb || !profilesOk) return;
+    try{
+      const u = await currentAuthUser();
+      if(!u) return;
+      const reg = isRegistered(u);
+      const m = u.user_metadata || {};
+      const row = {user_id: u.id, display_name: reg ? accountDisplayName(u) : null, avatar_url: reg ? (m.avatar_url || null) : null, updated_at: new Date().toISOString()};
+      const r = await sb.from('profiles').upsert(row);
+      if(r.error){
+        if(/profiles|relation|does not exist|PGRST205/i.test(String(r.error.message || r.error.code || ''))) profilesOk = false;
+        console.warn('成員資料寫入失敗（還沒執行 supabase-upgrade.sql 的 G 段？）：', r.error);
+        return;
+      }
+      profileCache.set(u.id, {name: row.display_name, avatar: row.avatar_url});
+    }catch(err){}
+  }
+  async function loadProfilesFor(ids){
+    if(!sb || !profilesOk) return;
+    const need = Array.from(new Set((ids || []).filter(id => id && !profileCache.has(id))));
+    if(!need.length) return;
+    try{
+      const r = await sb.from('profiles').select('user_id, display_name, avatar_url').in('user_id', need);
+      if(r.error){ profilesOk = false; return; }
+      need.forEach(id => profileCache.set(id, null)); // 讀不到的（訪客、或還沒開過新版 App）記成沒有
+      (r.data || []).forEach(p => profileCache.set(p.user_id, {name: p.display_name, avatar: p.avatar_url}));
+    }catch(err){}
+  }
+  const NOTIF_BELL_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>';
+  function fillNotifAvatar(el, actorId){
+    const p = actorId ? profileCache.get(actorId) : null;
+    el.innerHTML = '';
+    if(p && p.avatar){
+      const img = document.createElement('img');
+      img.alt = '';
+      img.onerror = function(){ el.textContent = (p.name || '?').charAt(0); };
+      img.src = p.avatar;
+      el.appendChild(img);
+    } else if(p && p.name){
+      el.textContent = p.name.charAt(0);
+    } else if(actorId){
+      el.innerHTML = PERSON_SVG; // 訪客、或對方還沒有成員資料
+    } else {
+      el.innerHTML = NOTIF_BELL_SVG; // 舊通知沒有記是誰做的
+    }
+  }
+  authReady.then(function(){ upsertMyProfile(); });
+
   function renderNotificationBadge(){
     const hasUnread = notifications.some(n => isMine(n.recipientId) && !n.read);
     notifDot.hidden = !hasUnread;
@@ -7798,7 +7870,9 @@
       mine.forEach(n => {
         const item = document.createElement('div');
         item.className = 'notif-panel-item';
-        item.innerHTML = '<span class="notif-msg"></span><span class="notif-time"></span>';
+        item.innerHTML = '<span class="notif-avatar"></span><span class="notif-body"><span class="notif-msg"></span><span class="notif-time"></span></span>';
+        item.querySelector('.notif-avatar').dataset.actor = n.actorId || '';
+        fillNotifAvatar(item.querySelector('.notif-avatar'), n.actorId);
         item.querySelector('.notif-msg').textContent = n.message;
         item.querySelector('.notif-time').textContent = formatRelativeTime(n.createdAt);
         // 舊通知（存的時候還沒有這兩個欄位）沒有明確指向的行程，維持
@@ -7812,6 +7886,9 @@
     }
     panel.appendChild(list);
     document.body.appendChild(panel);
+    loadProfilesFor(mine.map(n => n.actorId)).then(function(){ // 頭像資料讀到之後補上
+      panel.querySelectorAll('.notif-avatar').forEach(function(el){ fillNotifAvatar(el, el.dataset.actor || null); });
+    });
 
     const rect = btnNotifications.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
@@ -13239,6 +13316,7 @@
       const r = await sb.auth.updateUser({data: meta});
       if(r.error) throw r.error;
       showToast('照片已更新');
+      upsertMyProfile();
       fillAvatar(document.getElementById('nbAcctPhoto'), r.data && r.data.user ? r.data.user : await currentAuthUser());
       document.getElementById('nbAcctPhotoRecrop').hidden = false;
       document.getElementById('nbAcctPhotoPick').textContent = '更換照片';
@@ -13324,6 +13402,7 @@
         if(r.error) throw r.error;
         showToast('已儲存');
         renderAccountAvatar();
+        upsertMyProfile();
       }
       await refreshAcctPage(); // 儲存完立刻結束編輯模式
     }catch(err){
@@ -13738,6 +13817,7 @@
       const r = await sb.auth.updateUser({data: {display_name: v}});
       if(r.error) throw r.error;
       renderAccountAvatar();
+      upsertMyProfile();
       const next = afterNameStep; afterNameStep = null;
       if(next) next();
     }catch(err){
@@ -13754,6 +13834,7 @@
     purgeLocalNotebookData();
     saveNotebookList(list);
     loadDisplayPrefsFromAccount(); // 換帳號登入：顯示設定換成這個帳號的
+    upsertMyProfile();
     authFlow = null;
     clearInterval(resendTimer);
     renderAccountAvatar();
