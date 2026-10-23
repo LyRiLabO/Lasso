@@ -839,7 +839,7 @@
     padding:2px 10px 14px;
     font-family:'Noto Sans TC', sans-serif; color:var(--ink);
   }
-  .nav-code-row{display:flex; align-items:stretch; gap:4px;}
+  .nav-code-row{display:flex; align-items:stretch; justify-content:center; gap:6px;} /* 密碼＋複製鍵整組放大、置中，左右留一樣的空間 */
   /* 「個人化」選單裡的主題色票：一顆圓形分成三色（該主題的卡片底色／
      主色／強調金色），底下配文字標籤。選到的那個用外框圈起來，跟
      .nav-row.current 用同一套「選到了就描邊」語彙。 */
@@ -922,8 +922,8 @@
   .nav-code{
     display:flex; align-items:center;
     font-family:ui-monospace, Menlo, Consolas, monospace;
-    font-size:17px; font-weight:700; letter-spacing:.14em;
-    padding:5px 6px 5px 10px;
+    font-size:20px; font-weight:700; letter-spacing:.12em;
+    padding:6px 7px 6px 11px;
     border:1px dashed var(--btn-brown); border-radius:8px;
     user-select:all; -webkit-user-select:all;
     box-sizing:border-box;
@@ -938,7 +938,8 @@
   }
   .nav-btn:active{opacity:.6;}
   .nav-code-row .nav-btn{
-    flex:0 0 auto; white-space:nowrap; /* 密碼列縮小後空間變擠，按鍵字數少但不能被壓到一字一行 */
+    flex:0 0 auto; white-space:nowrap; /* 按鍵字數少但不能被壓到一字一行 */
+    font-size:15px; padding:6px 12px;
   }
   .nav-leave{
     border-color:var(--red); color:var(--red);
@@ -979,6 +980,39 @@
       repeating-linear-gradient(to bottom, transparent 0 13px, var(--nav-rule, var(--line-soft)) 13px 14px),
       var(--paper-deep);}
   .nav-row.current{border-color:var(--btn-brown); cursor:default;}
+  /* 「我的手帳」清單的每一本：皮革封面的筆記本（底色跟原本一樣），
+     皮紋用很淡的細點，邊緣一圈車線，左側一條緞帶書籤，顏色是那本手帳目前主題色彩的代表色。 */
+  .nav-row.book-row{
+    overflow:visible; /* 緞帶尾巴稍微垂到封面下緣外面（列與列之間有間距，不會疊到下一本） */
+    padding:9px 12px 9px 34px;
+    border:none; border-radius:6px 10px 10px 6px;
+    background:
+      radial-gradient(rgba(74,55,40,.045) 0.8px, transparent 1.2px) 0 0 / 5px 5px,
+      radial-gradient(rgba(74,55,40,.035) 0.8px, transparent 1.2px) 2px 3px / 7px 7px,
+      linear-gradient(to right, rgba(74,55,40,.10), rgba(74,55,40,0) 14%),
+      var(--card);
+    box-shadow:
+      inset 0 0 0 1px rgba(74,55,40,.10),
+      inset 0 -3px 6px rgba(74,55,40,.06),
+      0 1px 3px var(--shadow);
+  }
+  .nav-row.book-row::before{
+    /* 緞帶書籤：從封面上緣垂下來，尾端剪成燕尾 */
+    content:''; position:absolute; left:13px; top:-2px; bottom:-5px; width:10px;
+    border:none; opacity:1; background:var(--ribbon, var(--red));
+    background-image:linear-gradient(to right, rgba(255,255,255,.18), rgba(0,0,0,.10));
+    clip-path:polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 5px), 0 100%);
+    filter:drop-shadow(0 1px 0.5px rgba(0,0,0,.15));
+  }
+  .nav-row.book-row::after{
+    /* 封面邊緣的車線 */
+    content:''; position:absolute; inset:3px; border-radius:4px 8px 8px 4px;
+    border:1px dashed color-mix(in srgb, var(--ink-faint) 45%, transparent);
+    pointer-events:none;
+  }
+  .nav-row.book-row:active{ background-color:var(--paper-deep); }
+  .nav-row.book-row.current{ box-shadow:inset 0 0 0 1.5px var(--btn-brown), inset 0 -3px 6px rgba(74,55,40,.06), 0 1px 3px var(--shadow); }
+  .nav-rows:has(> .book-row){ gap:10px; padding-bottom:4px; }
   .nav-row-title{font-family:'Noto Serif TC', serif; font-size:16px; font-weight:700; word-break:break-all;}
   .nav-row-sub{font-size:11px; color:var(--ink-faint);}
   /* 置頂的手帳：右上角的圖釘 */
@@ -1002,7 +1036,7 @@
   .book-pin-menu button svg{ color:var(--red); }
   .book-pin-menu button:active{ background:var(--paper-deep); }
   .nav-pair-row .nav-btn{
-    flex:1 1 0; min-width:0; padding:8px 4px;
+    flex:1 1 0; min-width:0; padding:5px 4px;
     flex-direction:column; gap:4px; font-size:12px; line-height:1.3; text-align:center; /* 選單比較窄：圖示在上、文字在下 */
   }
   .nav-rows > .nav-row{ flex-shrink:0; } /* 清單限制高度捲動時，每一本不能被壓扁 */
@@ -3605,7 +3639,7 @@
   button.set-row:active{ background:var(--paper-deep); }
   .set-label{ flex:1 1 auto; min-width:0; }
   .set-value{ color:var(--ink-faint); font-size:14px; }
-  .set-chev{ color:var(--ink-faint); font-size:20px; line-height:1; margin-left:2px; }
+  .set-chev{ flex:0 0 auto; color:var(--ink-faint); margin-left:2px; display:block; } /* SVG 箭頭：跟文字垂直置中 */
   .set-switch-input{ display:none; }
   .set-switch-input:checked + .toggle-switch{ background:var(--red); }
   .set-switch-input:checked + .toggle-switch::after{ transform:translateX(16px); }
@@ -3659,6 +3693,15 @@
   }
   .popup-choice-btn.primary{ background:var(--btn-coffee); color:var(--paper); }
   .popup-choice-btn.danger{ background:var(--red); border-color:var(--red); color:#fff; }
+  .popup-radio-group{ display:flex; flex-direction:column; gap:2px; margin-bottom:6px; }
+  .popup-radio{
+    display:flex; align-items:center; gap:10px; padding:9px 4px; border:none; background:none; cursor:pointer; text-align:left;
+    font-family:'Noto Sans TC', sans-serif; font-size:14.5px; color:var(--ink);
+  }
+  .popup-radio-dot{ flex:0 0 auto; width:18px; height:18px; border-radius:50%; box-sizing:border-box; border:1.5px solid var(--ink-faint); transition:border .12s ease; }
+  .popup-radio.on .popup-radio-dot{ border:5.5px solid var(--red); }
+  .popup-choice-actions{ display:flex; gap:8px; }
+  .popup-choice-actions .popup-choice-btn{ flex:1 1 0; }
   .popup-choice-btn.cancel{ border:none; font-weight:500; color:var(--ink-faint); padding:8px; }
   .set-choice-menu{
     position:fixed; z-index:100002; min-width:150px;
@@ -4081,7 +4124,7 @@
         </button>
         <button type="button" class="device-user-btn nb-tile-btn" id="nbBtnJoin">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-          <span>加入其他人的手帳</span>
+          <span>加入他人手帳</span>
         </button>
       </div>
       <div class="nb-books-dd" id="nbBooksDd" hidden>
@@ -4111,7 +4154,7 @@
     </div>
 
     <div class="nb-step" data-step="join" hidden>
-      <div class="device-user-title">加入其他人的手帳</div>
+      <div class="device-user-title">加入他人手帳</div>
       <div class="nb-field-label">手帳密碼</div>
       <input type="text" id="nbJoinCode" class="nb-input code" inputmode="text" autocapitalize="characters" maxlength="9" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="－－－－－－">
       <div class="nb-error" id="nbJoinError"></div>
@@ -4217,14 +4260,14 @@
         <button type="button" class="nb-link acct-edit-link" id="nbAcctEdit">編輯資料</button>
         <div class="acct-edit-area" id="nbAcctEditArea" hidden>
           <div class="set-list">
-            <button type="button" class="set-row" id="nbAcctChangePw"><span class="set-label">修改密碼</span><span class="set-chev">›</span></button>
+            <button type="button" class="set-row" id="nbAcctChangePw"><span class="set-label">修改密碼</span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
             <div class="set-form" id="nbAcctPwForm" hidden>
               <input type="password" id="nbAcctPw1" class="line-input" autocomplete="new-password" placeholder="新密碼（至少 8 碼）">
               <input type="password" id="nbAcctPw2" class="line-input" autocomplete="new-password" placeholder="再輸入一次">
               <div class="nb-error" id="nbAcctPwError"></div>
               <button type="button" class="set-form-btn" id="nbAcctPwOk">確定</button>
             </div>
-            <button type="button" class="set-row" id="nbAcctChangeEmail"><span class="set-label">更改綁定的 email</span><span class="set-chev">›</span></button>
+            <button type="button" class="set-row" id="nbAcctChangeEmail"><span class="set-label">更改綁定的 email</span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
             <div class="set-form" id="nbAcctEmailForm" hidden>
               <div class="set-form-hint" id="nbAcctEmailHint"></div>
               <input type="email" id="nbAcctEmailNew" class="line-input" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="新的 email">
@@ -4248,14 +4291,14 @@
 
         <div class="acct-sec-title">行程共編</div>
         <div class="set-list">
-          <button type="button" class="set-row" id="nbPermRow"><span class="set-label" id="nbPermVal"></span><span class="set-chev">›</span></button>
+          <button type="button" class="set-row" id="nbPermRow"><span class="set-label" id="nbPermVal"></span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
         </div>
         <div class="perm-hint" id="nbPermHint"></div>
 
         <div class="acct-sec-title">通知</div>
         <div class="set-list">
           <label class="set-row"><span class="set-label">行程開始前提醒我</span><input type="checkbox" id="nbNotifyOn" class="set-switch-input"><span class="toggle-switch" aria-hidden="true"></span></label>
-          <button type="button" class="set-row" id="nbNotifyLeadRow" hidden><span class="set-label">提前</span><span class="set-value" id="nbNotifyLeadVal"></span><span class="set-chev">›</span></button>
+          <button type="button" class="set-row" id="nbNotifyLeadRow" hidden><span class="set-label">提前</span><span class="set-value" id="nbNotifyLeadVal"></span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
         </div>
         <div class="perm-hint" id="nbNotifyStatus"></div>
         <div class="perm-hint acct-soon">提醒功能準備中，暫時不會發送。</div>
@@ -4268,8 +4311,8 @@
         </div>
         <div class="perm-hint" id="nbAppearHint"></div>
         <div class="set-list">
-          <button type="button" class="set-row" id="nbWeekStartRow"><span class="set-label">每週開始</span><span class="set-value" id="nbWeekStartVal"></span><span class="set-chev">›</span></button>
-          <button type="button" class="set-row" id="nbTimeStepRow"><span class="set-label">時間最小刻度</span><span class="set-value" id="nbTimeStepVal"></span><span class="set-chev">›</span></button>
+          <button type="button" class="set-row" id="nbWeekStartRow"><span class="set-label">每週開始</span><span class="set-value" id="nbWeekStartVal"></span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
+          <button type="button" class="set-row" id="nbTimeStepRow"><span class="set-label">時間軸最小刻度</span><span class="set-value" id="nbTimeStepVal"></span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
           <label class="set-row"><span class="set-label">月曆標示週末</span><input type="checkbox" id="nbMarkWeekend" class="set-switch-input"><span class="toggle-switch" aria-hidden="true"></span></label>
           <label class="set-row"><span class="set-label">月曆標示國定假日</span><input type="checkbox" id="nbMarkHoliday" class="set-switch-input"><span class="toggle-switch" aria-hidden="true"></span></label>
         </div>
@@ -4355,8 +4398,8 @@
           <div class="nav-hint" style="margin-top:-4px">長按可以置頂</div>
           <div class="nav-rows nav-book-scroll" id="navBookList"></div>
           <div class="nav-pair-row">
-            <button type="button" class="nav-btn nav-icon-btn" id="navCreateBook"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><line x1="13" y1="6.5" x2="13" y2="12.5"></line><line x1="10" y1="9.5" x2="16" y2="9.5"></line></svg><span>創建新的手帳</span></button>
-            <button type="button" class="nav-btn nav-icon-btn" id="navJoinBook"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span>加入其他人的手帳</span></button>
+            <button type="button" class="nav-btn nav-icon-btn" id="navCreateBook"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><line x1="13" y1="6.5" x2="13" y2="12.5"></line><line x1="10" y1="9.5" x2="16" y2="9.5"></line></svg><span>創建新的手帳</span></button>
+            <button type="button" class="nav-btn nav-icon-btn" id="navJoinBook"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span>加入他人手帳</span></button>
           </div>
           <button type="button" class="nav-btn nav-icon-btn" id="navImport"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>匯入其他手帳資料</span></button>
           <button type="button" class="nav-btn nav-leave" id="navLeave">退出這本手帳</button>
@@ -4697,7 +4740,7 @@
       <div class="field" id="permField">
         <span class="field-label">行程共編</span>
         <div class="set-list">
-          <button type="button" class="set-row" id="permRow"><span class="set-label" id="permVal"></span><span class="set-chev">›</span></button>
+          <button type="button" class="set-row" id="permRow"><span class="set-label" id="permVal"></span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
         </div>
         <div class="perm-hint" id="permHint"></div>
       </div>
@@ -5311,6 +5354,39 @@
       msg.textContent = message;
       card.appendChild(msg);
       const done = function(i){ ov.classList.add('closing'); setTimeout(function(){ ov.remove(); }, 160); resolve(i); };
+      if(opts.radio){
+        // 單選圓框：先選一個（預設 opts.defaultIndex），再按確定
+        let picked = opts.defaultIndex || 0;
+        const group = document.createElement('div');
+        group.className = 'popup-radio-group';
+        labels.forEach(function(l, i){
+          const r = document.createElement('button');
+          r.type = 'button';
+          r.className = 'popup-radio' + (i === picked ? ' on' : '');
+          r.innerHTML = '<span class="popup-radio-dot"></span><span></span>';
+          r.lastChild.textContent = l;
+          r.addEventListener('click', function(){
+            picked = i;
+            group.querySelectorAll('.popup-radio').forEach(function(x, j){ x.classList.toggle('on', j === i); });
+          });
+          group.appendChild(r);
+        });
+        card.appendChild(group);
+        const row = document.createElement('div');
+        row.className = 'popup-choice-actions';
+        const c = document.createElement('button');
+        c.type = 'button'; c.className = 'popup-choice-btn'; c.textContent = '取消';
+        c.addEventListener('click', function(){ done(-1); });
+        const ok = document.createElement('button');
+        ok.type = 'button'; ok.className = 'popup-choice-btn primary'; ok.textContent = '確定';
+        ok.addEventListener('click', function(){ done(picked); });
+        row.appendChild(c); row.appendChild(ok);
+        card.appendChild(row);
+        ov.appendChild(card);
+        ov.addEventListener('click', function(e){ if(e.target === ov) done(-1); });
+        document.body.appendChild(ov);
+        return;
+      }
       labels.forEach(function(l, i){
         const b = document.createElement('button');
         b.type = 'button';
@@ -13411,7 +13487,7 @@
     if(next === defaultPermission){ renderPermSetting(); return; }
     renderPermSetting(next);
     const choice = await popupChoice('改成「' + PERM_LABELS_SHORT[next] + '」，要套用到哪些行程？',
-      ['只有之後的新行程', '現有的行程也一起改']);
+      ['只有之後的新行程', '現有的行程也一起改'], {radio: true, defaultIndex: 0});
     if(choice < 0){ renderPermSetting(); return; } // 取消：回到原本選的那一顆
     setDefaultPermissionLocal(next);
     renderPermSetting();
@@ -14566,9 +14642,18 @@
   }
   const PIN_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2.5l7 7-2.2.6-3.6 3.6.4 4.6-1.8 1.8-4.2-4.2-5.2 5.6-.9-.9 5.6-5.2-4.2-4.2 1.8-1.8 4.6.4 3.6-3.6z"/></svg>';
   // 手帳清單的一列（選單的手帳管理、第二頁的下拉選單共用）：長按切換置頂
+  // 手帳的代表色（緞帶書籤用）：那本手帳目前主題色彩的第一個顏色
+  function notebookRibbonColor(nbId){
+    const t = THEMES.find(x => x.id === storedThemeFor(nbId)) || THEMES[0];
+    const c = t.colors[0];
+    const L = perceivedL(c);
+    return (L != null && L > 72) ? darkenHex(c, 0.12) : c; // 太淺的顏色（例如經典的粉色）在米色封面上看不清楚，稍微加深
+  }
   function makeBookRow(nb, isCurrent){
     const pinned = getPinnedBooks().indexOf(nb.id) !== -1;
     const row = makeNavRow(notebookDisplayName(nb), (isCurrent ? '當前手帳・' : '') + participantsLabel(nb), isCurrent);
+    row.classList.add('book-row');
+    row.style.setProperty('--ribbon', notebookRibbonColor(nb.id));
     if(pinned){
       row.classList.add('pinned');
       const pin = document.createElement('span');
@@ -14673,7 +14758,7 @@
 
     renderNavBookList();
   }
-  // 手帳管理裡的「創建新的手帳」「加入其他人的手帳」：收起選單，直接打開那一步
+  // 手帳管理裡的「創建新的手帳」「加入他人手帳」：收起選單，直接打開那一步
   document.getElementById('navCreateBook').addEventListener('click', function(){
     closeDrawer(); createIconSel = defaultIconSel(); renderIconPickBtn(nbCreateIconBtn, createIconSel); prepareNameDefaults(); openStartOverlay('create');
   });
