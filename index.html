@@ -984,34 +984,35 @@
      皮紋用很淡的細點，最左側一條車線，左側一條單色緞帶書籤（不超出封面），顏色是那本手帳目前主題色彩的代表色。 */
   .nav-row.book-row{
     overflow:visible;
-    padding:9px 12px 9px 38px;
+    padding:9px 12px 9px 34px;
     border:none; border-radius:6px 10px 10px 6px;
+    /* 封面本身是單一底色（不做漸層），只疊很淡的皮紋細點 */
     background:
       radial-gradient(rgba(74,55,40,.045) 0.8px, transparent 1.2px) 0 0 / 5px 5px,
       radial-gradient(rgba(74,55,40,.035) 0.8px, transparent 1.2px) 2px 3px / 7px 7px,
-      linear-gradient(to right, rgba(74,55,40,.10), rgba(74,55,40,0) 14%),
       var(--card);
-    box-shadow:
-      inset 0 0 0 1px rgba(74,55,40,.10),
-      inset 0 -3px 6px rgba(74,55,40,.06),
-      0 1px 3px var(--shadow);
+    box-shadow:inset 0 0 0 1px rgba(74,55,40,.10), 0 1px 3px var(--shadow);
   }
-  .nav-row.book-row::before{
-    /* 緞帶書籤：從封面上緣垂下來，尾端剪成燕尾 */
-    /* 單色、不超出封面：尾端停在離下緣「封面高度 1/4」的地方 */
-    content:''; position:absolute; left:15px; top:-2px; bottom:25%; width:13px;
-    border:none; opacity:1; background:var(--ribbon, var(--red)); background-image:none;
+  .nav-row.book-row::before{ content:none; } /* 不用原本的打孔 */
+  /* 緞帶書籤：外層負責陰影、內層剪成燕尾（clip-path 會把同一層的陰影一起剪掉，所以分兩層）。
+     上緣只高出封面一點點，尾端垂到參與者那一行字的底部齊平（＝封面的下內距）。 */
+  .book-ribbon{
+    position:absolute; left:11px; top:-1px; bottom:9px; width:13px;
+    filter:drop-shadow(0 1.5px 1.5px rgba(0,0,0,.25));
+    pointer-events:none;
+  }
+  .book-ribbon i{
+    display:block; width:100%; height:100%; background:var(--ribbon, var(--red));
     clip-path:polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 5px), 0 100%);
-    filter:drop-shadow(0 1px 0.5px rgba(0,0,0,.15));
   }
   .nav-row.book-row::after{
     /* 車線：只有最左側一條直線 */
-    content:''; position:absolute; left:7px; top:4px; bottom:4px; width:0;
-    border-left:1px dashed color-mix(in srgb, var(--ink-faint) 55%, transparent);
+    content:''; position:absolute; left:5px; top:4px; bottom:4px; width:0;
+    border-left:1.2px dashed color-mix(in srgb, var(--ink-faint) 85%, transparent);
     pointer-events:none;
   }
   .nav-row.book-row:active{ background-color:var(--paper-deep); }
-  .nav-row.book-row.current{ box-shadow:inset 0 0 0 1.5px var(--btn-brown), inset 0 -3px 6px rgba(74,55,40,.06), 0 1px 3px var(--shadow); }
+  .nav-row.book-row.current{ box-shadow:inset 0 0 0 1.5px var(--btn-brown), 0 1px 3px var(--shadow); }
   .nav-rows:has(> .book-row){ gap:10px; padding-bottom:4px; }
   .nav-row-title{font-family:'Noto Serif TC', serif; font-size:16px; font-weight:700; word-break:break-all;}
   .nav-row-sub{font-size:11px; color:var(--ink-faint);}
@@ -14364,6 +14365,12 @@
   function applyTheme(themeId){
     setThemeAttr(themeId);
     if(NOTEBOOK){ try{ localStorage.setItem(themeStorageKey(NOTEBOOK.id), themeId); }catch(err){} } // 只存給目前這本手帳
+    // 選單裡「我的手帳」那一本的緞帶顏色馬上跟著換（不用關掉選單再打開）
+    if(NOTEBOOK){
+      document.querySelectorAll('.book-row').forEach(function(r){
+        if(r.dataset.nbId === NOTEBOOK.id) r.style.setProperty('--ribbon', notebookRibbonColor(NOTEBOOK.id));
+      });
+    }
     syncThemeColorMeta();
     // 行程顏色會跟著風格換成配對色，已經畫在畫面上的卡片要重畫
     if(NOTEBOOK){
@@ -14642,18 +14649,23 @@
   }
   const PIN_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2.5l7 7-2.2.6-3.6 3.6.4 4.6-1.8 1.8-4.2-4.2-5.2 5.6-.9-.9 5.6-5.2-4.2-4.2 1.8-1.8 4.6.4 3.6-3.6z"/></svg>';
   // 手帳清單的一列（選單的手帳管理、第二頁的下拉選單共用）：長按切換置頂
-  // 手帳的代表色（緞帶書籤用）：那本手帳目前主題色彩的第一個顏色
+  // 手帳的代表色（緞帶書籤用）：從那本手帳目前主題的三色圓圈裡取一色，直接用原色。
+  // 使用者指定的幾個主題用指定的那一色，其他用第一色。
+  const RIBBON_COLOR_INDEX = {'default': 1, 'berry-picnic': 2, 'showa': 1, 'british-academy': 1, 'lemon-soda': 1};
   function notebookRibbonColor(nbId){
     const t = THEMES.find(x => x.id === storedThemeFor(nbId)) || THEMES[0];
-    const c = t.colors[0];
-    const L = perceivedL(c);
-    return (L != null && L > 72) ? darkenHex(c, 0.12) : c; // 太淺的顏色（例如經典的粉色）在米色封面上看不清楚，稍微加深
+    return t.colors[RIBBON_COLOR_INDEX[t.id] || 0];
   }
   function makeBookRow(nb, isCurrent){
     const pinned = getPinnedBooks().indexOf(nb.id) !== -1;
     const row = makeNavRow(notebookDisplayName(nb), (isCurrent ? '當前手帳・' : '') + participantsLabel(nb), isCurrent);
     row.classList.add('book-row');
+    row.dataset.nbId = nb.id;
     row.style.setProperty('--ribbon', notebookRibbonColor(nb.id));
+    const rib = document.createElement('span');
+    rib.className = 'book-ribbon';
+    rib.innerHTML = '<i></i>';
+    row.appendChild(rib);
     if(pinned){
       row.classList.add('pinned');
       const pin = document.createElement('span');
