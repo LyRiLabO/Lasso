@@ -657,6 +657,26 @@
   }
   .device-user-action.primary{background:var(--btn-coffee); color:var(--paper);}
   .device-user-action:disabled{opacity:.4; cursor:default;}
+  /* 入口頁面（日日貼的開始畫面，含帳號頁面）：按鍵和輸入框不畫框線，
+     用比較淺的卡片色當底，靠陰影暗示範圍（跟頂端那排圖示按鍵同一套陰影，各主題自己有調）。 */
+  #notebookStartOverlay .device-user-btn,
+  #notebookStartOverlay .device-user-action:not(.primary),
+  #notebookStartOverlay .icon-pick-btn{
+    border:none; background:var(--card); box-shadow:var(--btn-relief);
+  }
+  #notebookStartOverlay .device-user-action.primary{ border:none; box-shadow:var(--btn-relief); }
+  #notebookStartOverlay .device-user-btn:active,
+  #notebookStartOverlay .device-user-action:not(.primary):active,
+  #notebookStartOverlay .icon-pick-btn:active{
+    background:var(--btn-face-pressed); color:var(--ink); box-shadow:var(--btn-relief-pressed);
+  }
+  #notebookStartOverlay .nb-input:not(.acct-name-input){
+    border:none; background:var(--card);
+    box-shadow:0 1px 5px color-mix(in srgb, var(--ink) 16%, transparent), 0 0 0 0.5px color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+  #notebookStartOverlay .nb-input:not(.acct-name-input):focus{
+    box-shadow:0 1px 5px color-mix(in srgb, var(--ink) 16%, transparent), 0 0 0 1.5px var(--ink-faint);
+  }
 
   /* 開啟時的「創建／加入手帳」畫面、以及手帳密碼面板共用的樣式 */
   .nb-step{display:flex; flex-direction:column; gap:8px; animation:nb-step-in .2s ease;}
@@ -1021,7 +1041,8 @@
   .nav-row.book-row::after{
     /* 車線：只有最左側一條直線 */
     content:''; position:absolute; left:5px; top:4px; bottom:4px; width:0;
-    border-left:1.2px dashed color-mix(in srgb, var(--ink-faint) 85%, transparent);
+    border-left:1.2px dashed color-mix(in srgb, var(--ink-faint) 50%, transparent);
+    filter:drop-shadow(0.7px 0.7px 0.4px rgba(74,55,40,.22)); /* 一點點陰影：像車線壓進皮革裡 */
     pointer-events:none;
   }
   .nav-row.book-row:active{ background-color:var(--paper-deep); }
@@ -1035,7 +1056,10 @@
   .nav-row.pinned{ padding-right:28px; }
   /* 手帳管理：清單一次最多看到三本（高度由 JS 量），多的捲動 */
   .nav-book-scroll{ overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
-  .nav-pair-row{ display:flex; gap:8px; }
+  .nav-pair-row{ display:flex; gap:8px; padding:2px 0 4px; }
+  /* 手帳管理的創建／加入：沒有框線，按鍵面用比較淺的卡片色，靠陰影暗示按鍵的範圍 */
+  .nav-pair-row .nav-btn{ border:none; background:var(--card); box-shadow:var(--btn-relief); }
+  .nav-pair-row .nav-btn:active{ opacity:1; background:var(--btn-face-pressed); box-shadow:var(--btn-relief-pressed); }
   .book-pin-menu{
     position:fixed; z-index:100002;
     background:var(--card); border-radius:12px; overflow:hidden;
@@ -3576,6 +3600,9 @@
     color:var(--ink-faint);
   }
 
+  /* 輸入框的提示文字（placeholder）：瀏覽器預設的灰色在英倫學院這種偏深的底色上幾乎看不到，
+     改成跟著主題的次要文字色 */
+  input::placeholder, textarea::placeholder{ color:color-mix(in srgb, var(--ink) 55%, var(--card)); opacity:1; }
   /* 說明文字沒有內容時整行收起來，不留空白 */
   .device-user-hint:empty, .perm-hint:empty, .nav-hint:empty{ display:none; }
   /* ---- 帳號頁面 ---- */
