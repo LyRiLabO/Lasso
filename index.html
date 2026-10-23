@@ -981,10 +981,10 @@
       var(--paper-deep);}
   .nav-row.current{border-color:var(--btn-brown); cursor:default;}
   /* 「我的手帳」清單的每一本：皮革封面的筆記本（底色跟原本一樣），
-     皮紋用很淡的細點，邊緣一圈車線，左側一條緞帶書籤，顏色是那本手帳目前主題色彩的代表色。 */
+     皮紋用很淡的細點，最左側一條車線，左側一條單色緞帶書籤（不超出封面），顏色是那本手帳目前主題色彩的代表色。 */
   .nav-row.book-row{
-    overflow:visible; /* 緞帶尾巴稍微垂到封面下緣外面（列與列之間有間距，不會疊到下一本） */
-    padding:9px 12px 9px 34px;
+    overflow:visible;
+    padding:9px 12px 9px 38px;
     border:none; border-radius:6px 10px 10px 6px;
     background:
       radial-gradient(rgba(74,55,40,.045) 0.8px, transparent 1.2px) 0 0 / 5px 5px,
@@ -998,16 +998,16 @@
   }
   .nav-row.book-row::before{
     /* 緞帶書籤：從封面上緣垂下來，尾端剪成燕尾 */
-    content:''; position:absolute; left:13px; top:-2px; bottom:-5px; width:10px;
-    border:none; opacity:1; background:var(--ribbon, var(--red));
-    background-image:linear-gradient(to right, rgba(255,255,255,.18), rgba(0,0,0,.10));
+    /* 單色、不超出封面：尾端停在離下緣「封面高度 1/4」的地方 */
+    content:''; position:absolute; left:15px; top:-2px; bottom:25%; width:13px;
+    border:none; opacity:1; background:var(--ribbon, var(--red)); background-image:none;
     clip-path:polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 5px), 0 100%);
     filter:drop-shadow(0 1px 0.5px rgba(0,0,0,.15));
   }
   .nav-row.book-row::after{
-    /* 封面邊緣的車線 */
-    content:''; position:absolute; inset:3px; border-radius:4px 8px 8px 4px;
-    border:1px dashed color-mix(in srgb, var(--ink-faint) 45%, transparent);
+    /* 車線：只有最左側一條直線 */
+    content:''; position:absolute; left:7px; top:4px; bottom:4px; width:0;
+    border-left:1px dashed color-mix(in srgb, var(--ink-faint) 55%, transparent);
     pointer-events:none;
   }
   .nav-row.book-row:active{ background-color:var(--paper-deep); }
