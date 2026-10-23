@@ -3445,6 +3445,16 @@
     transition:opacity .15s ease;
   }
   .month-cell .cell-fade-hint.visible{opacity:1;}
+  .month-cell.has-holiday .cell-fade-hint{ display:none; } /* 節日名稱那一條已經有同樣的漸層 */
+  .month-cell.has-holiday .cell-events{ padding-bottom:14px; } /* 捲到底時最後一個行程不會被節日名稱蓋住 */
+  .month-cell .cell-holiday{
+    position:absolute; left:0; right:0; bottom:0;
+    padding:8px 2px 2px; text-align:center;
+    font-family:'Noto Sans TC', sans-serif; font-size:9px; line-height:1.2; font-weight:700;
+    color:var(--red); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    background:linear-gradient(to bottom, color-mix(in srgb, var(--cell-bg) 0%, transparent), var(--cell-bg) 55%);
+    pointer-events:none;
+  }
 
   .delete-btn{
     margin-top:6px;
@@ -3535,7 +3545,10 @@
   .acct-name{ font-family:'Noto Serif TC', serif; font-weight:700; font-size:19px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .acct-name[hidden]{ display:none; }
   .acct-email{ font-family:'Noto Sans TC', sans-serif; font-size:13px; color:var(--ink-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .acct-name-input{ margin:0; padding:6px 2px; font-size:17px; }
+  .nb-input.acct-name-input{
+    margin:0; padding:2px 0 4px; font-family:'Noto Serif TC', serif; font-weight:700; font-size:19px;
+    border:none; border-bottom:1.5px solid var(--ink-faint); border-radius:0; background:transparent; box-shadow:none;
+  }
   .acct-name-input[hidden]{ display:none; }
   .acct-page{ position:relative; }
   .acct-photo-menu{
@@ -3588,6 +3601,57 @@
   .set-switch-input{ display:none; }
   .set-switch-input:checked + .toggle-switch{ background:var(--red); }
   .set-switch-input:checked + .toggle-switch::after{ transform:translateX(16px); }
+  .set-form{ display:flex; flex-direction:column; gap:10px; padding:6px 14px 14px; border-top:1px solid var(--line-soft); background:var(--paper); animation:todo-row-in .2s ease; }
+  .set-form[hidden]{ display:none; }
+  .set-form + .set-row{ border-top:1px solid var(--line-soft); }
+  .set-form-hint{ font-family:'Noto Sans TC', sans-serif; font-size:12.5px; color:var(--ink-faint); }
+  .set-form-hint:empty{ display:none; }
+  .line-input{
+    width:100%; box-sizing:border-box; border:none; border-bottom:1.5px solid var(--ink-faint); border-radius:0;
+    background:transparent; padding:8px 0 6px; outline:none;
+    font-family:'Noto Sans TC', sans-serif; font-size:15px; color:var(--ink);
+  }
+  .line-input[hidden]{ display:none; }
+  .line-input:focus{ border-bottom-color:var(--ink); }
+  .set-form-btn{
+    align-self:flex-end; padding:7px 18px; border-radius:10px; border:none; cursor:pointer;
+    background:var(--btn-coffee); color:var(--paper);
+    font-family:'Noto Sans TC', sans-serif; font-size:13.5px; font-weight:700;
+  }
+  .set-form-btn:disabled{ opacity:.5; }
+  .set-options{ overflow:hidden; transition:max-height .22s cubic-bezier(.2,.8,.3,1); border-top:1px solid var(--line-soft); background:var(--paper); }
+  .set-options + .set-row{ border-top:1px solid var(--line-soft); }
+  .set-option{
+    display:flex; align-items:center; gap:6px; width:100%; box-sizing:border-box;
+    padding:10px 14px 10px 18px; border:none; background:none; cursor:pointer; text-align:left;
+    font-family:'Noto Sans TC', sans-serif; font-size:14px; color:var(--ink);
+  }
+  .set-option.on{ font-weight:700; }
+  .set-option:active{ background:var(--paper-deep); }
+  .set-row .set-chev{ transition:transform .2s ease; }
+  .set-row.open .set-chev{ transform:rotate(90deg); }
+  .set-row.readonly{ cursor:default; opacity:.6; }
+  .set-row.readonly .set-chev{ display:none; }
+  /* 小彈窗詢問（popupChoice） */
+  .popup-choice-overlay{
+    position:fixed; inset:0; z-index:100003; background:rgba(20,22,30,.38);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+    animation:overlay-fade-in .16s ease;
+  }
+  .popup-choice-overlay.closing{ animation:overlay-fade-out .16s ease forwards; }
+  .popup-choice-card{
+    width:100%; max-width:300px; background:var(--card); border-radius:16px; padding:18px 16px 12px;
+    display:flex; flex-direction:column; gap:8px; box-shadow:0 12px 32px rgba(0,0,0,.3);
+    animation:popover-in .2s cubic-bezier(.2,.8,.3,1);
+  }
+  .popup-choice-msg{ font-family:'Noto Sans TC', sans-serif; font-size:15px; line-height:1.5; color:var(--ink); text-align:center; margin-bottom:6px; }
+  .popup-choice-btn{
+    padding:10px; border-radius:11px; border:1.5px solid var(--btn-coffee); background:transparent; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; font-size:14.5px; font-weight:700; color:var(--ink);
+  }
+  .popup-choice-btn.primary{ background:var(--btn-coffee); color:var(--paper); }
+  .popup-choice-btn.danger{ background:var(--red); border-color:var(--red); color:#fff; }
+  .popup-choice-btn.cancel{ border:none; font-weight:500; color:var(--ink-faint); padding:8px; }
   .set-choice-menu{
     position:fixed; z-index:100002; min-width:150px;
     background:var(--card); border-radius:12px; overflow:hidden;
@@ -4011,7 +4075,7 @@
     <div class="nb-step" data-step="create" hidden>
       <div class="device-user-title">創建新的手帳</div>
       <div class="nb-field-label">手帳名稱</div>
-      <input type="text" id="nbCreateNotebookName" class="nb-input" autocomplete="off" placeholder="例如：我們的行程表">
+      <input type="text" id="nbCreateNotebookName" class="nb-input" autocomplete="off" placeholder="新手帳">
       <div class="nb-field-label">你的欄位名稱</div>
       <input type="text" id="nbCreateName" class="nb-input" autocomplete="off">
       <div class="nb-field-label">你的圖示</div>
@@ -4054,7 +4118,7 @@
       <div class="device-user-title" id="nbAuthTitle">註冊／登入</div>
       <div class="device-user-hint" id="nbAuthHint"></div>
       <div class="nb-field-label">Email</div>
-      <input type="email" id="nbAuthEmail" class="nb-input" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com">
+      <input type="email" id="nbAuthEmail" class="nb-input" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
       <div class="nb-field-label" id="nbAuthPwLabel" hidden>密碼</div>
       <input type="password" id="nbAuthPw" class="nb-input" autocomplete="current-password" hidden>
       <div class="nb-error" id="nbAuthError"></div>
@@ -4130,8 +4194,24 @@
       <div id="nbAcctUser" hidden>
         <button type="button" class="nb-link acct-edit-link" id="nbAcctEdit">編輯資料</button>
         <div class="acct-edit-area" id="nbAcctEditArea" hidden>
-          <button type="button" class="acct-edit-row" id="nbAcctChangePw"><span>修改密碼</span><span class="acct-row-arrow">›</span></button>
-          <button type="button" class="acct-edit-row" id="nbAcctChangeEmail"><span>更改綁定的 email</span><span class="acct-row-arrow">›</span></button>
+          <div class="set-list">
+            <button type="button" class="set-row" id="nbAcctChangePw"><span class="set-label">修改密碼</span><span class="set-chev">›</span></button>
+            <div class="set-form" id="nbAcctPwForm" hidden>
+              <input type="password" id="nbAcctPw1" class="line-input" autocomplete="new-password" placeholder="新密碼（至少 8 碼）">
+              <input type="password" id="nbAcctPw2" class="line-input" autocomplete="new-password" placeholder="再輸入一次">
+              <div class="nb-error" id="nbAcctPwError"></div>
+              <button type="button" class="set-form-btn" id="nbAcctPwOk">確定</button>
+            </div>
+            <button type="button" class="set-row" id="nbAcctChangeEmail"><span class="set-label">更改綁定的 email</span><span class="set-chev">›</span></button>
+            <div class="set-form" id="nbAcctEmailForm" hidden>
+              <div class="set-form-hint" id="nbAcctEmailHint"></div>
+              <input type="email" id="nbAcctEmailNew" class="line-input" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="新的 email">
+              <input type="text" id="nbAcctEmailCode" class="line-input" inputmode="numeric" maxlength="10" autocomplete="one-time-code" placeholder="驗證碼" hidden>
+              <div class="nb-error" id="nbAcctEmailError"></div>
+              <button type="button" class="set-form-btn" id="nbAcctEmailOk">寄送驗證碼</button>
+              <button type="button" class="nb-link" id="nbAcctEmailResend" style="padding:4px" hidden>重新寄送</button>
+            </div>
+          </div>
           <div class="nb-error" id="nbAcctError"></div>
           <div class="device-user-actions" style="margin-top:6px">
             <button type="button" class="device-user-action" id="nbAcctEditCancel">返回</button>
@@ -4144,11 +4224,9 @@
       <div class="acct-settings" id="nbAcctSettings">
         <div class="acct-settings-title">設定</div>
 
-        <div class="acct-sec-title">預設權限</div>
-        <div class="perm-seg" id="nbPermSeg">
-          <button type="button" data-perm="view">僅檢視</button>
-          <button type="button" data-perm="join">可加入</button>
-          <button type="button" data-perm="edit">可編輯</button>
+        <div class="acct-sec-title">行程共編</div>
+        <div class="set-list">
+          <button type="button" class="set-row" id="nbPermRow"><span class="set-label">新行程，其他人可以</span><span class="set-value" id="nbPermVal"></span><span class="set-chev">›</span></button>
         </div>
         <div class="perm-hint" id="nbPermHint"></div>
 
@@ -4600,11 +4678,9 @@
 
       <!-- 行程權限：其他人（不是建立者）可以做什麼。只有建立者能改。 -->
       <div class="field" id="permField">
-        <span class="field-label">其他人可以</span>
-        <div class="perm-seg" id="permSeg">
-          <button type="button" data-perm="view">僅檢視</button>
-          <button type="button" data-perm="join">可加入</button>
-          <button type="button" data-perm="edit">可編輯</button>
+        <span class="field-label">行程共編</span>
+        <div class="set-list">
+          <button type="button" class="set-row" id="permRow"><span class="set-label">其他人可以</span><span class="set-value" id="permVal"></span><span class="set-chev">›</span></button>
         </div>
         <div class="perm-hint" id="permHint"></div>
       </div>
@@ -5163,6 +5239,80 @@
      資料庫那邊有同一套規則（supabase-upgrade.sql 的 trigger）。 */
   const PERMS = ['view', 'join', 'edit'];
   const PERM_LABELS = {view:'僅供檢視', join:'可供加入', edit:'可供編輯'};
+  const PERM_LABELS_SHORT = {view:'僅檢視', join:'可加入', edit:'可編輯'};
+
+  /* ---------------- 清單式選項：點一列在下面展開選項，再點一次收合 ----------------
+     （帳號頁面的設定、行程編輯頁的行程共編共用） */
+  function closeInlineOptions(rowEl){
+    const next = rowEl && rowEl.nextElementSibling;
+    rowEl && rowEl.classList.remove('open');
+    if(next && next.classList.contains('set-options')){
+      const panel = next;
+      panel.style.maxHeight = panel.scrollHeight + 'px';
+      void panel.offsetHeight;
+      panel.style.maxHeight = '0px';
+      setTimeout(function(){ panel.remove(); }, 220);
+    }
+  }
+  function toggleInlineOptions(rowEl, opts, current, onPick){
+    const next = rowEl.nextElementSibling;
+    if(next && next.classList.contains('set-options') && rowEl.classList.contains('open')){ closeInlineOptions(rowEl); return; }
+    // 同一個清單裡其他展開的先收起來
+    const list = rowEl.parentElement;
+    list.querySelectorAll('.set-row.open').forEach(function(r){ if(r !== rowEl) closeInlineOptions(r); });
+    const panel = document.createElement('div');
+    panel.className = 'set-options';
+    opts.forEach(function(o){
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'set-option' + (o[0] === current ? ' on' : '');
+      b.innerHTML = '<span class="set-check">' + (o[0] === current ? '✓' : '') + '</span><span></span>';
+      b.lastChild.textContent = o[1];
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        closeInlineOptions(rowEl);
+        if(o[0] !== current) onPick(o[0]);
+      });
+      panel.appendChild(b);
+    });
+    rowEl.after(panel);
+    rowEl.classList.add('open');
+    panel.style.maxHeight = '0px';
+    void panel.offsetHeight;
+    panel.style.maxHeight = panel.scrollHeight + 'px';
+  }
+  // 小彈窗詢問（蓋在所有畫面上面，不換頁）：回傳選了第幾個，取消回傳 -1
+  function popupChoice(message, labels, opts){
+    opts = opts || {};
+    return new Promise(function(resolve){
+      const ov = document.createElement('div');
+      ov.className = 'popup-choice-overlay';
+      const card = document.createElement('div');
+      card.className = 'popup-choice-card';
+      const msg = document.createElement('div');
+      msg.className = 'popup-choice-msg';
+      msg.textContent = message;
+      card.appendChild(msg);
+      const done = function(i){ ov.classList.add('closing'); setTimeout(function(){ ov.remove(); }, 160); resolve(i); };
+      labels.forEach(function(l, i){
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'popup-choice-btn' + (opts.danger === i ? ' danger' : '') + (i === 0 && opts.danger == null ? ' primary' : '');
+        b.textContent = l;
+        b.addEventListener('click', function(){ done(i); });
+        card.appendChild(b);
+      });
+      const c = document.createElement('button');
+      c.type = 'button';
+      c.className = 'popup-choice-btn cancel';
+      c.textContent = '取消';
+      c.addEventListener('click', function(){ done(-1); });
+      card.appendChild(c);
+      ov.appendChild(card);
+      ov.addEventListener('click', function(e){ if(e.target === ov) done(-1); });
+      document.body.appendChild(ov);
+    });
+  }
   const PERM_HINTS = {
     view: '其他人只能查看、複製。',
     join: '其他人可以加入或退出。',
@@ -6342,25 +6492,26 @@
      其他年份第一次用到時從 jsDelivr 抓，存在這支裝置。
      holidays：週一到週五放假的日子＋有名稱的假日（月日 MMDD）；workdays：週末補班的日子。 */
   const TW_HOLIDAYS = {
-    2025: {holidays: ['0101','0127','0128','0129','0130','0131','0228','0403','0404','0530','0531','0928','0929','1006','1010','1024','1025','1225'], workdays: ['0208']},
-    2026: {holidays: ['0101','0215','0216','0217','0218','0219','0220','0227','0228','0403','0404','0405','0406','0501','0619','0925','0928','1009','1010','1025','1026','1225'], workdays: []},
-    2027: {holidays: ['0101','0204','0205','0206','0207','0208','0209','0210','0228','0301','0404','0405','0406','0430','0501','0609','0915','0928','1010','1011','1025','1224','1225','1231'], workdays: []}
+    2025: {names: {'0101':'開國紀念日','0127':'小年夜','0128':'農曆除夕','0129':'春節','0130':'春節','0131':'春節','0228':'和平紀念日','0403':'補假','0404':'兒童節及民族掃墓節','0530':'補假','0531':'端午節','0928':'孔子誕辰紀念日','0929':'補假','1006':'中秋節','1010':'國慶日','1024':'補假','1025':'臺灣光復暨金門古寧頭大捷紀念日','1225':'行憲紀念日'}, workdays: ['0208']},
+    2026: {names: {'0101':'開國紀念日','0215':'小年夜','0216':'農曆除夕','0217':'春節','0218':'春節','0219':'春節','0220':'補假','0227':'補假','0228':'和平紀念日','0403':'補假','0404':'兒童節','0405':'清明節','0406':'補假','0501':'勞動節','0619':'端午節','0925':'中秋節','0928':'孔子誕辰紀念日/教師節','1009':'補假','1010':'國慶日','1025':'臺灣光復暨金門古寧頭大捷紀念日','1026':'補假','1225':'行憲紀念日'}, workdays: []},
+    2027: {names: {'0101':'開國紀念日','0204':'小年夜','0205':'農曆除夕','0206':'春節','0207':'春節','0208':'春節','0209':'補假','0210':'補假','0228':'和平紀念日','0301':'補假','0404':'兒童節','0405':'清明節','0406':'補假','0430':'補假','0501':'勞動節','0609':'端午節','0915':'中秋節','0928':'孔子誕辰紀念日/教師節','1010':'國慶日','1011':'補假','1025':'臺灣光復暨金門古寧頭大捷紀念日','1224':'補假','1225':'行憲紀念日','1231':'補假'}, workdays: []}
   };
+  // 月曆格子很窄：太長的節日名稱換成常見的簡稱
+  const HOLIDAY_SHORT = {'臺灣光復暨金門古寧頭大捷紀念日':'光復節', '孔子誕辰紀念日/教師節':'教師節', '孔子誕辰紀念日':'教師節', '兒童節及民族掃墓節':'兒童節', '開國紀念日':'元旦'};
   const holidayFetching = {};
   function holidayYear(y){
     if(TW_HOLIDAYS[y]) return TW_HOLIDAYS[y];
-    try{ const c = JSON.parse(localStorage.getItem('plannerHolidays:' + y) || 'null'); if(c && Array.isArray(c.holidays)){ TW_HOLIDAYS[y] = c; return c; } }catch(e){}
+    try{ const c = JSON.parse(localStorage.getItem('plannerHolidays2:' + y) || 'null'); if(c && c.names){ TW_HOLIDAYS[y] = c; return c; } }catch(e){}
     if(!holidayFetching[y] && typeof fetch === 'function'){
       holidayFetching[y] = true;
       fetch('https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/' + y + '.json').then(r => r.ok ? r.json() : null).then(function(list){
         if(!Array.isArray(list)) return;
         const weekend = w => w === '六' || w === '日';
-        const data = {
-          holidays: list.filter(x => x.isHoliday && (x.description || !weekend(x.week))).map(x => String(x.date).slice(4)),
-          workdays: list.filter(x => !x.isHoliday && weekend(x.week)).map(x => String(x.date).slice(4))
-        };
+        const names = {};
+        list.filter(x => x.isHoliday && (x.description || !weekend(x.week))).forEach(x => { names[String(x.date).slice(4)] = x.description || '放假'; });
+        const data = {names: names, workdays: list.filter(x => !x.isHoliday && weekend(x.week)).map(x => String(x.date).slice(4))};
         TW_HOLIDAYS[y] = data;
-        try{ localStorage.setItem('plannerHolidays:' + y, JSON.stringify(data)); }catch(e){}
+        try{ localStorage.setItem('plannerHolidays2:' + y, JSON.stringify(data)); }catch(e){}
         try{ if(pageMonth.classList.contains('active')) renderMonthGrid(); }catch(e){}
       }).catch(function(){});
     }
@@ -6370,12 +6521,19 @@
     if(!markWeekend && !markHoliday) return false;
     const y = Number(dateStr.slice(0, 4)), md = dateStr.slice(5, 7) + dateStr.slice(8, 10);
     const data = (markWeekend || markHoliday) ? holidayYear(y) : null;
-    if(markHoliday && data && data.holidays.indexOf(md) !== -1) return true;
+    if(markHoliday && data && data.names[md]) return true;
     if(markWeekend){
       const wd = weekdayOf(dateStr);
       if((wd === 0 || wd === 6) && !(data && data.workdays.indexOf(md) !== -1)) return true; // 補班的週末不標
     }
     return false;
+  }
+  // 國定假日的名稱（月曆格子底部的小字）；沒開「標示國定假日」或不是假日就回傳空字串
+  function holidayLabel(dateStr){
+    if(!markHoliday) return '';
+    const data = holidayYear(Number(dateStr.slice(0, 4)));
+    const n = data && data.names[dateStr.slice(5, 7) + dateStr.slice(8, 10)];
+    return n ? (HOLIDAY_SHORT[n] || n) : '';
   }
   function setTimeStep(v){
     if(TIME_STEPS.indexOf(v) < 0) return;
@@ -7913,7 +8071,7 @@
       validate: function(value){
         const v = (value || '').trim();
         if(!v || v === col.name) return '';
-        return nameLengthError(v) || (columns.some(c => c.id !== col.id && c.name === v) ? '名稱已被使用' : '');
+        return nameLengthError(v);
       }
     });
   }
@@ -8718,11 +8876,8 @@
       if(!sel.icon){
         if(!opts.iconOptional){ errEl.textContent = '請先選一個圖示'; return; } // 圖示可以不要（只留名稱）
         if(opts.requireOne && !name){ errEl.textContent = '名稱和圖示至少要有一個'; return; }
-      } else {
-        const used = findIconComboUser(opts.usedCols, sel, opts.excludeOwnerId);
-        if(used){ errEl.textContent = '這個圖示與顏色已經被「' + colLabel(used) + '」使用了，\n請換一個圖示或顏色。'; return; }
       }
-      close();
+      close(); // 名稱、圖示都不再擋重複（使用者 10/23 決定：完全自由）
       opts.onConfirm({icon: sel.icon, color: sel.color, name: name});
     });
   }
@@ -8740,7 +8895,7 @@
           const v = (value || '').trim();
           if(!v) return '';
           if(v === col.name) return '';
-          return nameLengthError(v) || (columns.some(c => c.id !== col.id && c.name === v) ? '名稱已被使用' : '');
+          return nameLengthError(v);
         }
       },
       iconOptional: true,
@@ -11020,7 +11175,7 @@
         validate: function(value){
           const v = (value || '').trim();
           if(!v) return '';
-          return nameLengthError(v) || (columns.some(c => c.name === v) ? '名稱已被使用' : '');
+          return nameLengthError(v);
         }
       },
       initial: mineIcon ? {icon: mineIcon.icon, color: mineIcon.color} : null,
@@ -11170,22 +11325,19 @@
   let editLeaveHint = '';
 
   const btnJoin = document.getElementById('btnJoin');
-  const permSeg = document.getElementById('permSeg');
+  const permRow = document.getElementById('permRow');
+  const PERM_OPTS = [['view', '僅檢視'], ['join', '可加入'], ['edit', '可編輯']];
   const permHint = document.getElementById('permHint');
   let editPermission = 'view';
   function renderPermSeg(){
-    permSeg.classList.toggle('readonly', !editIsCreator);
-    permSeg.querySelectorAll('button').forEach(b => {
-      b.classList.toggle('selected', b.dataset.perm === editPermission);
-      b.disabled = !editIsCreator;
-    });
+    closeInlineOptions(permRow);
+    permRow.classList.toggle('readonly', !editIsCreator); // 不是建立者：看得到設定，但不能展開修改
+    document.getElementById('permVal').textContent = PERM_LABELS_SHORT[editPermission];
     permHint.textContent = (editIsCreator ? '' : '建立者的設定：') + PERM_HINTS[editPermission];
   }
-  permSeg.addEventListener('click', function(e){
-    const b = e.target.closest('button[data-perm]');
-    if(!b || !editIsCreator) return;
-    editPermission = normPerm(b.dataset.perm);
-    renderPermSeg();
+  permRow.addEventListener('click', function(){
+    if(!editIsCreator) return;
+    toggleInlineOptions(permRow, PERM_OPTS, editPermission, function(v){ editPermission = normPerm(v); renderPermSeg(); });
   });
   // 編輯頁的「加入此行程」：直接加入（不用再按完成），回到時間軸
   btnJoin.addEventListener('click', function(){
@@ -11492,6 +11644,15 @@
       const fadeEl = document.createElement('div');
       fadeEl.className = 'cell-fade-hint';
       cell.appendChild(fadeEl);
+      // 國定假日：格子底部小字寫節日名稱，底下墊一層跟格子同色的漸層（行程塞滿時字不會跟行程混在一起，也提示可以往下捲）
+      const hName = holidayLabel(cellDate);
+      if(hName){
+        cell.classList.add('has-holiday');
+        const h = document.createElement('div');
+        h.className = 'cell-holiday';
+        h.textContent = hName;
+        cell.appendChild(h);
+      }
       function updateCellFadeHint(){
         const overflowing = listEl.scrollHeight - listEl.clientHeight > 1;
         const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
@@ -12565,7 +12726,7 @@
     const txt = document.createElement('span');
     if(sel){
       prev.innerHTML = colIconSvg(sel.icon, rawEventColorById(sel.color).hex);
-      txt.textContent = (COL_ICON_MAP[sel.icon] ? COL_ICON_MAP[sel.icon].name : '') + '（點一下可以重選）';
+      txt.textContent = COL_ICON_MAP[sel.icon] ? COL_ICON_MAP[sel.icon].name : '';
     } else {
       prev.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-dasharray="2.2 3" aria-hidden="true" style="color:var(--ink-faint)"><circle cx="12" cy="12" r="8"/></svg>';
       txt.className = 'pick-hint';
@@ -12587,9 +12748,19 @@
       onConfirm: function(sel){ joinIconSel = sel.icon ? sel : null; sel = joinIconSel; renderIconPickBtn(nbJoinIconBtn, sel); setNbError('nbJoinNameError', ''); }});
   });
 
+  // 創建／加入時的預設值：手帳名稱「新手帳」、欄位名稱＝帳號名稱、圖示＝第一個圖示＋第一個顏色。
+  // 什麼都沒改直接按確定，就用這些預設值。
+  let defaultColName = '';
+  function defaultIconSel(){ return {icon: COL_ICONS[0].id, color: themeEventColorList()[0].id}; }
+  async function prepareNameDefaults(){
+    try{ defaultColName = accountDisplayName(await currentAuthUser()); }catch(e){ defaultColName = ''; }
+    if(defaultColName === '訪客') defaultColName = '';
+    nbCreateName.placeholder = defaultColName;
+    nbJoinName.placeholder = defaultColName;
+  }
   async function submitCreate(){
-    const notebookName = nbCreateNotebookName.value.trim();
-    const name = nbCreateName.value.trim();
+    const notebookName = nbCreateNotebookName.value.trim() || '新手帳';
+    const name = nbCreateName.value.trim() || defaultColName;
     if(!name && !createIconSel){ setNbError('nbCreateError', '欄位名稱和圖示至少要有一個'); return; }
     if(nameLengthError(name)){ setNbError('nbCreateError', nameLengthError(name)); return; }
     nbCreateSubmit.disabled = true;
@@ -12635,7 +12806,8 @@
         return;
       }
       pendingJoin = {nb: nb, remote: remote};
-      joinIconSel = null; renderIconPickBtn(nbJoinIconBtn, null);
+      joinIconSel = defaultIconSel(); renderIconPickBtn(nbJoinIconBtn, joinIconSel);
+      prepareNameDefaults();
       showNbStep('joinName');
     }catch(err){
       console.error('加入手帳失敗：', err);
@@ -12647,12 +12819,9 @@
 
   async function submitJoinName(){
     if(!pendingJoin){ showNbStep('choice'); return; }
-    const name = nbJoinName.value.trim();
+    const name = nbJoinName.value.trim() || defaultColName;
     if(!name && !joinIconSel){ setNbError('nbJoinNameError', '欄位名稱和圖示至少要有一個'); return; }
     if(nameLengthError(name)){ setNbError('nbJoinNameError', nameLengthError(name)); return; }
-    if(name && pendingJoin.remote.columns.some(c => c.name === name)){ setNbError('nbJoinNameError', '名稱已被使用'); return; }
-    const taken = joinIconSel ? findIconComboUser(pendingJoin.remote.columns, joinIconSel, null) : null;
-    if(taken){ setNbError('nbJoinNameError', '這個圖示與顏色已經被「' + colLabel(taken) + '」使用了，請重新選擇'); return; }
     nbJoinNameSubmit.disabled = true;
     try{
       const col = {id: newColumnId(), name: name, ownerId: DEVICE_ID};
@@ -12672,7 +12841,7 @@
     }
   }
 
-  function goCreateStep(){ createIconSel = null; renderIconPickBtn(nbCreateIconBtn, null); showNbStep('create'); }
+  function goCreateStep(){ createIconSel = defaultIconSel(); renderIconPickBtn(nbCreateIconBtn, createIconSel); prepareNameDefaults(); showNbStep('create'); }
   document.getElementById('nbBtnCreate').addEventListener('click', goCreateStep);
   document.getElementById('nbBtnJoin').addEventListener('click', function(){ showNbStep('join'); });
 
@@ -13024,6 +13193,7 @@
     nbAcctPhoto.disabled = !on;
     nbAcctPhotoMenu.hidden = true;
     setNbError('nbAcctError', '');
+    try{ resetAcctForms(); }catch(e){}
   }
   async function refreshAcctPage(){
     renderPermSetting();
@@ -13076,11 +13246,11 @@
      改了之後問一次要不要連現有的行程一起改：現有的行程走資料庫的
      set_my_events_permission（所有手帳裡我建立的行程），沒執行那份 SQL 的話
      只改目前這本手帳。訪客、已註冊的人都可以設定（存在帳號資料裡）。 */
-  const nbPermSeg = document.getElementById('nbPermSeg');
+  const nbPermRow = document.getElementById('nbPermRow');
   const nbPermHint = document.getElementById('nbPermHint');
   function renderPermSetting(previewPerm){
     const p = normPerm(previewPerm || defaultPermission);
-    nbPermSeg.querySelectorAll('button').forEach(b => b.classList.toggle('selected', b.dataset.perm === p));
+    document.getElementById('nbPermVal').textContent = PERM_LABELS_SHORT[p];
     nbPermHint.textContent = PERM_HINTS[p];
   }
   /* ---------------- 設定：通知（雛形） ----------------
@@ -13123,7 +13293,7 @@
   });
   document.getElementById('nbNotifyLeadRow').addEventListener('click', function(){
     const o = getNotifySetting();
-    openSettingChoice(this, NOTIFY_LEADS, o.lead, function(v){ o.lead = v; setNotifySetting(o); renderNotifySetting(); });
+    toggleInlineOptions(this, NOTIFY_LEADS, o.lead, function(v){ o.lead = v; setNotifySetting(o); renderNotifySetting(); });
   });
 
   /* ---------------- 設定：顯示（外觀、每週從哪天開始、時間最小刻度）----------------
@@ -13162,36 +13332,6 @@
   const nbAppearSeg = document.getElementById('nbAppearSeg');
   const WEEK_START_OPTS = [[0, '星期日'], [1, '星期一']];
   const TIME_STEP_OPTS = TIME_STEPS.map(v => [v, v + ' 分鐘']);
-  // 清單式設定的小選單：在那一列下方跳出選項，目前的選項前面打勾，點一個就關掉
-  let settingChoiceMenu = null;
-  function closeSettingChoice(){
-    if(settingChoiceMenu){ settingChoiceMenu.remove(); settingChoiceMenu = null; }
-    document.removeEventListener('pointerdown', onSettingChoiceOutside, true);
-  }
-  function onSettingChoiceOutside(e){ if(settingChoiceMenu && !settingChoiceMenu.contains(e.target)) closeSettingChoice(); }
-  function openSettingChoice(rowEl, opts, current, onPick){
-    closeSettingChoice();
-    const m = document.createElement('div');
-    m.className = 'set-choice-menu';
-    opts.forEach(function(o){
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = o[0] === current ? 'on' : '';
-      b.innerHTML = '<span class="set-check">' + (o[0] === current ? '✓' : '') + '</span><span></span>';
-      b.lastChild.textContent = o[1];
-      b.addEventListener('click', function(e){ e.stopPropagation(); closeSettingChoice(); onPick(o[0]); });
-      m.appendChild(b);
-    });
-    document.body.appendChild(m);
-    const r = rowEl.getBoundingClientRect();
-    const mw = m.offsetWidth, mh = m.offsetHeight;
-    let top = r.bottom + 4;
-    if(top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);
-    m.style.left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.right - mw)) + 'px';
-    m.style.top = top + 'px';
-    settingChoiceMenu = m;
-    setTimeout(function(){ document.addEventListener('pointerdown', onSettingChoiceOutside, true); }, 0);
-  }
   function renderDisplaySettings(){
     const mode = getAppearance();
     nbAppearSeg.querySelectorAll('button').forEach(b => b.classList.toggle('selected', b.dataset.v === mode));
@@ -13215,12 +13355,11 @@
     saveDisplayPrefsToAccount();
   });
   document.getElementById('nbWeekStartRow').addEventListener('click', function(){
-    openSettingChoice(this, WEEK_START_OPTS, weekStart, function(v){ setWeekStart(v); renderDisplaySettings(); saveDisplayPrefsToAccount(); });
+    toggleInlineOptions(this, WEEK_START_OPTS, weekStart, function(v){ setWeekStart(v); renderDisplaySettings(); saveDisplayPrefsToAccount(); });
   });
   document.getElementById('nbTimeStepRow').addEventListener('click', function(){
-    openSettingChoice(this, TIME_STEP_OPTS, timeStep, function(v){ setTimeStep(v); renderDisplaySettings(); saveDisplayPrefsToAccount(); });
+    toggleInlineOptions(this, TIME_STEP_OPTS, timeStep, function(v){ setTimeStep(v); renderDisplaySettings(); saveDisplayPrefsToAccount(); });
   });
-  nbStartOverlay.addEventListener('scroll', closeSettingChoice, {passive: true});
 
   async function loadDefaultPermFromAccount(){
     const u = await currentAuthUser();
@@ -13249,14 +13388,14 @@
     scheduleSaveToStorage();
     return ok;
   }
-  nbPermSeg.addEventListener('click', async function(e){
-    const btn = e.target.closest('button[data-perm]');
-    if(!btn) return;
-    const next = btn.dataset.perm;
+  nbPermRow.addEventListener('click', function(){
+    toggleInlineOptions(nbPermRow, [['view', '僅檢視'], ['join', '可加入'], ['edit', '可編輯']], defaultPermission, changeDefaultPermission);
+  });
+  async function changeDefaultPermission(next){
     if(next === defaultPermission){ renderPermSetting(); return; }
     renderPermSetting(next);
-    const choice = await chooseOption('預設權限改成「' + PERM_LABELS[next] + '」，要套用到哪些行程？',
-      ['只套用到之後建立的行程', '現有的行程也一併更改']);
+    const choice = await popupChoice('改成「' + PERM_LABELS_SHORT[next] + '」，要套用到哪些行程？',
+      ['只有之後的新行程', '現有的行程也一起改']);
     if(choice < 0){ renderPermSetting(); return; } // 取消：回到原本選的那一顆
     setDefaultPermissionLocal(next);
     renderPermSetting();
@@ -13268,11 +13407,11 @@
     }
     if(choice === 1){
       const ok = await applyPermissionToMyEvents(next);
-      showToast(ok ? '已更新預設權限和現有的行程' : '已更新預設權限\n現有行程只改了目前這本手帳', 2000);
+      showToast(ok ? '已更新，現有的行程也改好了' : '已更新\n現有行程只改了目前這本手帳', 2000);
     } else {
-      showToast('已更新預設權限', 1500);
+      showToast('已更新', 1200);
     }
-  });
+  }
   renderPermSetting();
   authReady.then(loadDefaultPermFromAccount);
 
@@ -13663,7 +13802,95 @@
     if(!nbAcctPhotoMenu.hidden && !nbAcctPhotoMenu.contains(e.target)) nbAcctPhotoMenu.hidden = true;
   });
   document.getElementById('nbAcctPhotoRecrop').addEventListener('click', function(){ nbAcctPhotoMenu.hidden = true; uploadAvatar(null); });
-  document.getElementById('nbAcctChangeEmail').addEventListener('click', function(){ openAuth('changeemail', 'acct', ''); });
+  // ---- 編輯資料裡的「修改密碼」「更改 email」：在清單裡展開表單，不換頁 ----
+  function toggleAcctForm(rowId, formId){
+    const row = document.getElementById(rowId), form = document.getElementById(formId);
+    const open = form.hidden;
+    ['nbAcctPwForm', 'nbAcctEmailForm'].forEach(function(id){ document.getElementById(id).hidden = true; });
+    ['nbAcctChangePw', 'nbAcctChangeEmail'].forEach(function(id){ document.getElementById(id).classList.remove('open'); });
+    form.hidden = !open;
+    row.classList.toggle('open', open);
+    if(open){ const f = form.querySelector('input:not([hidden])'); if(f) setTimeout(function(){ f.focus(); }, 60); }
+  }
+  function resetAcctForms(){
+    ['nbAcctPw1', 'nbAcctPw2', 'nbAcctEmailNew', 'nbAcctEmailCode'].forEach(function(id){ document.getElementById(id).value = ''; });
+    ['nbAcctPwError', 'nbAcctEmailError'].forEach(function(id){ setNbError(id, ''); });
+    ['nbAcctPwForm', 'nbAcctEmailForm'].forEach(function(id){ document.getElementById(id).hidden = true; });
+    ['nbAcctChangePw', 'nbAcctChangeEmail'].forEach(function(id){ document.getElementById(id).classList.remove('open'); });
+    setEmailStage('input');
+  }
+  document.getElementById('nbAcctChangeEmail').addEventListener('click', function(){ toggleAcctForm('nbAcctChangeEmail', 'nbAcctEmailForm'); });
+  document.getElementById('nbAcctPwOk').addEventListener('click', async function(){
+    const pw = document.getElementById('nbAcctPw1').value, pw2 = document.getElementById('nbAcctPw2').value;
+    if(pw.length < 8){ setNbError('nbAcctPwError', '密碼至少 8 碼'); return; }
+    if(pw !== pw2){ setNbError('nbAcctPwError', '兩次輸入的密碼不一樣'); return; }
+    const btn = this; btn.disabled = true; setNbError('nbAcctPwError', '');
+    try{
+      const r = await sb.auth.updateUser({password: pw});
+      if(r.error) throw r.error;
+      showToast('密碼已更新');
+      document.getElementById('nbAcctPw1').value = ''; document.getElementById('nbAcctPw2').value = '';
+      toggleAcctForm('nbAcctChangePw', 'nbAcctPwForm');
+    }catch(err){ setNbError('nbAcctPwError', friendlyAuthError(err, 'setpw')); }
+    finally{ btn.disabled = false; }
+  });
+  // 更改 email：輸入新 email → 新信箱的驗證碼 →（Supabase 的安全設定開著時）原本信箱的驗證碼
+  let emailStage = 'input', emailNew = '', emailOld = '';
+  function setEmailStage(st){
+    emailStage = st;
+    const inp = document.getElementById('nbAcctEmailNew'), code = document.getElementById('nbAcctEmailCode');
+    inp.hidden = st !== 'input';
+    code.hidden = st === 'input';
+    code.value = '';
+    document.getElementById('nbAcctEmailResend').hidden = st !== 'code';
+    document.getElementById('nbAcctEmailOk').textContent = st === 'input' ? '寄送驗證碼' : '驗證';
+    document.getElementById('nbAcctEmailHint').textContent =
+      st === 'code' ? '驗證碼已寄到 ' + emailNew : st === 'code2' ? '再輸入寄到原本信箱 ' + emailOld + ' 的驗證碼' : '';
+    if(!code.hidden) setTimeout(function(){ code.focus(); }, 60);
+  }
+  async function emailChangeDoneCheck(){
+    let user = null;
+    try{ const r = await sb.auth.getUser(); user = r && r.data ? r.data.user : null; }catch(e){}
+    if(user && user.email && user.email.toLowerCase() === emailNew){
+      showToast('email 已更換', 1500);
+      renderAccountAvatar();
+      document.getElementById('nbAcctEmail').textContent = user.email;
+      resetAcctForms();
+      return;
+    }
+    setEmailStage('code2');
+  }
+  document.getElementById('nbAcctEmailOk').addEventListener('click', async function(){
+    const btn = this; setNbError('nbAcctEmailError', '');
+    btn.disabled = true;
+    try{
+      if(emailStage === 'input'){
+        const email = document.getElementById('nbAcctEmailNew').value.trim().toLowerCase();
+        if(!EMAIL_RE.test(email)){ setNbError('nbAcctEmailError', '請輸入正確的 email'); return; }
+        emailOld = ((await currentAuthUser()) || {}).email || '';
+        await requestAuthCode('changeemail', email);
+        emailNew = email;
+        setEmailStage('code');
+      } else {
+        const token = document.getElementById('nbAcctEmailCode').value.replace(/\s/g, '');
+        if(!/^\d{6,10}$/.test(token)){ setNbError('nbAcctEmailError', '請輸入信裡的驗證碼'); return; }
+        const r = await sb.auth.verifyOtp({email: emailStage === 'code' ? emailNew : emailOld, token: token, type: 'email_change'});
+        if(r.error) throw r.error;
+        await emailChangeDoneCheck();
+      }
+    }catch(err){
+      setNbError('nbAcctEmailError', friendlyAuthError(err, emailStage === 'input' ? 'changeemail' : 'verify'));
+    }finally{ btn.disabled = false; }
+  });
+  document.getElementById('nbAcctEmailResend').addEventListener('click', async function(){
+    try{ await requestAuthCode('changeemail', emailNew); showToast('已重新寄出'); }
+    catch(err){ setNbError('nbAcctEmailError', friendlyAuthError(err, 'changeemail')); }
+  });
+  ['nbAcctPw2', 'nbAcctEmailNew', 'nbAcctEmailCode'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(e){
+      if(e.key === 'Enter') document.getElementById(id === 'nbAcctPw2' ? 'nbAcctPwOk' : 'nbAcctEmailOk').click();
+    });
+  });
   accountAvatarBtn.addEventListener('click', function(){ openStartOverlay('acct'); });
   const nbAcctPhotoFile = document.getElementById('nbAcctPhotoFile');
   document.getElementById('nbAcctPhotoPick').addEventListener('click', function(){ nbAcctPhotoMenu.hidden = true; nbAcctPhotoFile.click(); });
@@ -13678,10 +13905,7 @@
   });
   nbPwSubmit.addEventListener('click', submitSetPassword);
   document.getElementById('nbPwBack').addEventListener('click', function(){ authFlow = null; showNbStep('acct'); });
-  document.getElementById('nbAcctChangePw').addEventListener('click', function(){
-    authFlow = {mode: 'changepw', email: '', from: 'acct'};
-    openSetPassword();
-  });
+  document.getElementById('nbAcctChangePw').addEventListener('click', function(){ toggleAcctForm('nbAcctChangePw', 'nbAcctPwForm'); });
   nbCodeSubmit.addEventListener('click', submitAuthCode);
   nbCodeResend.addEventListener('click', resendCode);
   document.getElementById('nbCodeLinkDone').addEventListener('click', checkLinkDone);
@@ -13696,8 +13920,8 @@
   const nbAcctDelete = document.getElementById('nbAcctDelete');
   async function deleteAccount(){
     if(!sb){ showToast('目前連不上雲端，沒辦法刪除帳號'); return; }
-    const choice = await chooseOption('確定永久刪除帳號？你的欄位和行程會刪除，無法復原。',
-      ['永久刪除我的帳號']);
+    const choice = await popupChoice('確定永久刪除帳號？你的欄位和行程會刪除，無法復原。',
+      ['永久刪除'], {danger: 0});
     if(choice !== 0) return;
     nbAcctDelete.disabled = true;
     try{
@@ -14364,8 +14588,8 @@
     document.body.appendChild(m);
     const r = row.getBoundingClientRect();
     const mw = m.offsetWidth, mh = m.offsetHeight;
-    let top = r.bottom - 6;
-    if(top + mh > window.innerHeight - 8) top = r.top - mh + 6;
+    let top = r.top - mh - 4; // 往上彈出，才不會被按著的手指擋住
+    if(top < 8) top = r.bottom + 4;
     m.style.left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.right - mw - 10)) + 'px';
     m.style.top = top + 'px';
     bookPinMenu = m;
@@ -14419,7 +14643,7 @@
   }
   // 手帳管理裡的「創建新的手帳」「加入其他人的手帳」：收起選單，直接打開那一步
   document.getElementById('navCreateBook').addEventListener('click', function(){
-    closeDrawer(); createIconSel = null; renderIconPickBtn(nbCreateIconBtn, null); openStartOverlay('create');
+    closeDrawer(); createIconSel = defaultIconSel(); renderIconPickBtn(nbCreateIconBtn, createIconSel); prepareNameDefaults(); openStartOverlay('create');
   });
   document.getElementById('navJoinBook').addEventListener('click', function(){ closeDrawer(); openStartOverlay('join'); });
   function openDrawer(){
