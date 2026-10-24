@@ -4970,7 +4970,7 @@
      2) 手動：網址後面加 ?reset 只忘掉目前的手帳；加 ?reset=all 連這支裝置的身分
         和本機快取也一起清掉，等於一支全新的手機（用來測「新的人加入」）。
         處理完會把 ?reset 從網址上拿掉，重新整理不會一直重置。 */
-  const RESET_ON_NEW_DEPLOY = true;
+  const RESET_ON_NEW_DEPLOY = false; // 10/24 關掉：開始給朋友實際使用，更新版本後不再把大家踢回入口頁（要測試時用網址加 ?reset）
   const BUILD_SEEN_KEY = 'shared-planner-build-seen';
   (function resetForTesting(){
     try{
