@@ -958,6 +958,136 @@
   .theme-swatch.selected{color:var(--ink); font-weight:700;}
   .theme-swatch.selected .theme-swatch-dot{border-color:var(--btn-brown);}
   .theme-swatch:active .theme-swatch-dot{opacity:.7;}
+  /* 「自定義」：新增一套自己的配色（虛線圓圈＋加號） */
+  .theme-swatch-add .theme-swatch-dot{
+    background:none; box-shadow:none; border:1.5px dashed var(--ink-faint);
+    display:flex; align-items:center; justify-content:center; color:var(--ink-soft);
+  }
+  .ct-menu button{ display:block; width:100%; text-align:left; }
+  .ct-menu button + button{ border-top:1px solid var(--line-soft); }
+  .ct-menu button.danger{ color:var(--red); }
+
+  /* ---- 自定義配色的編輯頁（一本空白手帳，每種顏色旁邊一顆「編輯顏色」）---- */
+  .cte-overlay{
+    position:absolute; inset:0; z-index:900;
+    display:flex; flex-direction:column;
+    background:var(--paper);
+    animation:overlay-fade-in .2s ease;
+  }
+  .cte-overlay.closing{ animation:overlay-fade-out .18s ease forwards; }
+  .cte-top{
+    flex:0 0 auto; display:flex; align-items:center; gap:8px;
+    padding:calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .cte-back{ width:34px; height:34px; border:none; background:none; color:var(--ink); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
+  .cte-name{
+    flex:1 1 auto; min-width:0; text-align:center;
+    border:none; border-bottom:1.5px solid var(--line); background:transparent; border-radius:0;
+    padding:6px 4px; font-family:'Noto Serif TC', serif; font-size:17px; font-weight:700; color:var(--ink); outline:none;
+  }
+  .cte-name:focus{ border-bottom-color:var(--btn-brown); }
+  .cte-save{
+    flex:0 0 auto; padding:7px 16px; border-radius:10px; border:none; cursor:pointer;
+    background:var(--btn-coffee); color:var(--paper); font-family:'Noto Sans TC', sans-serif; font-size:14px; font-weight:700;
+  }
+  .cte-scroll{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; background:var(--body-bg); padding:14px 12px calc(env(safe-area-inset-bottom, 0px) + 20px); }
+  .cte-book{
+    background:var(--paper); color:var(--ink); border-radius:18px; padding:16px 14px 14px;
+    box-shadow:0 6px 20px rgba(0,0,0,.18);
+    font-family:'Noto Sans TC', sans-serif;
+  }
+  .cte-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .cte-row-tight{ margin-top:-6px; }
+  .cte-title{ font-family:'Noto Serif TC', serif; font-size:21px; font-weight:900; color:var(--ink); border-bottom:1.5px solid var(--ink); padding-bottom:1px; }
+  .cte-sub{ font-size:12.5px; color:var(--ink-soft); }
+  .cte-ibtn{
+    width:42px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center;
+    background:var(--btn-face); box-shadow:var(--btn-relief); color:var(--btn-brown);
+  }
+  .cte-ibtn.pressed{ background:var(--btn-face-pressed); box-shadow:var(--btn-relief-pressed); transform:translateY(2px); }
+  .cte-btnrow .cte-pill + .cte-ibtn{ margin-left:6px; }
+  .cte-date{
+    display:flex; flex-direction:column; align-items:center; padding:5px 16px 6px; border-radius:10px;
+    background:var(--date-bg); border:2px solid var(--red); color:var(--ink);
+  }
+  .cte-date small{ font-size:10.5px; letter-spacing:.1em; color:var(--ink-soft); }
+  .cte-date b{ font-family:'Noto Serif TC', serif; font-size:16px; }
+  .cte-tl{ position:relative; height:250px; margin:4px -14px 6px; border-top:1px solid var(--line); }
+  .cte-hr{ position:absolute; left:0; right:0; height:64px; border-top:1px solid var(--grid-line); }
+  .cte-hr:first-child{ border-top:none; }
+  .cte-hr::after{ content:""; position:absolute; left:52px; right:0; top:32px; border-top:1px dashed var(--grid-line-sub); }
+  .cte-hr span{ position:absolute; left:8px; top:-8px; font-size:11px; color:var(--ink-soft); background:var(--paper); padding:0 2px; }
+  .cte-hr:first-child span{ top:2px; }
+  .cte-tl::before{ content:""; position:absolute; left:50px; top:0; bottom:0; border-left:1px solid var(--col-div); }
+  .cte-ev{
+    position:absolute; box-sizing:border-box; border-radius:8px; padding:4px 7px; overflow:hidden;
+    display:flex; flex-direction:column; gap:1px; box-shadow:0 1px 3px rgba(0,0,0,.12);
+  }
+  .cte-ev b{ font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cte-ev small{ font-size:10.5px; opacity:.8; white-space:nowrap; }
+  .cte-now{ position:absolute; left:50px; right:0; border-top:2px solid var(--red); }
+  .cte-now::before{ content:""; position:absolute; left:-4px; top:-5px; width:8px; height:8px; border-radius:50%; background:var(--red); }
+  .cte-pillpos{ position:absolute; z-index:2; }
+  .cte-month{ border-top:1px solid var(--line); padding-top:8px; }
+  .cte-wk, .cte-days{ display:grid; grid-template-columns:repeat(7, 1fr); text-align:center; }
+  .cte-wk span{ font-size:11px; color:var(--ink-soft); padding-bottom:4px; }
+  .cte-days span{ display:flex; justify-content:center; padding:4px 0; font-size:13px; color:var(--ink); }
+  .cte-days i{ font-style:normal; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--gold); color:var(--gold-fg); font-weight:700; }
+  .cte-month-pill{ display:flex; justify-content:center; margin-top:8px; }
+  /* 「編輯顏色」按鍵：固定用白底深字，不管手帳配色怎麼調都看得清楚 */
+  .cte-pill{
+    display:inline-flex; align-items:center; gap:4px; flex:0 0 auto;
+    padding:4px 9px 4px 7px; border-radius:999px; cursor:pointer;
+    border:1px solid rgba(0,0,0,.12); background:#FFFFFF; color:#2B2F3A;
+    box-shadow:0 2px 6px rgba(0,0,0,.18);
+    font-family:'Noto Sans TC', sans-serif; font-size:11.5px; font-weight:700; white-space:nowrap;
+  }
+  .cte-pill:active{ transform:translateY(1px); box-shadow:0 1px 3px rgba(0,0,0,.2); }
+
+  /* ---- 選顏色的彈窗：色譜＋其他主題的配色 ---- */
+  .ct-pop-overlay{ padding:16px; }
+  .ct-pop{ max-width:340px; max-height:calc(100dvh - 32px); overflow-y:auto; gap:10px; padding:16px 14px 12px; }
+  .ct-cur{ display:flex; align-items:center; gap:10px; }
+  .ct-cur-sw{ width:34px; height:34px; border-radius:50%; box-shadow:inset 0 0 0 1px rgba(0,0,0,.15), 0 2px 5px rgba(0,0,0,.18); flex:0 0 auto; }
+  .ct-hex{
+    width:100px; border:none; border-bottom:1.5px solid var(--line); background:transparent; border-radius:0;
+    padding:4px 2px; font-family:ui-monospace, Menlo, Consolas, monospace; font-size:15px; color:var(--ink); outline:none; text-transform:uppercase;
+  }
+  .ct-sv{
+    position:relative; height:150px; border-radius:10px; touch-action:none; cursor:crosshair;
+    background:linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, var(--ct-hue, #f00));
+  }
+  .ct-sv-knob, .ct-hue-knob{
+    position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+    border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 1px 4px rgba(0,0,0,.4); pointer-events:none;
+  }
+  .ct-hue{
+    position:relative; height:16px; border-radius:8px; touch-action:none; cursor:pointer;
+    background:linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  }
+  .ct-hue-knob{ top:50%; }
+  .ct-pal-list{ display:flex; flex-direction:column; border-top:1px solid var(--line-soft); }
+  .ct-pal{ border-bottom:1px solid var(--line-soft); }
+  .ct-pal-head{
+    display:flex; align-items:center; gap:10px; width:100%; padding:8px 2px; border:none; background:none; cursor:pointer;
+    font-family:'Noto Sans TC', sans-serif; font-size:13.5px; color:var(--ink); text-align:left;
+  }
+  .ct-pal-head .theme-swatch-dot{ width:22px; height:22px; flex:0 0 auto; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .ct-pal-name{ flex:1 1 auto; }
+  .ct-pal-chev{ color:var(--ink-faint); transition:transform .15s ease; }
+  .ct-pal.open .ct-pal-chev{ transform:rotate(180deg); }
+  .ct-pal-colors{ display:flex; flex-wrap:wrap; gap:8px; padding:2px 2px 10px; }
+  .ct-pal-colors[hidden]{ display:none; }
+  .ct-pal-color{ width:26px; height:26px; border-radius:50%; border:none; cursor:pointer; padding:0; box-shadow:inset 0 0 0 1px rgba(0,0,0,.14), 0 1px 3px rgba(0,0,0,.15); }
+  .ct-pal-color:active{ transform:scale(.9); }
+  .ct-evlist{ display:flex; flex-wrap:wrap; gap:8px; }
+  .ct-evchip{ width:28px; height:28px; border-radius:50%; border:none; padding:0; cursor:pointer; box-shadow:inset 0 0 0 1px rgba(0,0,0,.14), 0 1px 3px rgba(0,0,0,.15); }
+  .ct-evchip.on{ box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--btn-brown); }
+  .ct-evadd{ background:none; box-shadow:none; border:1.5px dashed var(--ink-faint); color:var(--ink-soft); display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
+  .ct-evtools{ display:flex; justify-content:flex-end; margin-top:-4px; }
+  .ct-evremove{ border:none; background:none; color:var(--red); font-family:'Noto Sans TC', sans-serif; font-size:12.5px; cursor:pointer; padding:2px 0; }
+  .ct-evremove[hidden]{ display:none; }
   .nav-code{
     display:flex; align-items:center;
     font-family:ui-monospace, Menlo, Consolas, monospace;
@@ -4123,6 +4253,11 @@
       try{ const cur = JSON.parse(localStorage.getItem('shared-planner-notebook') || 'null'); nbId = cur && cur.id ? cur.id : ''; }catch(e){}
       const saved = nbId ? localStorage.getItem('plannerTheme:' + nbId) : null;
       if(saved && saved !== 'default') document.documentElement.setAttribute('data-theme', saved);
+      // 自定義配色：把上次產生好的 CSS 先放上去（主程式之後會再更新一次）
+      if(saved && saved.indexOf('custom-') === 0){
+        const css = localStorage.getItem('plannerCustomThemeCss');
+        if(css){ const st = document.createElement('style'); st.id = 'customThemeStyle'; st.textContent = css; document.head.appendChild(st); }
+      }
       if(localStorage.getItem('plannerTimeGrid') === 'cells') document.documentElement.setAttribute('data-timegrid', 'cells');
       const a = parseInt(localStorage.getItem('plannerCardAlpha'), 10);
       if(a >= 10 && a < 100) document.documentElement.style.setProperty('--ecard-alpha-pct', a + '%');
@@ -6483,7 +6618,29 @@
   const DEFAULT_EVENT_COLOR = EVENT_COLORS[0].id;
   const rawEventColorById = id => EVENT_COLORS.find(c => c.id === id) || EVENT_COLORS[0];
   // 顯示用：依目前風格換成配對的顏色（行程卡片、月曆、叢集清單都走這個）
-  const eventColorById = id => rawEventColorById(pairedEventColorId(id));
+  function eventColorById(id){
+    const ct = activeCustomTheme();
+    if(ct){
+      const pid = pairedEventColorId(id);
+      const k = Math.max(0, EVENT_COLOR_THEME_IDS['default'].indexOf(pid));
+      return {id: pid, name: '', hex: ct.ev[k % ct.ev.length]};
+    }
+    return rawEventColorById(pairedEventColorId(id));
+  }
+  // 自定義配色（var 才能在宣告前讀到 undefined，不會出錯）
+  var customThemes;
+  function isCustomThemeId(id){ return typeof id === 'string' && id.indexOf('custom-') === 0; }
+  function customThemeById(id){ return isCustomThemeId(id) && customThemes ? (customThemes.find(t => t.id === id) || null) : null; }
+  function activeCustomTheme(){ return customThemeById(activeThemeId()); }
+  // 任何一套風格的色 id 是第幾格（0～15）；不認得的算第 0 格
+  function eventColorSlot(id){
+    for(const k in EVENT_COLOR_THEME_IDS){
+      const i = EVENT_COLOR_THEME_IDS[k].indexOf(id);
+      if(i >= 0) return i;
+    }
+    if(LEGACY_COLOR_SLOTS[id] != null) return LEGACY_COLOR_SLOTS[id];
+    return 0;
+  }
   // 每個介面主題對應顯示的十六色子集（依序），顏色選色盤（renderColorSwatches）
   // 跟「新建行程預設色」都看這份對照表決定要用哪一排，不是整份 EVENT_COLORS
   // 都顯示。currentTheme 這個變數定義在後面「個人化：介面色彩主題」那一段，
@@ -6525,6 +6682,8 @@
   // 把任何一套風格的顏色 id 換成「目前風格」裡配對的那一色 id；不認得的
   // id（舊資料、空字串）退回目前風格的第一色。
   function pairedEventColorId(id){
+    const ct = activeCustomTheme();
+    if(ct) return EVENT_COLOR_THEME_IDS['default'][eventColorSlot(id) % ct.ev.length]; // 自定義：用經典同一格的 id 存
     const cur = EVENT_COLOR_THEME_IDS[activeThemeId()] || EVENT_COLOR_THEME_IDS['default'];
     if(cur.indexOf(id) >= 0) return id;
     for(const k in EVENT_COLOR_THEME_IDS){
@@ -6535,6 +6694,8 @@
     return cur[0];
   }
   function themeEventColorList(){
+    const ct = activeCustomTheme();
+    if(ct) return ct.ev.map((hex, k) => ({id: EVENT_COLOR_THEME_IDS['default'][k], name: '', hex: hex}));
     const ids = EVENT_COLOR_THEME_IDS[activeThemeId()] || EVENT_COLOR_THEME_IDS['default'];
     return ids.map(rawEventColorById);
   }
@@ -9019,7 +9180,7 @@
   }
   // 圖示顏色（hex）：存的是色 id，換算成「目前主題同一格」的顏色
   function colIconHex(colorId){
-    try{ return rawEventColorById(pairedEventColorId(colorId || themeDefaultEventColor())).hex; }
+    try{ return eventColorById(colorId || themeDefaultEventColor()).hex; }
     catch(err){ return '#888888'; }
   }
   // 圖示是每個欄位各自一個：同一個使用者的不同欄位可以用不同圖示，自己名下的欄位
@@ -9095,7 +9256,7 @@
         errEl.textContent = (opts.nameField.validate && opts.nameField.validate(nameInput.value)) || '';
       });
     }
-    function hexOf(id){ return rawEventColorById(id).hex; }
+    function hexOf(id){ return eventColorById(id).hex; }
     const noneBtn = overlay.querySelector('#ipNone');
     if(noneBtn) noneBtn.addEventListener('click', function(){ sel.icon = null; errEl.textContent = ''; draw(); });
     function draw(){
@@ -9459,14 +9620,8 @@
         card.dataset.masterId = inst.masterId;
         card.dataset.date = inst.instanceDate;
 
-        if(zoomFastMode){
-          // 縮放中每一影格都要把所有卡片重畫，逐張量測文字有沒有塞得下
-          // （overflowCheck）會一直強迫瀏覽器重新排版，手機上一影格要幾百毫秒，
-          // 反覆縮放就會卡到整個網頁沒反應。縮放中先只畫色塊，放手後再補一次完整重繪。
-          eventsLayer.appendChild(card);
-          break;
-        }
-
+        // 選取模式的樣子（選到的變灰、不能選的變淡）要在快速模式之前加上，
+        // 不然雙指縮放的每一影格選取樣子都會消失、放手再出現，看起來一直閃
         if(selectMode){
           card.classList.add('select-mode');
           if(canSelectInstance(inst)){
@@ -9475,6 +9630,14 @@
           } else {
             card.classList.add('select-locked');
           }
+        }
+
+        if(zoomFastMode){
+          // 縮放中每一影格都要把所有卡片重畫，逐張量測文字有沒有塞得下
+          // （overflowCheck）會一直強迫瀏覽器重新排版，手機上一影格要幾百毫秒，
+          // 反覆縮放就會卡到整個網頁沒反應。縮放中先只畫色塊，放手後再補一次完整重繪。
+          eventsLayer.appendChild(card);
+          break;
         }
 
         if(durationMin < 45){
@@ -13093,7 +13256,7 @@
     prev.className = 'pick-prev';
     const txt = document.createElement('span');
     if(sel){
-      prev.innerHTML = colIconSvg(sel.icon, rawEventColorById(sel.color).hex);
+      prev.innerHTML = colIconSvg(sel.icon, eventColorById(sel.color).hex);
       txt.textContent = COL_ICON_MAP[sel.icon] ? COL_ICON_MAP[sel.icon].name : '';
     } else {
       prev.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-dasharray="2.2 3" aria-hidden="true" style="color:var(--ink-faint)"><circle cx="12" cy="12" r="8"/></svg>';
@@ -14709,11 +14872,18 @@
     { id: 'cocoa-rum', name: '可可蘭姆', colors: ['#552229', '#9A817A', '#F4F1FA'] }
   ];
   let currentTheme = 'default';
+  // 自定義配色（詳見下面「自定義主題色彩」那一段）：這裡先讀本機存的，開頁就能套用
+  const CUSTOM_THEMES_KEY = 'plannerCustomThemes', CUSTOM_CSS_KEY = 'plannerCustomThemeCss';
+  const CT_DEFAULT = {paper:'#F6F1E4', pressed:'#EFE8D6', card:'#FFFDF8', ink:'#20263A', soft:'#5B6178', icon:'#4A3728', red:'#B23A2F', gold:'#C08A2E'};
+  const CT_MAX_EV = 16;
+  customThemes = loadLocalCustomThemes();
+  injectCustomThemeCss();
+  function isKnownTheme(id){ return THEMES.some(t => t.id === id) || !!customThemeById(id); }
   // 讀某本手帳存的主題（沒有手帳、沒存過、或是現在不支援的主題＝經典）
   function storedThemeFor(nbId){
     let saved = 'default';
     if(nbId){ try{ saved = localStorage.getItem(themeStorageKey(nbId)) || 'default'; }catch(err){} }
-    return THEMES.some(t => t.id === saved) ? saved : 'default';
+    return isKnownTheme(saved) ? saved : 'default';
   }
   function setThemeAttr(themeId){
     currentTheme = themeId;
@@ -14755,6 +14925,7 @@
   // 開 App、登入時：帳號裡有存的主題寫回本機；目前這本手帳的主題不一樣就馬上換
   async function loadThemesFromAccount(){
     try{
+      await loadCustomThemesFromAccount(); // 先拿到這個帳號的自定義配色，才認得 custom-… 的主題
       const u = await currentAuthUser();
       const all = u && u.user_metadata && u.user_metadata.notebook_themes;
       if(!all || typeof all !== 'object' || (NOTEBOOK && !all[NOTEBOOK.id])){
@@ -14763,9 +14934,9 @@
         if(!all || typeof all !== 'object') return;
       }
       Object.keys(all).forEach(function(id){
-        if(THEMES.some(t => t.id === all[id])){ try{ localStorage.setItem(themeStorageKey(id), all[id]); }catch(e){} }
+        if(isKnownTheme(all[id])){ try{ localStorage.setItem(themeStorageKey(id), all[id]); }catch(e){} }
       });
-      if(NOTEBOOK && all[NOTEBOOK.id] && all[NOTEBOOK.id] !== currentTheme && THEMES.some(t => t.id === all[NOTEBOOK.id])){
+      if(NOTEBOOK && all[NOTEBOOK.id] && all[NOTEBOOK.id] !== currentTheme && isKnownTheme(all[NOTEBOOK.id])){
         applyTheme(all[NOTEBOOK.id], {fromAccount: true});
       }
       try{ refreshBookLists(); }catch(e){}
@@ -14887,7 +15058,7 @@
     const row = document.getElementById('themeSwatchRow');
     if(!row) return;
     row.innerHTML = '';
-    THEMES.forEach(function(t){
+    allThemes().forEach(function(t){
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'theme-swatch' + (currentTheme === t.id ? ' selected' : '');
@@ -14901,12 +15072,519 @@
       btn.appendChild(dot);
       btn.appendChild(label);
       btn.addEventListener('click', function(){
+        if(btn.dataset.longPressed){ delete btn.dataset.longPressed; return; } // 長按叫出選單的那一下不算點擊
         if(currentTheme === t.id) return;
         applyTheme(t.id);
         renderThemeSwatches(); // 重繪才能把選取框移到新選的這一顆上
       });
+      if(t.custom) attachCustomThemeLongPress(btn, t.id); // 自定義的：長按可以編輯、刪除
       row.appendChild(btn);
     });
+    // 最後一顆：新增自定義配色
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'theme-swatch theme-swatch-add';
+    add.innerHTML = '<span class="theme-swatch-dot"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span>自定義</span>';
+    add.addEventListener('click', function(){ openCustomThemeEditor(null); });
+    row.appendChild(add);
+  }
+
+  /* ============ 自定義主題色彩 ============
+     使用者自己挑八種顏色（手帳底色、按下去的底色、卡片、主文字、次文字、圖示、強調紅、
+     月曆所在日）＋行程卡片 1～16 色。存在帳號（user_settings.custom_themes，見
+     supabase-upgrade.sql 的 J 段），本機另存一份讓開頁不閃。套用方式：<html data-theme="custom-…">，
+     再用一段 <style> 依這八色算出所有 CSS 變數（線條、陰影等從這八色混出來）。
+     行程顏色：行程裡存的還是「經典」那一格的色 id（別人看到的是他自己主題的同一格），
+     自己看的時候第 k 格換成自定義的第 k 色；色數比 16 少就循環使用。 */
+  function ctNormHex(h){
+    if(typeof h !== 'string') return null;
+    h = h.trim();
+    if(/^#[0-9a-fA-F]{3}$/.test(h)) h = '#' + h[1]+h[1]+h[2]+h[2]+h[3]+h[3];
+    return /^#[0-9a-fA-F]{6}$/.test(h) ? h.toUpperCase() : null;
+  }
+  function ctSanitize(list){
+    if(!Array.isArray(list)) return [];
+    const out = [];
+    list.forEach(function(t){
+      if(!t || typeof t.id !== 'string' || t.id.indexOf('custom-') !== 0 || out.some(x => x.id === t.id)) return;
+      const c = {};
+      Object.keys(CT_DEFAULT).forEach(function(k){ c[k] = ctNormHex(t.c && t.c[k]) || CT_DEFAULT[k]; });
+      let ev = (Array.isArray(t.ev) ? t.ev : []).map(ctNormHex).filter(Boolean).slice(0, CT_MAX_EV);
+      if(!ev.length) ev = ctDefaultEventHexes().slice(0, 1);
+      out.push({id: t.id, name: String(t.name || '').slice(0, 20), c: c, ev: ev});
+    });
+    return out;
+  }
+  function ctDefaultEventHexes(){ return EVENT_COLOR_THEME_IDS['default'].map(id => rawEventColorById(id).hex.toUpperCase()); }
+  function loadLocalCustomThemes(){
+    try{
+      const o = JSON.parse(localStorage.getItem(CUSTOM_THEMES_KEY) || 'null');
+      return ctSanitize(o && o.list);
+    }catch(e){ return []; }
+  }
+  function customDisplayName(t){
+    if(t.name) return t.name;
+    const unnamed = customThemes.filter(x => !x.name);
+    return unnamed.length <= 1 ? '自定義' : '自定義' + (unnamed.indexOf(t) + 1);
+  }
+  function allThemes(){
+    return THEMES.concat(customThemes.map(function(t){
+      return {id: t.id, name: customDisplayName(t), colors: [t.ev[0], t.ev[1] || t.c.red, t.ev[2] || t.c.gold], custom: true};
+    }));
+  }
+  function ctRgba(hex, a){
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+  // 八種顏色 → 整套 CSS 變數（線條、背景、陰影等都從這八色混出來）
+  function ctVars(c){
+    const mix = (a, p, b) => 'color-mix(in srgb, ' + a + ' ' + p + '%, ' + b + ')';
+    const goldFg = isLightColor(c.gold) ? (isLightColor(c.ink) ? '#20263A' : c.ink) : (isLightColor(c.card) ? c.card : '#FFFFFF');
+    return {
+      '--body-bg': mix(c.paper, 86, c.ink),
+      '--paper': c.paper, '--btn-face': c.paper,
+      '--paper-deep': c.pressed, '--btn-face-pressed': c.pressed,
+      '--line': mix(c.soft, 45, c.paper),
+      '--line-soft': mix(c.soft, 28, c.paper),
+      '--grid-line': mix(c.soft, 22, c.paper),
+      '--grid-line-sub': mix(c.soft, 32, c.paper),
+      '--ink': c.ink, '--btn-coffee': c.ink, '--chip-bg': c.ink, '--chip-fg': c.paper,
+      '--ink-soft': c.soft, '--ink-faint': c.soft,
+      '--btn-brown': c.icon,
+      '--btn-relief': '0 3px 8px ' + ctRgba(c.icon, .34) + ', 0 1px 3px ' + ctRgba(c.icon, .22),
+      '--btn-relief-pressed': 'inset 0 1px 3px ' + ctRgba(c.icon, .32) + ', 0 0 0 ' + ctRgba(c.icon, 0),
+      '--red': c.red, '--red-deep': darkenHex(c.red, .25),
+      '--card': c.card, '--date-bg': c.card,
+      '--gold': c.gold, '--gold-fg': goldFg,
+      '--shadow': ctRgba(c.ink, .2),
+      '--nav-rule': 'color-mix(in srgb, var(--line-soft) 50%, var(--card))',
+      '--col-div': 'color-mix(in srgb, var(--line) 70%, var(--ink))'
+    };
+  }
+  function ctCssText(){
+    return customThemes.map(function(t){
+      const v = ctVars(t.c);
+      return 'html[data-theme="' + t.id + '"]:not([data-dark]){' + Object.keys(v).map(k => k + ':' + v[k]).join(';') + '}';
+    }).join('\n');
+  }
+  function injectCustomThemeCss(){
+    const css = ctCssText();
+    let el = document.getElementById('customThemeStyle');
+    if(!el){ el = document.createElement('style'); el.id = 'customThemeStyle'; document.head.appendChild(el); }
+    el.textContent = css;
+    try{ localStorage.setItem(CUSTOM_CSS_KEY, css); }catch(e){} // 開頁時 <head> 的小 script 直接套用，不閃
+  }
+  function saveCustomThemesLocal(uid){
+    try{ localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify({uid: uid || ctOwner || null, list: customThemes})); }catch(e){}
+  }
+  let ctOwner = null; // 本機這份是哪個帳號的
+  try{ const o = JSON.parse(localStorage.getItem(CUSTOM_THEMES_KEY) || 'null'); ctOwner = o && o.uid || null; }catch(e){}
+  async function saveCustomThemesToAccount(){
+    if(!sb) return;
+    try{
+      const u = await currentAuthUser();
+      if(!u) return;
+      const r = await sb.from('user_settings').upsert({user_id: u.id, custom_themes: customThemes, updated_at: new Date().toISOString()});
+      if(r.error) throw r.error;
+    }catch(err){ console.warn('自定義配色存到帳號失敗（只存在這支裝置）：', err); }
+  }
+  // 自定義配色改了之後：重新產生 CSS、重畫色票；正在用的那套被刪掉就回到經典，被改了就重畫
+  function afterCustomThemesChanged(){
+    injectCustomThemeCss();
+    if(isCustomThemeId(currentTheme) && !customThemeById(currentTheme)) applyTheme('default');
+    else if(isCustomThemeId(currentTheme)) applyTheme(currentTheme, {fromAccount: true});
+    else renderThemeSwatches();
+    try{ refreshBookLists(); }catch(e){}
+  }
+  async function loadCustomThemesFromAccount(){
+    if(!sb) return;
+    try{
+      const u = await currentAuthUser();
+      if(!u) return;
+      const r = await sb.from('user_settings').select('custom_themes').eq('user_id', u.id).maybeSingle();
+      if(r.error) throw r.error;
+      let list;
+      if(r.data && Array.isArray(r.data.custom_themes)) list = ctSanitize(r.data.custom_themes);
+      else list = (ctOwner === u.id) ? customThemes : []; // 帳號裡還沒有：這支裝置存的是同一個帳號的才保留（之後再上傳）
+      const changed = JSON.stringify(list) !== JSON.stringify(customThemes);
+      customThemes = list;
+      ctOwner = u.id;
+      saveCustomThemesLocal(u.id);
+      if(!r.data && list.length) saveCustomThemesToAccount();
+      if(changed) afterCustomThemesChanged();
+    }catch(err){ console.warn('讀取自定義配色失敗：', err); }
+  }
+
+  // 長按自定義的色票：編輯／刪除
+  function attachCustomThemeLongPress(btn, id){
+    let timer = null, sx = 0, sy = 0;
+    btn.addEventListener('pointerdown', function(e){
+      delete btn.dataset.longPressed;
+      sx = e.clientX; sy = e.clientY;
+      clearTimeout(timer);
+      timer = setTimeout(function(){
+        btn.dataset.longPressed = '1';
+        if(navigator.vibrate) navigator.vibrate(12);
+        openCustomThemeMenu(btn, id);
+      }, 480);
+    });
+    btn.addEventListener('pointermove', function(e){ if(Math.hypot(e.clientX - sx, e.clientY - sy) > 8) clearTimeout(timer); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => btn.addEventListener(t, function(){ clearTimeout(timer); }));
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+  }
+  let ctMenu = null;
+  function closeCustomThemeMenu(){
+    if(ctMenu){ ctMenu.remove(); ctMenu = null; }
+    document.removeEventListener('pointerdown', onCtMenuOutside, true);
+  }
+  function onCtMenuOutside(e){ if(ctMenu && !ctMenu.contains(e.target)) closeCustomThemeMenu(); }
+  function openCustomThemeMenu(btn, id){
+    closeCustomThemeMenu();
+    const m = document.createElement('div');
+    m.className = 'book-pin-menu ct-menu';
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.textContent = '編輯';
+    edit.addEventListener('click', function(e){ e.stopPropagation(); closeCustomThemeMenu(); openCustomThemeEditor(id); });
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'danger';
+    del.textContent = '刪除';
+    del.addEventListener('click', async function(e){
+      e.stopPropagation();
+      closeCustomThemeMenu();
+      const t = customThemeById(id);
+      if(!t) return;
+      const i = await popupChoice('刪除「' + customDisplayName(t) + '」？', ['刪除'], {danger: 0});
+      if(i !== 0) return;
+      customThemes = customThemes.filter(x => x.id !== id);
+      saveCustomThemesLocal();
+      saveCustomThemesToAccount();
+      afterCustomThemesChanged();
+    });
+    m.appendChild(edit);
+    m.appendChild(del);
+    document.body.appendChild(m);
+    const r = btn.getBoundingClientRect();
+    const mw = m.offsetWidth, mh = m.offsetHeight;
+    let top = r.top - mh - 4; // 往上彈出，才不會被按著的手指擋住
+    if(top < 8) top = r.bottom + 4;
+    m.style.left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.left + r.width / 2 - mw / 2)) + 'px';
+    m.style.top = top + 'px';
+    ctMenu = m;
+    setTimeout(function(){ document.addEventListener('pointerdown', onCtMenuOutside, true); }, 0);
+  }
+
+  // ---- 其他主題的配色（選顏色時當調色盤用）----
+  let ctPaletteCache = null;
+  function ctToHex(str){
+    const ctx = ctToHex.ctx || (ctToHex.ctx = document.createElement('canvas').getContext('2d'));
+    ctx.fillStyle = '#000000';
+    ctx.fillStyle = String(str || '').trim();
+    const v = ctx.fillStyle;
+    return /^#[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : null;
+  }
+  function ctThemePalettes(){
+    if(ctPaletteCache) return ctPaletteCache;
+    const keys = {paper:'--paper', pressed:'--btn-face-pressed', card:'--card', ink:'--ink', soft:'--ink-soft', icon:'--btn-brown', red:'--red', gold:'--gold'};
+    ctPaletteCache = THEMES.map(function(t){
+      let ui = [];
+      if(t.id === 'default'){
+        ui = Object.keys(CT_DEFAULT).map(k => CT_DEFAULT[k]);
+      } else {
+        const probe = document.createElement('div');
+        probe.setAttribute('data-theme', t.id);
+        probe.style.display = 'none';
+        document.body.appendChild(probe);
+        const cs = getComputedStyle(probe);
+        ui = Object.keys(keys).map(k => ctToHex(cs.getPropertyValue(keys[k]))).filter(Boolean);
+        probe.remove();
+      }
+      const ev = (EVENT_COLOR_THEME_IDS[t.id] || []).map(id => rawEventColorById(id).hex.toUpperCase());
+      const seen = new Set(), colors = [];
+      ui.concat(ev).forEach(function(h){ h = ctNormHex(h); if(h && !seen.has(h)){ seen.add(h); colors.push(h); } });
+      return {name: t.name, dot: t.colors, colors: colors};
+    });
+    return ctPaletteCache;
+  }
+
+  // ---- HSV ↔ 色碼 ----
+  function ctHexToHsv(hex){
+    const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+    let h = 0;
+    if(d){
+      if(max === r) h = ((g - b) / d) % 6;
+      else if(max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60; if(h < 0) h += 360;
+    }
+    return {h: h, s: max ? d / max : 0, v: max};
+  }
+  function ctHsvToHex(h, s, v){
+    const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+    let r = 0, g = 0, b = 0;
+    if(h < 60){ r = c; g = x; } else if(h < 120){ r = x; g = c; } else if(h < 180){ g = c; b = x; }
+    else if(h < 240){ g = x; b = c; } else if(h < 300){ r = x; b = c; } else { r = c; b = x; }
+    return '#' + [r,g,b].map(t => Math.round((t + m) * 255).toString(16).padStart(2,'0')).join('').toUpperCase();
+  }
+
+  // ---- 選顏色的彈窗 ----
+  // 單色：opts = {value, onChange(hex)}；行程顏色（多色）：opts = {list, onChange(list)}。
+  // 按確定 resolve(true)、取消 resolve(false)（取消時呼叫端自己還原）。
+  function openCtColorPopup(opts){
+    return new Promise(function(resolve){
+      const multi = Array.isArray(opts.list);
+      let list = multi ? opts.list.slice() : null;
+      let sel = 0;
+      let cur = multi ? list[0] : opts.value;
+      let hsv = ctHexToHsv(cur);
+
+      const ov = document.createElement('div');
+      ov.className = 'popup-choice-overlay ct-pop-overlay';
+      const card = document.createElement('div');
+      card.className = 'popup-choice-card ct-pop';
+      card.innerHTML =
+        (multi ? '<div class="ct-evlist"></div><div class="ct-evtools"><button type="button" class="ct-evremove">移除這個顏色</button></div>' : '') +
+        '<div class="ct-cur"><span class="ct-cur-sw"></span><input class="ct-hex" maxlength="7" spellcheck="false" autocomplete="off" aria-label="色碼"></div>' +
+        '<div class="ct-sv"><i class="ct-sv-knob"></i></div>' +
+        '<div class="ct-hue"><i class="ct-hue-knob"></i></div>' +
+        '<div class="ct-pal-list"></div>' +
+        '<div class="popup-choice-actions"><button type="button" class="popup-choice-btn ct-cancel">取消</button><button type="button" class="popup-choice-btn primary ct-ok">確定</button></div>';
+      ov.appendChild(card);
+      const curSw = card.querySelector('.ct-cur-sw'), hexIn = card.querySelector('.ct-hex');
+      const sv = card.querySelector('.ct-sv'), svKnob = card.querySelector('.ct-sv-knob');
+      const hue = card.querySelector('.ct-hue'), hueKnob = card.querySelector('.ct-hue-knob');
+      const evList = card.querySelector('.ct-evlist'), evRemove = card.querySelector('.ct-evremove');
+
+      function drawPicker(fromHexInput){
+        sv.style.setProperty('--ct-hue', 'hsl(' + hsv.h + ',100%,50%)');
+        svKnob.style.left = (hsv.s * 100) + '%';
+        svKnob.style.top = ((1 - hsv.v) * 100) + '%';
+        hueKnob.style.left = (hsv.h / 360 * 100) + '%';
+        curSw.style.background = cur;
+        if(!fromHexInput) hexIn.value = cur;
+      }
+      function drawEvList(){
+        if(!multi) return;
+        evList.innerHTML = '';
+        list.forEach(function(h, i){
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'ct-evchip' + (i === sel ? ' on' : '');
+          b.style.background = h;
+          b.setAttribute('aria-label', '顏色 ' + (i + 1));
+          b.addEventListener('click', function(){ sel = i; cur = list[i]; hsv = ctHexToHsv(cur); drawEvList(); drawPicker(); });
+          evList.appendChild(b);
+        });
+        if(list.length < CT_MAX_EV){
+          const add = document.createElement('button');
+          add.type = 'button';
+          add.className = 'ct-evchip ct-evadd';
+          add.setAttribute('aria-label', '新增顏色');
+          add.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+          add.addEventListener('click', function(){
+            const defs = ctDefaultEventHexes();
+            list.push(defs[list.length % defs.length]);
+            sel = list.length - 1; cur = list[sel]; hsv = ctHexToHsv(cur);
+            drawEvList(); drawPicker(); opts.onChange(list.slice());
+          });
+          evList.appendChild(add);
+        }
+        evRemove.hidden = list.length <= 1;
+      }
+      function setColor(hex, keepHsv, fromHexInput){
+        cur = hex;
+        if(!keepHsv) hsv = ctHexToHsv(hex);
+        if(multi){
+          list[sel] = hex;
+          const chip = evList.children[sel];
+          if(chip) chip.style.background = hex;
+          opts.onChange(list.slice());
+        } else opts.onChange(hex);
+        drawPicker(fromHexInput);
+      }
+      if(multi){
+        evRemove.addEventListener('click', function(){
+          if(list.length <= 1) return;
+          list.splice(sel, 1);
+          sel = Math.min(sel, list.length - 1); cur = list[sel]; hsv = ctHexToHsv(cur);
+          drawEvList(); drawPicker(); opts.onChange(list.slice());
+        });
+      }
+      // 色譜：拖曳選飽和度／明度、拖曳選色相
+      function dragOn(el, fn){
+        el.addEventListener('pointerdown', function(e){
+          e.preventDefault();
+          try{ el.setPointerCapture(e.pointerId); }catch(err){}
+          fn(e);
+          const move = ev => fn(ev);
+          const up = function(){ el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+          el.addEventListener('pointermove', move);
+          el.addEventListener('pointerup', up);
+          el.addEventListener('pointercancel', up);
+        });
+      }
+      dragOn(sv, function(e){
+        const r = sv.getBoundingClientRect();
+        hsv.s = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+        hsv.v = 1 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+        setColor(ctHsvToHex(hsv.h, hsv.s, hsv.v), true);
+      });
+      dragOn(hue, function(e){
+        const r = hue.getBoundingClientRect();
+        hsv.h = Math.max(0, Math.min(359.9, (e.clientX - r.left) / r.width * 360));
+        setColor(ctHsvToHex(hsv.h, hsv.s, hsv.v), true);
+      });
+      hexIn.addEventListener('input', function(){
+        const h = ctNormHex(hexIn.value.charAt(0) === '#' ? hexIn.value : '#' + hexIn.value);
+        if(h && h.length === 7 && hexIn.value.replace('#','').length === 6) setColor(h, false, true);
+      });
+      hexIn.addEventListener('blur', function(){ hexIn.value = cur; });
+      // 其他主題的配色：點主題名稱展開、再點收合
+      const palList = card.querySelector('.ct-pal-list');
+      ctThemePalettes().concat(customThemes.map(function(t){
+        return {name: customDisplayName(t), dot: [t.ev[0], t.ev[1] || t.c.red, t.ev[2] || t.c.gold], colors: Array.from(new Set(Object.keys(CT_DEFAULT).map(k => t.c[k]).concat(t.ev)))};
+      })).forEach(function(p){
+        const row = document.createElement('div');
+        row.className = 'ct-pal';
+        const head = document.createElement('button');
+        head.type = 'button';
+        head.className = 'ct-pal-head';
+        head.innerHTML = '<span class="theme-swatch-dot"></span><span class="ct-pal-name"></span><svg class="ct-pal-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+        const d = head.querySelector('.theme-swatch-dot');
+        d.style.setProperty('--sw-c1', p.dot[0]); d.style.setProperty('--sw-c2', p.dot[1]); d.style.setProperty('--sw-c3', p.dot[2]);
+        head.querySelector('.ct-pal-name').textContent = p.name;
+        const body = document.createElement('div');
+        body.className = 'ct-pal-colors';
+        body.hidden = true;
+        p.colors.forEach(function(h){
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'ct-pal-color';
+          b.style.background = h;
+          b.setAttribute('aria-label', h);
+          b.addEventListener('click', function(){ setColor(h); });
+          body.appendChild(b);
+        });
+        head.addEventListener('click', function(){
+          const open = body.hidden;
+          palList.querySelectorAll('.ct-pal-colors').forEach(x => { x.hidden = true; });
+          palList.querySelectorAll('.ct-pal').forEach(x => x.classList.remove('open'));
+          body.hidden = !open;
+          row.classList.toggle('open', open);
+        });
+        row.appendChild(head);
+        row.appendChild(body);
+        palList.appendChild(row);
+      });
+      const done = function(ok){ ov.classList.add('closing'); setTimeout(function(){ ov.remove(); }, 160); resolve(ok); };
+      card.querySelector('.ct-cancel').addEventListener('click', function(){ done(false); });
+      card.querySelector('.ct-ok').addEventListener('click', function(){ done(true); });
+      ov.addEventListener('click', function(e){ if(e.target === ov) done(false); });
+      drawEvList();
+      drawPicker();
+      document.body.appendChild(ov);
+    });
+  }
+
+  // ---- 自定義配色的編輯頁：一本空白手帳，每種顏色旁邊一顆「編輯顏色」 ----
+  const CT_PILL_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7H16a5 5 0 0 0 5-5C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1" fill="currentColor"/><circle cx="10" cy="7" r="1.1" fill="currentColor"/><circle cx="14.5" cy="7" r="1.1" fill="currentColor"/></svg>';
+  function openCustomThemeEditor(editId){
+    try{ closeDrawer(); }catch(e){}
+    const base = editId ? customThemeById(editId) : null;
+    const draft = base ? JSON.parse(JSON.stringify(base)) : {id: null, name: '', c: Object.assign({}, CT_DEFAULT), ev: ctDefaultEventHexes()};
+    const startJson = JSON.stringify(draft);
+    const pill = k => '<button type="button" class="cte-pill" data-k="' + k + '">' + CT_PILL_SVG + '<span>編輯顏色</span></button>';
+    const root = document.createElement('div');
+    root.className = 'cte-overlay';
+    root.innerHTML =
+      '<div class="cte-top">' +
+        '<button type="button" class="cte-back" aria-label="返回"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 5 8 12 15 19"></polyline></svg></button>' +
+        '<input class="cte-name" maxlength="12" autocomplete="off" aria-label="配色名稱">' +
+        '<button type="button" class="cte-save">儲存</button>' +
+      '</div>' +
+      '<div class="cte-scroll"><div class="cte-book">' +
+        '<div class="cte-row"><span class="cte-title">我的手帳</span>' + pill('ink') + '</div>' +
+        '<div class="cte-row cte-row-tight"><span class="cte-sub">3 位參與者</span>' + pill('soft') + '</div>' +
+        '<div class="cte-row cte-btnrow">' +
+          '<span class="cte-ibtn"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>' + pill('icon') +
+          '<span class="cte-ibtn pressed"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>' + pill('pressed') +
+        '</div>' +
+        '<div class="cte-row"><span class="cte-date"><small>2026年</small><b>10月26日 · 週一</b></span>' + pill('card') + '</div>' +
+        '<div class="cte-tl">' +
+          '<div class="cte-hr" style="top:0"><span>09:00</span></div>' +
+          '<div class="cte-hr" style="top:64px"><span>10:00</span></div>' +
+          '<div class="cte-hr" style="top:128px"><span>11:00</span></div>' +
+          '<div class="cte-hr" style="top:192px"><span>12:00</span></div>' +
+          '<div class="cte-ev" data-i="0" style="top:8px;height:48px;left:54px;width:38%"><b>讀書會</b><small>09:10 – 10:00</small></div>' +
+          '<div class="cte-ev" data-i="1" style="top:74px;height:72px;left:calc(54px + 38% + 6px);width:30%"><b>午餐</b><small>10:10 – 11:20</small></div>' +
+          '<div class="cte-ev" data-i="2" style="top:160px;height:44px;left:54px;width:38%"><b>散步</b><small>11:30 – 12:10</small></div>' +
+          '<div class="cte-now" style="top:100px"></div>' +
+          '<div class="cte-pillpos" style="top:110px;left:54px">' + pill('red') + '</div>' +
+          '<div class="cte-pillpos" style="top:14px;right:8px">' + pill('ev') + '</div>' +
+          '<div class="cte-pillpos" style="top:214px;right:8px">' + pill('paper') + '</div>' +
+        '</div>' +
+        '<div class="cte-month">' +
+          '<div class="cte-wk"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>' +
+          '<div class="cte-days"><span>25</span><span><i>26</i></span><span>27</span><span>28</span><span>29</span><span>30</span><span>31</span></div>' +
+          '<div class="cte-month-pill">' + pill('gold') + '</div>' +
+        '</div>' +
+      '</div></div>';
+    const book = root.querySelector('.cte-book');
+    const nameIn = root.querySelector('.cte-name');
+    nameIn.value = draft.name;
+    nameIn.placeholder = '自定義';
+    function paint(){
+      const v = ctVars(draft.c);
+      Object.keys(v).forEach(k => book.style.setProperty(k, v[k]));
+      root.querySelectorAll('.cte-ev').forEach(function(el){
+        const h = draft.ev[Number(el.dataset.i) % draft.ev.length];
+        el.style.background = h;
+        el.style.color = isLightColor(h) ? 'rgba(30,26,22,0.92)' : '#FFFFFF';
+      });
+    }
+    paint();
+    root.querySelectorAll('.cte-pill').forEach(function(b){
+      b.addEventListener('click', async function(){
+        const k = b.dataset.k;
+        if(k === 'ev'){
+          const before = draft.ev.slice();
+          const ok = await openCtColorPopup({list: draft.ev, onChange: function(l){ draft.ev = l; paint(); }});
+          if(!ok){ draft.ev = before; paint(); }
+        } else {
+          const before = draft.c[k];
+          const ok = await openCtColorPopup({value: draft.c[k], onChange: function(h){ draft.c[k] = h; paint(); }});
+          if(!ok){ draft.c[k] = before; paint(); }
+        }
+      });
+    });
+    function close(){ root.classList.add('closing'); setTimeout(function(){ root.remove(); }, 180); }
+    root.querySelector('.cte-back').addEventListener('click', async function(){
+      draft.name = nameIn.value.trim();
+      if(JSON.stringify(draft) !== startJson){
+        const i = await popupChoice('還沒儲存，確定離開？', ['離開'], {danger: 0});
+        if(i !== 0) return;
+      }
+      close();
+    });
+    root.querySelector('.cte-save').addEventListener('click', function(){
+      draft.name = nameIn.value.trim().slice(0, 20);
+      if(draft.id && customThemeById(draft.id)){
+        customThemes = customThemes.map(t => t.id === draft.id ? draft : t);
+      } else {
+        draft.id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        customThemes = customThemes.concat([draft]);
+      }
+      customThemes = ctSanitize(customThemes);
+      saveCustomThemesLocal();
+      saveCustomThemesToAccount();
+      injectCustomThemeCss();
+      if(NOTEBOOK) applyTheme(draft.id); // 存好就直接套用到這本手帳
+      else renderThemeSwatches();
+      close();
+    });
+    (document.getElementById('phone') || document.body).appendChild(root);
   }
 
   function fallbackCopy(text){
@@ -15065,6 +15743,8 @@
   // 使用者指定的幾個主題用指定的那一色，其他用第一色。
   const RIBBON_COLOR_INDEX = {'default': 1, 'berry-picnic': 2, 'showa': 1, 'british-academy': 1, 'lemon-soda': 1};
   function notebookRibbonColor(nbId){
+    const ct = customThemeById(storedThemeFor(nbId));
+    if(ct) return ct.c.red; // 自定義配色：緞帶用強調紅
     const t = THEMES.find(x => x.id === storedThemeFor(nbId)) || THEMES[0];
     return t.colors[RIBBON_COLOR_INDEX[t.id] || 0];
   }
@@ -15229,6 +15909,7 @@
     const nbId = NOTEBOOK.id;
     const willEmpty = columns.every(c => myIds.has(c.id));
     const beforeEvents = JSON.parse(JSON.stringify(events));
+    const myNames = columns.filter(c => myIds.has(c.id)).map(colLabel);
 
     columns = columns.filter(c => !myIds.has(c.id));
     events = events.filter(function(ev){
@@ -15251,6 +15932,18 @@
           await sb.from('columns').delete().eq('notebook_id', nbId);
           await sb.from('notebooks').delete().eq('id', nbId);
         } else {
+          // 通知還在的人「誰退出了」（每位一則；要在自己還是成員時寫進去，退出後就沒有權限了）
+          const seenOwners = new Set();
+          const leaveNotes = [];
+          columns.forEach(function(c){
+            if(c.ownerId){ if(seenOwners.has(c.ownerId)) return; seenOwners.add(c.ownerId); }
+            leaveNotes.push({
+              id: 'n' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+              recipientId: c.id, message: '「' + myNames.join('、') + '」退出了這本手帳',
+              masterId: null, instanceDate: null, createdAt: new Date().toISOString(), read: false, actorId: DEVICE_ID || null
+            });
+          });
+          await Promise.all(leaveNotes.map(pushNotificationToSupabase));
           const eventChanges = diffById(beforeEvents, events);
           await sb.from('columns').delete().in('id', Array.from(myIds));
           await syncChangesToSupabase('events', eventChanges, ch => ch.after);
