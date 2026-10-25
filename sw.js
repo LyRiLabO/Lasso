@@ -3,10 +3,11 @@
      所以有網路時永遠是最新版，不會卡在舊版本。
    - 圖示、字型、supabase 程式庫這些不常變的檔案：先用存下來的，同時在背景更新。
    - Supabase 的資料、登入（supabase.co）一律不經過這裡，直接連網路，避免看到過期的資料。
+   - 行程提醒（推播）：伺服器推過來時跳出通知；點通知就打開（或切回）日日貼。
    改這個檔案時把 CACHE 的版本號 +1，舊的快取會在新版啟用時清掉。 */
-const CACHE = 'rirtie-v1';
+const CACHE = 'rirtie-v3';
 const CORE = ['./', './index.html', './manifest.webmanifest',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png'];
+  './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon-32.png'];
 
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(CORE); }).catch(function(){}));
@@ -50,5 +51,26 @@ self.addEventListener('fetch', function(e){
       }).catch(function(){ return hit; });
       return hit || net;
     });
+  }));
+});
+
+// ---- 行程提醒推播 ----
+self.addEventListener('push', function(e){
+  let d = {};
+  try{ d = e.data ? e.data.json() : {}; }catch(err){ d = {title: '日日貼', body: e.data ? e.data.text() : ''}; }
+  e.waitUntil(self.registration.showNotification(d.title || '日日貼', {
+    body: d.body || '',
+    tag: d.tag || undefined,     // 同一個提醒只顯示一則
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    data: {url: d.url || './'}
+  }));
+});
+self.addEventListener('notificationclick', function(e){
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(self.clients.matchAll({type: 'window', includeUncontrolled: true}).then(function(list){
+    for(const c of list){ if('focus' in c) return c.focus(); } // App 已經開著：切回去
+    return self.clients.openWindow(url);
   }));
 });

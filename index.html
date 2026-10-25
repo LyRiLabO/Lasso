@@ -3364,6 +3364,46 @@
     cursor:pointer;
   }
   .month-today-btn:active{opacity:.6;}
+  /* 月曆頁右上角的搜尋鍵：放最右邊，「回到今天」往左讓位 */
+  #page-month .month-today-btn{ right:40px; }
+  #page-month .month-title-nav{ margin-right:48px; } /* 年月往左讓一點，不要跟「回到今天」擠在一起 */
+  .month-search-btn{
+    position:absolute; right:0; top:50%; transform:translateY(-50%);
+    width:34px; height:34px; padding:0; border:none; background:none; border-radius:10px;
+    color:var(--ink); display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .month-search-btn:active{ opacity:.6; }
+  .search-panel{
+    position:absolute; inset:0; z-index:20; background:var(--paper);
+    display:flex; flex-direction:column;
+    padding-top:env(safe-area-inset-top, 0px);
+    animation:overlay-fade-in .16s ease;
+  }
+  .search-panel[hidden]{ display:none; }
+  .search-bar{ display:flex; align-items:center; gap:8px; padding:12px 16px 10px; border-bottom:1px solid var(--line-soft); }
+  .search-bar-icon{ flex:0 0 auto; color:var(--ink-faint); }
+  .search-input{
+    flex:1 1 auto; min-width:0; border:none; background:transparent; outline:none; padding:6px 0;
+    font-family:'Noto Sans TC', sans-serif; font-size:16px; color:var(--ink);
+    -webkit-appearance:none; appearance:none;
+  }
+  .search-input::-webkit-search-cancel-button{ display:none; }
+  .search-cancel{ border:none; background:none; padding:6px 2px; cursor:pointer; font-family:'Noto Sans TC', sans-serif; font-size:15px; color:var(--ink-soft); }
+  .search-results{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:4px 0 calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .search-group{ padding:12px 16px 4px; font-family:'Noto Sans TC', sans-serif; font-size:12px; font-weight:700; color:var(--ink-faint); }
+  .search-row{
+    display:flex; align-items:stretch; gap:10px; width:100%; box-sizing:border-box;
+    padding:10px 16px; border:none; background:none; text-align:left; cursor:pointer;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .search-row:active{ background:var(--paper-deep); }
+  .search-swatch{ flex:0 0 auto; width:4px; border-radius:2px; }
+  .search-main{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .search-title{ font-family:'Noto Sans TC', sans-serif; font-size:15px; font-weight:700; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .search-sub{ font-family:'Noto Sans TC', sans-serif; font-size:12.5px; color:var(--ink-soft); }
+  .search-note{ font-family:'Noto Sans TC', sans-serif; font-size:12px; color:var(--ink-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .search-results mark{ background:color-mix(in srgb, var(--red) 22%, transparent); color:inherit; border-radius:2px; padding:0 1px; }
+  .search-empty{ padding:40px 16px; text-align:center; font-family:'Noto Sans TC', sans-serif; font-size:14px; color:var(--ink-faint); }
   .month-title-nav{
     display:flex; align-items:center; gap:10px;
   }
@@ -4352,7 +4392,6 @@
           <button type="button" class="set-row" id="nbNotifyLeadRow" hidden><span class="set-label">提前</span><span class="set-value" id="nbNotifyLeadVal"></span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
         </div>
         <div class="perm-hint" id="nbNotifyStatus"></div>
-        <div class="perm-hint acct-soon">提醒功能準備中，暫時不會發送。</div>
 
         <div class="acct-sec-title">顯示</div>
         <div class="appear-cards" id="nbAppearSeg">
@@ -4827,8 +4866,20 @@
         <!-- 已經在今天所在的月份時，點下去直接跳今天的時間軸頁面；
              不同月份時，只是把月曆切回今天所在的月份，留在月曆頁。 -->
         <button type="button" id="btnMonthToday" class="month-today-btn" aria-label="回到今天">回到今天</button>
+        <button type="button" id="btnMonthSearch" class="month-search-btn" aria-label="搜尋行程">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+        </button>
       </div>
     </header>
+    <!-- 搜尋行程：蓋在月曆上面，輸入關鍵字找這本手帳的行程（名稱、備註），點一筆跳到那一天 -->
+    <div class="search-panel" id="searchPanel" hidden>
+      <div class="search-bar">
+        <svg class="search-bar-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+        <input type="search" id="searchInput" class="search-input" placeholder="搜尋行程" autocomplete="off" enterkeyhint="search">
+        <button type="button" class="search-cancel" id="searchCancel">取消</button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
     <div class="month-weekdays" id="monthWeekdaysRow"></div>
     <div class="month-slider" id="monthSlider">
       <div class="month-grid" id="monthGrid"></div>
@@ -12193,6 +12244,106 @@
     }
   });
 
+  /* ---------------- 搜尋行程（月曆頁右上角）----------------
+     找這本手帳的行程：名稱、備註裡有關鍵字就算（不分大小寫）。
+     重複行程顯示下一次的日期（都過了就顯示最後一次）；點一筆跳到那一天的時間軸。
+     排序：今天以後的依日期由近到遠，已經過去的放後面、由近到遠。 */
+  const searchPanel = document.getElementById('searchPanel');
+  const searchInput = document.getElementById('searchInput');
+  const searchResults = document.getElementById('searchResults');
+  function openSearch(){
+    searchPanel.hidden = false;
+    searchInput.value = '';
+    renderSearchResults();
+    setTimeout(function(){ searchInput.focus(); }, 60);
+  }
+  function closeSearch(){ searchPanel.hidden = true; searchInput.blur(); }
+  document.getElementById('btnMonthSearch').addEventListener('click', openSearch);
+  document.getElementById('searchCancel').addEventListener('click', closeSearch);
+  let searchTimer = null;
+  searchInput.addEventListener('input', function(){ clearTimeout(searchTimer); searchTimer = setTimeout(renderSearchResults, 120); });
+  searchInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') searchInput.blur(); }); // 收起鍵盤，結果留著
+  function searchHighlight(text, q){
+    const t = String(text || '');
+    const i = t.toLowerCase().indexOf(q);
+    if(i < 0) return escapeHtml(t);
+    return escapeHtml(t.slice(0, i)) + '<mark>' + escapeHtml(t.slice(i, i + q.length)) + '</mark>' + escapeHtml(t.slice(i + q.length));
+  }
+  // 重複行程：從今天開始往後找下一次（最多找兩年）；找不到就往回找最後一次
+  function searchOccurrence(ev){
+    if(!ev.recurrence) return {date: ev.date, start: ev.start, end: ev.end};
+    const today = todayStr();
+    let d = ev.date > today ? ev.date : today;
+    for(let i = 0; i < 731; i++){
+      const x = expandMasterOn(ev, d);
+      if(x) return {date: d, start: x.start, end: x.end};
+      d = dateByOffset(d, 1);
+    }
+    d = dateByOffset(today, -1);
+    for(let i = 0; i < 731 && d >= ev.date; i++){
+      const x = expandMasterOn(ev, d);
+      if(x) return {date: d, start: x.start, end: x.end};
+      d = dateByOffset(d, -1);
+    }
+    return {date: ev.date, start: ev.start, end: ev.end};
+  }
+  function searchDateLabel(dateStr){
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const thisYear = Number(todayStr().slice(0, 4));
+    return (y !== thisYear ? y + '/' : '') + m + '/' + d + '（' + WEEKDAYS[weekdayOf(dateStr)].slice(1) + '）';
+  }
+  function renderSearchResults(){
+    const q = searchInput.value.trim().toLowerCase();
+    searchResults.innerHTML = '';
+    if(!q) return;
+    const today = todayStr();
+    const hits = events.filter(function(ev){
+      return String(ev.title || '').toLowerCase().indexOf(q) !== -1 || String(ev.notes || '').toLowerCase().indexOf(q) !== -1;
+    }).map(function(ev){ return {ev: ev, occ: searchOccurrence(ev)}; });
+    if(!hits.length){
+      const e = document.createElement('div');
+      e.className = 'search-empty';
+      e.textContent = '找不到符合的行程';
+      searchResults.appendChild(e);
+      return;
+    }
+    const upcoming = hits.filter(h => h.occ.date >= today).sort((a, b) => (a.occ.date + a.occ.start).localeCompare(b.occ.date + b.occ.start));
+    const past = hits.filter(h => h.occ.date < today).sort((a, b) => (b.occ.date + b.occ.start).localeCompare(a.occ.date + a.occ.start));
+    [['接下來', upcoming], ['過去', past]].forEach(function(group){
+      if(!group[1].length) return;
+      if(upcoming.length && past.length){
+        const g = document.createElement('div');
+        g.className = 'search-group';
+        g.textContent = group[0];
+        searchResults.appendChild(g);
+      }
+      group[1].forEach(function(h){
+        const ev = h.ev, occ = h.occ;
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'search-row';
+        const sw = document.createElement('span');
+        sw.className = 'search-swatch';
+        sw.style.background = eventColorById(ev.color).hex;
+        const main = document.createElement('span');
+        main.className = 'search-main';
+        const noteHit = String(ev.notes || '').toLowerCase().indexOf(q);
+        main.innerHTML = '<span class="search-title">' + searchHighlight(ev.title || '(未命名行程)', q) + '</span>' +
+          '<span class="search-sub">' + searchDateLabel(occ.date) + ' ' + escapeHtml((occ.start || '') + '–' + (occ.end || '')) + (ev.recurrence ? ' · 重複' : '') + '</span>' +
+          (noteHit !== -1 ? '<span class="search-note">' + searchHighlight(String(ev.notes).slice(Math.max(0, noteHit - 8)), q) + '</span>' : '');
+        row.appendChild(sw);
+        row.appendChild(main);
+        row.addEventListener('click', function(){
+          closeSearch();
+          currentDate = occ.date;
+          renderTimeline();
+          goBackToTimeline();
+        });
+        searchResults.appendChild(row);
+      });
+    });
+  }
+
   let lastShownPage = 'timeline';
   function showPage(name){
     const prevPage = lastShownPage;
@@ -13465,26 +13616,31 @@
     document.getElementById('nbPermVal').textContent = PERM_LABELS_SHORT[p];
     nbPermHint.textContent = PERM_HINTS[p];
   }
-  /* ---------------- 設定：通知（雛形） ----------------
-     App 關掉之後的行程提醒要靠「推播」：瀏覽器的通知權限＋伺服器在對的時間寄出。
-     這一版先做設定畫面和要求通知權限，設定存在這支裝置；伺服器那一段之後再做。
-     iPhone 只有「加到主畫面」打開的日日貼才能要求通知權限（iOS 16.4 以上）。 */
+  /* ---------------- 設定：通知（行程提醒推播） ----------------
+     App 關掉之後也能收到「行程快開始了」：
+       打開開關 → 要求通知權限 → 跟瀏覽器訂閱推播（Web Push）→ 把訂閱存到資料庫
+       （save_push_subscription，每支手機一筆，記提前幾分鐘、時區）→ 伺服器每分鐘
+       檢查一次（Edge Function send-reminders），時間到就推到這支手機。
+     設定跟著手機（使用者 10/23 決定），存在本機；資料庫那一筆是給伺服器看的。
+     iPhone 只有「加到主畫面」打開的日日貼才能開（iOS 16.4 以上）。
+     VAPID 公開金鑰：跟 Edge Function 的 Secrets 裡 VAPID_PUBLIC_KEY 是同一組（私密金鑰只放在 Supabase）。 */
+  const VAPID_PUBLIC_KEY = 'BAqf3BFasrtf3yUxK9msZWCEG5BiS7yPky6DkehOO9vS1jdWaWzXxG4BzPTbALFwH1hnZsdiMov3wotoZUV6uu8';
   const NOTIFY_KEY = 'plannerNotify';
   function getNotifySetting(){
-    try{ const o = JSON.parse(localStorage.getItem(NOTIFY_KEY) || 'null'); if(o && typeof o === 'object') return {on: !!o.on, lead: Number(o.lead) || 0}; }catch(e){}
+    try{ const o = JSON.parse(localStorage.getItem(NOTIFY_KEY) || 'null'); if(o && typeof o === 'object') return {on: !!o.on, lead: Number.isFinite(Number(o.lead)) ? Number(o.lead) : 10}; }catch(e){}
     return {on: false, lead: 10};
   }
   function setNotifySetting(o){ try{ localStorage.setItem(NOTIFY_KEY, JSON.stringify(o)); }catch(e){} }
   const nbNotifyOn = document.getElementById('nbNotifyOn');
   const NOTIFY_LEADS = [[0, '準時'], [5, '5 分鐘'], [10, '10 分鐘'], [30, '30 分鐘'], [60, '1 小時']];
+  let notifyServerMsg = ''; // 存訂閱失敗時的說明（例如資料庫還沒更新）
+  function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
   function notifyStatusText(){
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-    if(!('Notification' in window)){
-      return ios && !standalone ? '請先把日日貼加到主畫面再開啟。' : '這個瀏覽器不支援通知。';
-    }
+    if(!pushSupported()) return ios && !standalone ? '請先把日日貼加到主畫面再開啟。' : '這個瀏覽器不支援通知。';
     if(Notification.permission === 'denied') return '通知被封鎖了，請到手機設定開啟。';
-    return '';
+    return notifyServerMsg;
   }
   function renderNotifySetting(){
     const o = getNotifySetting();
@@ -13494,18 +13650,67 @@
     document.getElementById('nbNotifyLeadVal').textContent = lead[1];
     document.getElementById('nbNotifyStatus').textContent = notifyStatusText();
   }
+  function b64urlToBytes(s){
+    const pad = '='.repeat((4 - s.length % 4) % 4);
+    const raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, c => c.charCodeAt(0));
+  }
+  function userTimeZone(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Taipei'; }catch(e){ return 'Asia/Taipei'; } }
+  // 訂閱推播並存到資料庫；回傳 true／false
+  async function savePushSubscription(lead){
+    notifyServerMsg = '';
+    if(!pushSupported() || !sb) return false;
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64urlToBytes(VAPID_PUBLIC_KEY)});
+    const j = sub.toJSON();
+    const r = await sb.rpc('save_push_subscription', {p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_lead: lead, p_tz: userTimeZone()});
+    if(r.error){
+      console.warn('存推播訂閱失敗：', r.error);
+      notifyServerMsg = /could not find the function|PGRST202/i.test((r.error.code || '') + ' ' + (r.error.message || ''))
+        ? '伺服器還沒設定好（supabase-upgrade.sql 的 H 段）。' : '設定失敗，請稍後再試。';
+      return false;
+    }
+    return true;
+  }
+  async function removePushSubscription(){
+    if(!pushSupported()) return;
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if(!sub) return;
+      if(sb){ try{ await sb.rpc('delete_push_subscription', {p_endpoint: sub.endpoint}); }catch(e){} }
+      await sub.unsubscribe();
+    }catch(e){ console.warn('取消推播訂閱失敗：', e); }
+  }
   nbNotifyOn.addEventListener('change', async function(){
     const o = getNotifySetting();
-    o.on = nbNotifyOn.checked;
-    setNotifySetting(o);
-    if(o.on && 'Notification' in window && Notification.permission === 'default'){
-      try{ await Notification.requestPermission(); }catch(e){}
+    if(nbNotifyOn.checked){
+      if(!pushSupported()){ nbNotifyOn.checked = false; renderNotifySetting(); return; }
+      let perm = Notification.permission;
+      if(perm === 'default'){ try{ perm = await Notification.requestPermission(); }catch(e){} } // 要在按下開關的當下就問（iPhone 規定）
+      if(perm !== 'granted'){ o.on = false; setNotifySetting(o); renderNotifySetting(); return; }
+      o.on = true; setNotifySetting(o); renderNotifySetting();
+      let ok = false;
+      try{ ok = await savePushSubscription(o.lead); }catch(e){ console.warn(e); notifyServerMsg = '設定失敗，請稍後再試。'; }
+      if(!ok){ o.on = false; setNotifySetting(o); }
+      renderNotifySetting();
+    } else {
+      o.on = false; setNotifySetting(o); notifyServerMsg = ''; renderNotifySetting();
+      removePushSubscription();
     }
-    renderNotifySetting();
   });
   document.getElementById('nbNotifyLeadRow').addEventListener('click', function(){
     const o = getNotifySetting();
-    toggleInlineOptions(this, NOTIFY_LEADS, o.lead, function(v){ o.lead = v; setNotifySetting(o); renderNotifySetting(); });
+    toggleInlineOptions(this, NOTIFY_LEADS, o.lead, function(v){
+      o.lead = v; setNotifySetting(o); renderNotifySetting();
+      savePushSubscription(v).then(renderNotifySetting).catch(function(){});
+    });
+  });
+  // 開 App 時：提醒是開著的、權限也還在，就把訂閱再存一次（換了帳號登入、或手機的訂閱換過都能接上）
+  authReady.then(function(){
+    const o = getNotifySetting();
+    if(o.on && pushSupported() && Notification.permission === 'granted') savePushSubscription(o.lead).catch(function(){});
   });
 
   /* ---------------- 設定：顯示（外觀、每週從哪天開始、時間最小刻度）----------------
@@ -13874,6 +14079,7 @@
     purgeLocalNotebookData();
     saveNotebookList(list);
     loadDisplayPrefsFromAccount(); // 換帳號登入：顯示設定換成這個帳號的
+    try{ const no = getNotifySetting(); if(no.on && pushSupported() && Notification.permission === 'granted') savePushSubscription(no.lead).catch(function(){}); }catch(e){} // 提醒改成寄給這個帳號
     upsertMyProfile();
     authFlow = null;
     clearInterval(resendTimer);
@@ -13963,6 +14169,7 @@
     }
     nbAcctSignOut.disabled = true;
     try{
+      await removePushSubscription(); // 登出：這支手機不再收這個帳號的提醒
       await sb.auth.signOut();
       purgeLocalNotebookData();
       location.reload(); // 重新載入後沒有登入狀態，會回到第一頁
@@ -13982,6 +14189,7 @@
       // 從第二頁返回後改選訪客：原本登入的是正式帳號的話，先登出，再建立新的訪客身分
       const cur = await currentAuthUser();
       if(isRegistered(cur)){
+        await removePushSubscription();
         await sb.auth.signOut({scope: 'local'});
         purgeLocalNotebookData();
       }
@@ -14149,6 +14357,7 @@
     try{
       const user = await currentAuthUser();
       if(user){ try{ await sb.storage.from('avatars').remove([user.id + '/avatar.jpg']); }catch(e){} }
+      await removePushSubscription();
       const r = await sb.rpc('delete_my_account');
       if(r.error) throw r.error;
       try{ await sb.auth.signOut({scope: 'local'}); }catch(e){} // 帳號已經不在了，只清掉這支裝置的登入狀態
