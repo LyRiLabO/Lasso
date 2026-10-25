@@ -531,7 +531,13 @@
   }
   @media (min-width:431px){
     body{padding:28px 0;}
-    #phone{min-height:860px; border-radius:28px; box-shadow:0 30px 70px rgba(20,20,30,0.45);}
+    /* 平板、電腦：手機框最高 860px，但不能比畫面高（不然下面會被切掉、又不能捲） */
+    #phone{min-height:0; height:860px; height:min(860px, calc(100vh - 56px)); height:min(860px, calc(100dvh - 56px)); border-radius:28px; box-shadow:0 30px 70px rgba(20,20,30,0.45);}
+  }
+  @media (min-width:431px) and (max-height:620px){
+    /* 很矮的畫面（手機橫放等）：不留上下邊、不做圓角，整個高度都給 App */
+    body{padding:0;}
+    #phone{height:100vh; height:100dvh; border-radius:0;}
   }
 
   /* 「你是哪一位」裝置身分選擇畫面：蓋在最上層，選好之前整個 App 都碰
@@ -4390,6 +4396,7 @@
         <div class="set-list">
           <label class="set-row"><span class="set-label">行程開始前提醒我</span><input type="checkbox" id="nbNotifyOn" class="set-switch-input"><span class="toggle-switch" aria-hidden="true"></span></label>
           <button type="button" class="set-row" id="nbNotifyLeadRow" hidden><span class="set-label">提前</span><span class="set-value" id="nbNotifyLeadVal"></span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
+          <button type="button" class="set-row" id="nbNotifyDeviceBtn" hidden><span class="set-label">在這支手機開啟通知</span><svg class="set-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg></button>
         </div>
         <div class="perm-hint" id="nbNotifyStatus"></div>
 
@@ -13625,12 +13632,21 @@
      iPhone 只有「加到主畫面」打開的日日貼才能開（iOS 16.4 以上）。
      VAPID 公開金鑰：跟 Edge Function 的 Secrets 裡 VAPID_PUBLIC_KEY 是同一組（私密金鑰只放在 Supabase）。 */
   const VAPID_PUBLIC_KEY = 'BAqf3BFasrtf3yUxK9msZWCEG5BiS7yPky6DkehOO9vS1jdWaWzXxG4BzPTbALFwH1hnZsdiMov3wotoZUV6uu8';
+  // 提醒的開關、提前多久跟著帳號（user_metadata.notify_prefs）；本機另存一份當快取。
+  // 每支手機還是要各自允許通知、各自訂閱（這是手機的規定），帳號開著時每支手機開 App 會自動接上。
   const NOTIFY_KEY = 'plannerNotify';
   function getNotifySetting(){
     try{ const o = JSON.parse(localStorage.getItem(NOTIFY_KEY) || 'null'); if(o && typeof o === 'object') return {on: !!o.on, lead: Number.isFinite(Number(o.lead)) ? Number(o.lead) : 10}; }catch(e){}
     return {on: false, lead: 10};
   }
-  function setNotifySetting(o){ try{ localStorage.setItem(NOTIFY_KEY, JSON.stringify(o)); }catch(e){} }
+  function setNotifySetting(o, local){
+    try{ localStorage.setItem(NOTIFY_KEY, JSON.stringify(o)); }catch(e){}
+    if(local || !sb) return;
+    sb.auth.updateUser({data: {notify_prefs: {on: !!o.on, lead: o.lead}}}).then(function(r){
+      if(r && r.error) console.warn('提醒設定存到帳號失敗：', r.error);
+    }).catch(function(){});
+  }
+  let deviceSubscribed = false; // 這支手機目前有沒有訂閱成功（給畫面顯示用）
   const nbNotifyOn = document.getElementById('nbNotifyOn');
   const NOTIFY_LEADS = [[0, '準時'], [5, '5 分鐘'], [10, '10 分鐘'], [30, '30 分鐘'], [60, '1 小時']];
   let notifyServerMsg = ''; // 存訂閱失敗時的說明（例如資料庫還沒更新）
@@ -13640,7 +13656,8 @@
     const standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
     if(!pushSupported()) return ios && !standalone ? '請先把日日貼加到主畫面再開啟。' : '這個瀏覽器不支援通知。';
     if(Notification.permission === 'denied') return '通知被封鎖了，請到手機設定開啟。';
-    return notifyServerMsg;
+    if(notifyServerMsg) return notifyServerMsg;
+    return '';
   }
   function renderNotifySetting(){
     const o = getNotifySetting();
@@ -13649,6 +13666,8 @@
     const lead = NOTIFY_LEADS.find(x => x[0] === o.lead) || NOTIFY_LEADS[2];
     document.getElementById('nbNotifyLeadVal').textContent = lead[1];
     document.getElementById('nbNotifyStatus').textContent = notifyStatusText();
+    // 帳號開著提醒、但這支手機還沒允許：給一顆按鍵在這支手機開（要使用者自己按，手機才肯跳出詢問）
+    document.getElementById('nbNotifyDeviceBtn').hidden = !(o.on && pushSupported() && Notification.permission === 'default');
   }
   function b64urlToBytes(s){
     const pad = '='.repeat((4 - s.length % 4) % 4);
@@ -13665,6 +13684,7 @@
     if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64urlToBytes(VAPID_PUBLIC_KEY)});
     const j = sub.toJSON();
     const r = await sb.rpc('save_push_subscription', {p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_lead: lead, p_tz: userTimeZone()});
+    if(!r.error) deviceSubscribed = true;
     if(r.error){
       console.warn('存推播訂閱失敗：', r.error);
       notifyServerMsg = /could not find the function|PGRST202/i.test((r.error.code || '') + ' ' + (r.error.message || ''))
@@ -13683,35 +13703,58 @@
       await sub.unsubscribe();
     }catch(e){ console.warn('取消推播訂閱失敗：', e); }
   }
+  // 在這支手機開啟：要通知權限 → 訂閱
+  async function enableOnThisDevice(){
+    if(!pushSupported()) return false;
+    let perm = Notification.permission;
+    if(perm === 'default'){ try{ perm = await Notification.requestPermission(); }catch(e){} } // 要在按下的當下就問（iPhone 規定）
+    if(perm !== 'granted'){ renderNotifySetting(); return false; }
+    let ok = false;
+    try{ ok = await savePushSubscription(getNotifySetting().lead); }catch(e){ console.warn(e); notifyServerMsg = '設定失敗，請稍後再試。'; }
+    renderNotifySetting();
+    return ok;
+  }
   nbNotifyOn.addEventListener('change', async function(){
     const o = getNotifySetting();
     if(nbNotifyOn.checked){
       if(!pushSupported()){ nbNotifyOn.checked = false; renderNotifySetting(); return; }
-      let perm = Notification.permission;
-      if(perm === 'default'){ try{ perm = await Notification.requestPermission(); }catch(e){} } // 要在按下開關的當下就問（iPhone 規定）
-      if(perm !== 'granted'){ o.on = false; setNotifySetting(o); renderNotifySetting(); return; }
       o.on = true; setNotifySetting(o); renderNotifySetting();
-      let ok = false;
-      try{ ok = await savePushSubscription(o.lead); }catch(e){ console.warn(e); notifyServerMsg = '設定失敗，請稍後再試。'; }
-      if(!ok){ o.on = false; setNotifySetting(o); }
-      renderNotifySetting();
+      await enableOnThisDevice();
     } else {
+      // 關掉＝這個帳號的所有手機都不再提醒
       o.on = false; setNotifySetting(o); notifyServerMsg = ''; renderNotifySetting();
+      if(sb){ try{ await sb.rpc('delete_my_push_subscriptions'); }catch(e){} }
       removePushSubscription();
     }
   });
+  document.getElementById('nbNotifyDeviceBtn').addEventListener('click', function(){ enableOnThisDevice(); });
   document.getElementById('nbNotifyLeadRow').addEventListener('click', function(){
     const o = getNotifySetting();
     toggleInlineOptions(this, NOTIFY_LEADS, o.lead, function(v){
       o.lead = v; setNotifySetting(o); renderNotifySetting();
-      savePushSubscription(v).then(renderNotifySetting).catch(function(){});
+      // 這個帳號的每支手機都改成新的提前時間
+      if(sb) sb.rpc('set_my_push_lead', {p_lead: v}).then(function(r){ if(r && r.error) console.warn('更新提前時間失敗：', r.error); }).catch(function(){});
+      if(pushSupported() && Notification.permission === 'granted') savePushSubscription(v).then(renderNotifySetting).catch(function(){});
     });
   });
-  // 開 App 時：提醒是開著的、權限也還在，就把訂閱再存一次（換了帳號登入、或手機的訂閱換過都能接上）
-  authReady.then(function(){
-    const o = getNotifySetting();
-    if(o.on && pushSupported() && Notification.permission === 'granted') savePushSubscription(o.lead).catch(function(){});
-  });
+  // 開 App、登入時：讀帳號的提醒設定。開著而且這支手機已經允許通知 → 自動訂閱（換手機、換帳號都能接上）；
+  // 帳號關著 → 這支手機如果還有訂閱就取消。
+  async function syncNotifyFromAccount(){
+    try{
+      const u = await currentAuthUser();
+      const p = u && u.user_metadata && u.user_metadata.notify_prefs;
+      if(p && typeof p === 'object') setNotifySetting({on: !!p.on, lead: Number.isFinite(Number(p.lead)) ? Number(p.lead) : 10}, true);
+      const o = getNotifySetting();
+      if(u && !p && o.on) setNotifySetting(o); // 舊版只存在這支手機的設定，第一次搬到帳號
+      if(o.on){
+        if(pushSupported() && Notification.permission === 'granted') await savePushSubscription(o.lead);
+      } else if(p && p.on === false){
+        removePushSubscription();
+      }
+      renderNotifySetting();
+    }catch(e){}
+  }
+  authReady.then(syncNotifyFromAccount);
 
   /* ---------------- 設定：顯示（外觀、每週從哪天開始、時間最小刻度）----------------
      跟著帳號走：存在本機，也存一份到帳號資料（user_metadata.display_prefs），換手機登入是同樣的設定。
@@ -14079,7 +14122,8 @@
     purgeLocalNotebookData();
     saveNotebookList(list);
     loadDisplayPrefsFromAccount(); // 換帳號登入：顯示設定換成這個帳號的
-    try{ const no = getNotifySetting(); if(no.on && pushSupported() && Notification.permission === 'granted') savePushSubscription(no.lead).catch(function(){}); }catch(e){} // 提醒改成寄給這個帳號
+    loadThemesFromAccount();
+    try{ syncNotifyFromAccount(); }catch(e){} // 提醒設定換成這個帳號的
     upsertMyProfile();
     authFlow = null;
     clearInterval(resendTimer);
@@ -14644,9 +14688,8 @@
   navImport.addEventListener('click', openImportPage);
 
   // ============ 個人化：介面色彩主題 ============
-  // 存在這支裝置的 localStorage 裡，是「這個瀏覽器/裝置」的個人偏好，
-  // 不隨手帳資料同步、不影響其他共編者看到的畫面（跟 DEVICE_ID 一樣是
-  // 純本機的東西）。<head> 裡有一小段提早執行的 script 會在畫面畫出來
+  // 個人偏好，不影響其他共編者看到的畫面。存在帳號（user_metadata.notebook_themes），
+  // 本機 localStorage 另存一份。<head> 裡有一小段提早執行的 script 會在畫面畫出來
   // 之前先套用一次，這裡的 applyTheme() 負責之後使用者手動切換時用。
   // 每本手帳分開存：plannerTheme:<手帳id>（沒存過＝經典）
   function themeStorageKey(nbId){ return 'plannerTheme:' + (nbId || ''); }
@@ -14692,9 +14735,48 @@
     }catch(err){}
   }
   syncThemeColorMeta();
-  function applyTheme(themeId){
+  // 主題色彩跟著帳號：本機一份（開頁時馬上套用、不閃），帳號資料一份（user_metadata.notebook_themes，
+  // {手帳id: 主題id}），換手機登入時用帳號的蓋過本機的。
+  let themeSaveTimer = null;
+  function saveThemeToAccount(nbId, themeId){
+    if(!sb || !nbId) return;
+    clearTimeout(themeSaveTimer);
+    themeSaveTimer = setTimeout(async function(){
+      try{
+        const u = await currentAuthUser();
+        if(!u) return;
+        const all = Object.assign({}, (u.user_metadata && u.user_metadata.notebook_themes) || {});
+        all[nbId] = themeId;
+        const r = await sb.auth.updateUser({data: {notebook_themes: all}});
+        if(r.error) throw r.error;
+      }catch(err){ console.warn('主題色彩存到帳號失敗（只存在這支裝置）：', err); }
+    }, 500);
+  }
+  // 開 App、登入時：帳號裡有存的主題寫回本機；目前這本手帳的主題不一樣就馬上換
+  async function loadThemesFromAccount(){
+    try{
+      const u = await currentAuthUser();
+      const all = u && u.user_metadata && u.user_metadata.notebook_themes;
+      if(!all || typeof all !== 'object' || (NOTEBOOK && !all[NOTEBOOK.id])){
+        // 帳號裡還沒有這本手帳的主題（舊版只存在這支裝置）：把這支裝置的搬上去
+        if(u && NOTEBOOK){ const local = storedThemeFor(NOTEBOOK.id); if(local) saveThemeToAccount(NOTEBOOK.id, local); }
+        if(!all || typeof all !== 'object') return;
+      }
+      Object.keys(all).forEach(function(id){
+        if(THEMES.some(t => t.id === all[id])){ try{ localStorage.setItem(themeStorageKey(id), all[id]); }catch(e){} }
+      });
+      if(NOTEBOOK && all[NOTEBOOK.id] && all[NOTEBOOK.id] !== currentTheme && THEMES.some(t => t.id === all[NOTEBOOK.id])){
+        applyTheme(all[NOTEBOOK.id], {fromAccount: true});
+      }
+      try{ refreshBookLists(); }catch(e){}
+    }catch(e){}
+  }
+  authReady.then(loadThemesFromAccount);
+  function applyTheme(themeId, opts){
     setThemeAttr(themeId);
     if(NOTEBOOK){ try{ localStorage.setItem(themeStorageKey(NOTEBOOK.id), themeId); }catch(err){} } // 只存給目前這本手帳
+    if(NOTEBOOK && !(opts && opts.fromAccount)) saveThemeToAccount(NOTEBOOK.id, themeId);
+    try{ renderThemeSwatches(); }catch(e){}
     // 選單裡「我的手帳」那一本的緞帶顏色馬上跟著換（不用關掉選單再打開）
     if(NOTEBOOK){
       document.querySelectorAll('.book-row').forEach(function(r){
